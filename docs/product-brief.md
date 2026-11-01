@@ -66,7 +66,7 @@ Accounts, saved projects, text/stickers/filters, video, posting through Instagra
 
 # v2: accounts, saved collages, Supporter pass, admin analytics
 
-Decided 2026-10-31. Everything above is the v1 brief, kept as written; this section adds to it and, where it says so,
+Decided 2026-10-31; amended the same day to defer text-message sign-in (email and password only for now). Everything above is the v1 brief, kept as written; this section adds to it and, where it says so,
 replaces parts of it. Build order and status: see "Backend milestones" in `PROJECT_SETUP.md`.
 
 ## What changes from v1
@@ -79,7 +79,7 @@ replaces parts of it. Build order and status: see "Backend milestones" in `PROJE
 - **Analytics.** v1: "No analytics." v2: first-party, aggregate analytics only (below). Still no third-party trackers and
   no tracking cookies.
 - **Cost.** v1: Cloudflare Pages only, $0. v2 adds a Railway API and Postgres (about $5–10/month), and per-use costs for
-  text-message codes and payments.
+  payments.
 - **Domain.** `storystitch.ashishnag.com` (production) and `staging.storystitch.ashishnag.com`, with the API at
   `api.storystitch.ashishnag.com` and `api-staging.storystitch.ashishnag.com`. One parent domain, so sign-in cookies
   work in iPhone Safari.
@@ -87,12 +87,11 @@ replaces parts of it. Build order and status: see "Backend milestones" in `PROJE
 ## Accounts
 
 - The core flow still works without an account; sign-in is asked for only when saving or buying the Supporter pass.
-- **Text message first.** Enter a phone number, receive a 6-digit code, done (passwordless). This is the primary,
-  most prominent option. US and Canadian numbers only to start.
-- **Email and password second.** A smaller "Use email instead" path, with email verification and password reset.
-- No Google or Apple sign-in for now.
-- Protection against SMS abuse from day one: a bot check (Cloudflare Turnstile) before a code is sent, per-number and
-  per-IP limits, and the SMS provider's fraud protection.
+- **Email and password**, optional: register, verify the email address, sign in, and reset a forgotten password by
+  email.
+- Not for now: text-message sign-in (deferred to keep this release simple), Google and Apple sign-in.
+- Protection against abuse from day one: a bot check (Cloudflare Turnstile) on sign-up, sign-in and password reset,
+  and limits on attempts per account and per IP address.
 - Users can sign out of all devices and delete their account, which deletes their saved collages and data.
 
 ## Saved collages
@@ -115,7 +114,7 @@ replaces parts of it. Build order and status: see "Backend milestones" in `PROJE
 ## Admin analytics
 
 - First-party events stored in our own database: visits, photos picked (count only), layout chosen, export, share,
-  save, sign-up, Supporter pass bought, and errors. Never image content, phone numbers, emails or IP addresses;
+  save, sign-up, Supporter pass bought, and errors. Never image content, emails or IP addresses;
   visitors are counted with a hash that changes every day.
 - A `/admin` dashboard: daily totals, the picked → exported → saved → supporter funnel, most-used layouts, and errors.
 - Only accounts marked as admin can open it, signing in with email, password and an authenticator-app code. It's
