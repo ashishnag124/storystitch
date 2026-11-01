@@ -68,6 +68,8 @@ for (const ws of workspaces.filter((w) => w.scripts.test)) {
 const built = run("Build", "pnpm", ["turbo", "run", "build"]);
 for (const ws of workspaces.filter((w) => w.scripts.e2e)) {
   if (!built) break;
+  // The builds the end-to-end tests serve (e.g. with a feature flag on and off), when the app defines them.
+  if (ws.scripts["build:e2e"] && !run(`End-to-end builds: ${ws.name}`, "pnpm", ["run", "build:e2e"], { cwd: ws.path })) continue;
   const reporter = process.env.CI ? "github,json" : "list,json";
   run(`End-to-end tests: ${ws.name}`, "pnpm", ["exec", "playwright", "test", `--reporter=${reporter}`], {
     cwd: ws.path,
