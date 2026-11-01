@@ -632,7 +632,7 @@ export function Editor({ photos, summary, notices, privacy, onStartOver }: Props
               </label>
             </div>
           ) : tool === "layouts" ? (
-            <LayoutStrip options={styledOptions} current={scene} photos={photos} onSelect={chooseLayout} />
+            <LayoutStrip options={styledOptions} current={scene} onSelect={chooseLayout} />
           ) : tool === "style" ? (
             <StylePanel layout={scene.layout} style={scene.style} onChange={(style) => setScene((s) => withStyle(s, style, photos))} />
           ) : (

@@ -144,6 +144,16 @@ test.describe("editing", () => {
     await expect(page.getByRole("application")).toHaveAccessibleName(new RegExp(`^Story preview: ${name},`));
   });
 
+  test("AC-EDIT-13 layouts are shown as diagrams of their cells, without the photos", async ({ page }) => {
+    await libraryInput(page).setInputFiles(await makePhotos(page, 4));
+    const options = page.getByRole("radiogroup", { name: "Layouts" }).getByRole("radio");
+    await expect(options.first()).toBeVisible();
+    for (const option of await options.all()) {
+      await expect(option.locator(".diagram-cell")).toHaveCount(4);
+      await expect(option.locator("canvas, img, image")).toHaveCount(0);
+    }
+  });
+
   test("AC-STYLE-01 the style tool has every control, and Reset restores the defaults", async ({ page }) => {
     await libraryInput(page).setInputFiles(await makePhotos(page, 2));
     await page.getByRole("radio", { name: "Two stacked" }).click();
