@@ -40,7 +40,7 @@ What and why: the v2 section of `docs/product-brief.md`. Acceptance criteria: th
 | B1 | API + Postgres on Railway (staging, production), custom domains, CI/release/QA wiring, feature flag | not started |
 | B2 | Optional email and password accounts (Better Auth, Resend, Turnstile), account deletion. Text-message sign-in deferred | not started |
 | B3 | Save collages to Cloudflare R2, "My stories", storage limits | not started |
-| B4 | Supporter pass (Lemon Squeezy, pay what you want, $3 minimum) | not started |
+| B4 | Supporter pass (Lemon Squeezy) | deferred: see "Later" in the brief |
 | B5 | Admin analytics (`/admin`, desktop, admin login with authenticator code) | not started |
 
 ### B0 checklist (yours)
@@ -52,10 +52,6 @@ Claude never reads that file; it loads values from it into Railway and GitHub wh
 - [ ] **Resend** (verification and password-reset email, needed for B2): sign up, add the domain `storystitch.ashishnag.com`, add the DNS
   records it shows (below), wait for "Verified", then create an API key.
   - Secret: `RESEND_API_KEY`.
-- [ ] **Lemon Squeezy**: sign up and create a store named StoryStitch. Stay in test mode: activating the store needs
-  the live privacy and terms pages, which ship in B2. Ask support whether a pay-what-you-want "Supporter pass" with
-  perks (higher storage limit, badge) is acceptable.
-  - Secrets (test mode): `LEMONSQUEEZY_API_KEY`, `LEMONSQUEEZY_STORE_ID`.
 - [x] **Cloudflare Turnstile** (bot check on sign-up, sign-in and password reset): Cloudflare dashboard → Turnstile → add a widget
   for `storystitch.ashishnag.com` and `staging.storystitch.ashishnag.com`, mode "Managed".
   - Secrets: `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`.
