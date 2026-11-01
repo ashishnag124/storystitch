@@ -153,15 +153,13 @@ describe the app exactly. When saving ships, AC-SAVE-02 and AC-SAVE-07 replace A
 
 | ID | Criterion | Check |
 |---|---|---|
-| AC-AUTH-01 | Picking, editing, exporting and sharing work without an account; sign-in is asked for only when saving or buying the Supporter pass. | planned |
-| AC-AUTH-02 | Users register and sign in with a phone number and a 6-digit text code, offered as the primary option. | planned |
-| AC-AUTH-03 | Text codes are sent only to US and Canadian numbers. | planned |
-| AC-AUTH-04 | A code is sent only after the bot check passes; sends are limited per number and per IP address, and wrong codes are limited per code. | planned |
+| AC-AUTH-01 | Picking, editing, exporting and sharing work without an account; sign-in is asked for only when saving. | planned |
+| AC-AUTH-04 | Sign-up, sign-in and password reset require the bot check to pass, and failed attempts are limited per account and per IP address. | planned |
 | AC-AUTH-05 | Users register and sign in with email and password, verify their email, and reset a forgotten password by email. | planned |
 | AC-AUTH-06 | Signed-in sessions persist across reloads in iPhone Safari (WebKit) and Android Chrome. | planned |
 | AC-AUTH-07 | Users can sign out, and sign out of every device. | planned |
 | AC-AUTH-08 | Deleting an account removes the user, their sessions, their saved collages and the stored files. | planned |
-| AC-AUTH-09 | A real text code arrives on a real phone, and sign-in works on iPhone Safari and Android Chrome. | planned |
+| AC-AUTH-10 | On staging, a real verification email and password-reset email arrive, and sign-up and sign-in work on iPhone Safari and Android Chrome. | planned |
 
 ## Saved collages
 
@@ -172,24 +170,15 @@ describe the app exactly. When saving ships, AC-SAVE-02 and AC-SAVE-07 replace A
 | AC-SAVE-03 | Saved images carry no EXIF or location metadata. | planned |
 | AC-SAVE-04 | "My stories" lists saved collages newest first; each can be opened full size, shared or downloaded again, and deleted. | planned |
 | AC-SAVE-05 | Users can reach only their own collages, through signed links that expire. | planned |
-| AC-SAVE-06 | An account holds up to 200 saved collages (1,000 with the Supporter pass) and says clearly when it's full. | planned |
+| AC-SAVE-06 | An account holds up to 200 saved collages and says clearly when it's full. | planned |
 | AC-SAVE-07 | The UI says original photos stay on the device and saved collages are stored privately in the account. | planned |
-
-## Supporter pass
-
-| ID | Criterion | Check |
-|---|---|---|
-| AC-SUPPORT-01 | After each successful export or share, a dismissible Supporter card appears; it never blocks exporting. | planned |
-| AC-SUPPORT-02 | The card opens Lemon Squeezy checkout (pay what you want, $3 minimum); signed-out users sign in first. | planned |
-| AC-SUPPORT-03 | Only a correctly signed Lemon Squeezy webhook grants the perks (higher limit, badge), and a repeated webhook grants them once. | planned |
-| AC-SUPPORT-04 | A test-mode purchase on staging grants the perks to the buyer's account. | planned |
 
 ## Admin analytics
 
 | ID | Criterion | Check |
 |---|---|---|
-| AC-ADMIN-01 | The app records first-party events: visit, photos picked (count), layout chosen, export, share, save, sign-up, Supporter pass and error. | planned |
-| AC-ADMIN-02 | Events never contain image data, phone numbers, emails or IP addresses; visitors are counted with a hash that changes daily. | planned |
+| AC-ADMIN-01 | The app records first-party events: visit, photos picked (count), layout chosen, export, share, save, sign-up and error. | planned |
+| AC-ADMIN-02 | Events never contain image data, emails or IP addresses; visitors are counted with a hash that changes daily. | planned |
 | AC-ADMIN-03 | `/admin` opens only for admin accounts signed in with email, password and an authenticator code; everyone else is refused. | planned |
-| AC-ADMIN-04 | The dashboard shows daily totals, the picked → exported → saved → Supporter funnel, most-used layouts and errors. | planned |
+| AC-ADMIN-04 | The dashboard shows daily totals, the picked → exported → saved funnel, most-used layouts and errors. | planned |
 | AC-ADMIN-05 | At phone width, `/admin` says to open it on a desktop. | planned |

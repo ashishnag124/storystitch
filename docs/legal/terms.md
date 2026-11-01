@@ -1,6 +1,6 @@
 <!--
 DRAFT for review: not legal advice. Fill in every [TODO] and have it checked before it goes live.
-It becomes the page at /terms when accounts ship (B2). Lemon Squeezy reviews it when activating the store.
+It becomes the page at /terms when accounts ship (B2).
 -->
 
 # StoryStitch terms of use
@@ -24,15 +24,6 @@ storystitch.ashishnag.com. By using StoryStitch you agree to them. If you don't 
 - When you save a collage, you let us store it and show it back to you, only so the service works. We don't use your
   collages for anything else, and we don't claim any ownership of them.
 - We may remove content or close accounts that break these terms or the law.
-
-## Supporter pass
-
-- The Supporter pass is a one-time, pay-what-you-want purchase (minimum $3) sold by Lemon Squeezy, our merchant of
-  record. Lemon Squeezy's terms apply to the purchase, including taxes, receipts and refunds.
-- It gives your account the perks described in the app when you buy it (currently a higher saved-collage limit and a
-  supporter badge) for as long as StoryStitch runs. Perks may be added; we won't remove a perk you paid for without
-  telling you, and if StoryStitch shuts down we'll give you time to download your collages.
-- Refunds: [TODO: e.g. "within 14 days of purchase, on request"; must match your Lemon Squeezy store settings].
 
 ## The service
 

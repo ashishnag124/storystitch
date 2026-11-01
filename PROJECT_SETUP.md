@@ -36,11 +36,11 @@ What and why: the v2 section of `docs/product-brief.md`. Acceptance criteria: th
 
 | | What | Status |
 |---|---|---|
-| B0 | Brief v2, planned criteria, legal drafts, accounts and DNS (checklist below) | in progress |
+| B0 | Brief v2, planned criteria, legal drafts, accounts and DNS (checklist below) | docs merged; checklist in progress |
 | B1 | API + Postgres on Railway (staging, production), custom domains, CI/release/QA wiring, feature flag | not started |
-| B2 | Text-message and email sign-in (Better Auth, Twilio Verify, Resend, Turnstile), account deletion | not started |
+| B2 | Optional email and password accounts (Better Auth, Resend, Turnstile), account deletion. Text-message sign-in deferred | not started |
 | B3 | Save collages to Cloudflare R2, "My stories", storage limits | not started |
-| B4 | Supporter pass (Lemon Squeezy, pay what you want, $3 minimum) | not started |
+| B4 | Supporter pass (Lemon Squeezy) | deferred: see "Later" in the brief |
 | B5 | Admin analytics (`/admin`, desktop, admin login with authenticator code) | not started |
 
 ### B0 checklist (yours)
@@ -48,25 +48,16 @@ What and why: the v2 section of `docs/product-brief.md`. Acceptance criteria: th
 Add each secret as a `KEY=value` line to `~/.config/new-project/secrets.env`, the same file as the Cloudflare token.
 Claude never reads that file; it loads values from it into Railway and GitHub when a milestone needs them.
 
-- [ ] **Railway**: sign up at railway.com, then run `railway login` in a terminal. Claude creates the project in B1.
-- [ ] **Twilio** (text-message codes): sign up and upgrade from trial (trial accounts can only text verified numbers).
-  - Verify → create two services: `StoryStitch staging` and `StoryStitch production`.
-  - Verify → Geo permissions: allow only the United States and Canada.
-  - Turn on Fraud Guard for both services.
-  - Secrets: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_VERIFY_SID_STAGING`, `TWILIO_VERIFY_SID_PRODUCTION`.
-- [ ] **Resend** (sign-in and password-reset email): sign up, add the domain `storystitch.ashishnag.com`, add the DNS
+- [x] **Railway**: sign up at railway.com, then run `railway login` in a terminal. Claude creates the project in B1.
+- [ ] **Resend** (verification and password-reset email, needed for B2): sign up, add the domain `storystitch.ashishnag.com`, add the DNS
   records it shows (below), wait for "Verified", then create an API key.
   - Secret: `RESEND_API_KEY`.
-- [ ] **Lemon Squeezy**: sign up and create a store named StoryStitch. Stay in test mode: activating the store needs
-  the live privacy and terms pages, which ship in B2. Ask support whether a pay-what-you-want "Supporter pass" with
-  perks (higher storage limit, badge) is acceptable.
-  - Secrets (test mode): `LEMONSQUEEZY_API_KEY`, `LEMONSQUEEZY_STORE_ID`.
-- [ ] **Cloudflare Turnstile** (bot check before sending a code): Cloudflare dashboard → Turnstile → add a widget
+- [x] **Cloudflare Turnstile** (bot check on sign-up, sign-in and password reset): Cloudflare dashboard → Turnstile → add a widget
   for `storystitch.ashishnag.com` and `staging.storystitch.ashishnag.com`, mode "Managed".
   - Secrets: `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`.
-- [ ] **Cloudflare R2** (saved collages): Cloudflare dashboard → R2 → enable it. It asks for a payment method even on
+- [x] **Cloudflare R2** (saved collages): Cloudflare dashboard → R2 → enable it. It asks for a payment method even on
   the free tier (10 GB free). Claude creates the buckets in B3.
-- [ ] **Production web domain**: Cloudflare dashboard → Workers & Pages → `storystitch-web` → Custom domains → add
+- [x] **Production web domain**: Cloudflare dashboard → Workers & Pages → `storystitch-web` → Custom domains → add
   `storystitch.ashishnag.com`, then add the DNS record below in Squarespace. The current v1 site goes live there.
 - [ ] **Legal drafts**: fill in the `[TODO]`s in `docs/legal/privacy-policy.md` and `docs/legal/terms.md` and have them
   reviewed.
@@ -75,7 +66,7 @@ Claude never reads that file; it loads values from it into Railway and GitHub wh
 
 | Host | Type | Value | When |
 |---|---|---|---|
-| `storystitch` | CNAME | `storystitch-web.pages.dev` | B0, after adding the domain in Cloudflare Pages |
+| `storystitch` | CNAME | `storystitch-web.pages.dev` | done |
 | Records Resend shows (MX and TXT on `send.storystitch`, TXT `resend._domainkey.storystitch`) | as shown | as shown | B0 |
 | `staging.storystitch` | CNAME | `main.storystitch-web.pages.dev` | B1, once Claude confirms Pages accepts a custom domain for the `main` branch |
 | `api.storystitch` | CNAME | given by Railway | B1 |

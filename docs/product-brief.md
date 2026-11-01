@@ -64,9 +64,9 @@ Accounts, saved projects, text/stickers/filters, video, posting through Instagra
 
 ---
 
-# v2: accounts, saved collages, Supporter pass, admin analytics
+# v2: accounts, saved collages, admin analytics
 
-Decided 2026-10-31. Everything above is the v1 brief, kept as written; this section adds to it and, where it says so,
+Decided 2026-10-31; amended the same day to defer text-message sign-in (email and password only for now) and payments (see "Later"). Everything above is the v1 brief, kept as written; this section adds to it and, where it says so,
 replaces parts of it. Build order and status: see "Backend milestones" in `PROJECT_SETUP.md`.
 
 ## What changes from v1
@@ -78,21 +78,19 @@ replaces parts of it. Build order and status: see "Backend milestones" in `PROJE
 - **Out of scope.** Accounts and saved images move into scope (finished collages only, not editable projects).
 - **Analytics.** v1: "No analytics." v2: first-party, aggregate analytics only (below). Still no third-party trackers and
   no tracking cookies.
-- **Cost.** v1: Cloudflare Pages only, $0. v2 adds a Railway API and Postgres (about $5–10/month), and per-use costs for
-  text-message codes and payments.
+- **Cost.** v1: Cloudflare Pages only, $0. v2 adds a Railway API and Postgres (about $5–10/month).
 - **Domain.** `storystitch.ashishnag.com` (production) and `staging.storystitch.ashishnag.com`, with the API at
   `api.storystitch.ashishnag.com` and `api-staging.storystitch.ashishnag.com`. One parent domain, so sign-in cookies
   work in iPhone Safari.
 
 ## Accounts
 
-- The core flow still works without an account; sign-in is asked for only when saving or buying the Supporter pass.
-- **Text message first.** Enter a phone number, receive a 6-digit code, done (passwordless). This is the primary,
-  most prominent option. US and Canadian numbers only to start.
-- **Email and password second.** A smaller "Use email instead" path, with email verification and password reset.
-- No Google or Apple sign-in for now.
-- Protection against SMS abuse from day one: a bot check (Cloudflare Turnstile) before a code is sent, per-number and
-  per-IP limits, and the SMS provider's fraud protection.
+- The core flow still works without an account; sign-in is asked for only when saving.
+- **Email and password**, optional: register, verify the email address, sign in, and reset a forgotten password by
+  email.
+- Not for now: text-message sign-in (deferred to keep this release simple), Google and Apple sign-in.
+- Protection against abuse from day one: a bot check (Cloudflare Turnstile) on sign-up, sign-in and password reset,
+  and limits on attempts per account and per IP address.
 - Users can sign out of all devices and delete their account, which deletes their saved collages and data.
 
 ## Saved collages
@@ -102,24 +100,24 @@ replaces parts of it. Build order and status: see "Backend milestones" in `PROJE
 - "My stories": a grid of saved collages, newest first. Open one to view it full size, share or download it again, or
   delete it.
 - Storage is private; images are served only through short-lived signed links.
-- Limits: 200 saved collages per account (1,000 with the Supporter pass), with a clear message when full.
-
-## Supporter pass
-
-- A pay-what-you-want, one-time purchase ($3 minimum) through Lemon Squeezy as merchant of record.
-- It must deliver a real product (Lemon Squeezy prohibits donations with no product): the higher saved-collage limit
-  and a supporter badge on the account.
-- Offered in a small, dismissible card after each successful export or share. It never blocks exporting.
-- Requires an account, so the perks attach to the right person.
+- Limits: 200 saved collages per account, with a clear message when full.
 
 ## Admin analytics
 
 - First-party events stored in our own database: visits, photos picked (count only), layout chosen, export, share,
-  save, sign-up, Supporter pass bought, and errors. Never image content, phone numbers, emails or IP addresses;
+  save, sign-up, and errors. Never image content, emails or IP addresses;
   visitors are counted with a hash that changes every day.
-- A `/admin` dashboard: daily totals, the picked → exported → saved → supporter funnel, most-used layouts, and errors.
+- A `/admin` dashboard: daily totals, the picked → exported → saved funnel, most-used layouts, and errors.
 - Only accounts marked as admin can open it, signing in with email, password and an authenticator-app code. It's
   built for desktop; on a phone it says to open it on a desktop.
+
+## Later (decided, not in this round)
+
+- **Payments: a Supporter pass.** A pay-what-you-want, one-time purchase ($3 minimum) through Lemon Squeezy as
+  merchant of record, offered in a dismissible card after export or share. It must deliver a real product, because
+  Lemon Squeezy prohibits donations with no product: e.g. a higher saved-collage limit and a supporter badge.
+- **Text-message sign-in** (phone number + 6-digit code, e.g. Twilio Verify with fraud protection).
+- **Google and Apple sign-in.**
 
 ## Acceptance
 
