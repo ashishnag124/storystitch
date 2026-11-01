@@ -54,6 +54,11 @@ async function exportImage(page: Page) {
 }
 
 test.beforeEach(async ({ page }) => {
+  // Surface browser warnings and errors (e.g. model load failures) in the test output.
+  page.on("console", (m) => {
+    if (m.type() === "warning" || m.type() === "error") console.log(`[browser ${m.type()}] ${m.text()}`);
+  });
+  page.on("pageerror", (e) => console.log(`[page error] ${e.message}`));
   // Force the download path: headless browsers have no share sheet to open.
   await page.addInitScript(() => {
     Object.defineProperty(Navigator.prototype, "canShare", { value: undefined });
