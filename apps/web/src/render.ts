@@ -1,7 +1,7 @@
 import { CENTER_CROP, sourceRect, type Crop } from "@storystitch/layout-engine";
 import { drawOrder, type Size } from "@storystitch/shared";
 import type { Photo } from "./photos";
-import { cellShapes, styleScale, type CellShape, type Outline, type Scene } from "./scene";
+import { DEFAULT_BACKGROUND, backgroundOf, cellShapes, styleScale, type CellShape, type Outline, type Scene } from "./scene";
 
 /** Anything drawable with its pixel size: a preview copy or a decoded original. */
 export interface Drawable {
@@ -36,7 +36,7 @@ function outlinePath(outline: Outline, radius: number): Path2D {
   return path;
 }
 
-export function drawCell(ctx: CanvasRenderingContext2D, shape: CellShape, img: Drawable, crop: Crop, radius: number) {
+export function drawCell(ctx: CanvasRenderingContext2D, shape: CellShape, img: Drawable, crop: Crop, radius: number, border = 0, borderColor = "#fff") {
   const { frame } = shape;
   const src = sourceRect(img, frame, crop);
   // A zoomed-out crop reaches past the photo; draw only the part that exists (Safari won't clip for us).
@@ -46,8 +46,10 @@ export function drawCell(ctx: CanvasRenderingContext2D, shape: CellShape, img: D
   const y1 = Math.min(src.y + src.height, img.height);
   const kx = frame.width / src.width;
   const ky = frame.height / src.height;
+  const outline = outlinePath(shape.outline, radius);
   ctx.save();
-  ctx.clip(outlinePath(shape.outline, radius));
+  ctx.clip(outline);
+  ctx.save();
   ctx.translate(frame.cx, frame.cy);
   ctx.rotate((frame.rotate * Math.PI) / 180);
   ctx.drawImage(
@@ -61,6 +63,13 @@ export function drawCell(ctx: CanvasRenderingContext2D, shape: CellShape, img: D
     (x1 - x0) * kx,
     (y1 - y0) * ky,
   );
+  ctx.restore();
+  if (border > 0) {
+    // Stroke twice the width centered on the outline; the clip keeps the inner half, so the border sits inside the cell.
+    ctx.lineWidth = 2 * border;
+    ctx.strokeStyle = borderColor;
+    ctx.stroke(outline);
+  }
   ctx.restore();
 }
 
@@ -90,9 +99,23 @@ export function drawBlurredBackground(ctx: CanvasRenderingContext2D, size: Size,
   ctx.restore();
 }
 
+/** Fills the canvas with the scene's background color, or the default one under a blurred photo. */
 export function fillBackground(ctx: CanvasRenderingContext2D, size: Size, scene: Scene) {
-  ctx.fillStyle = scene.style.background;
+  const background = backgroundOf(scene.layout, scene.style);
+  ctx.fillStyle = background.kind === "color" ? background.color : DEFAULT_BACKGROUND.color;
   ctx.fillRect(0, 0, size.width, size.height);
+}
+
+export const hasBlurredBackground = (scene: Scene) => backgroundOf(scene.layout, scene.style).kind === "blur";
+
+/** Editing feedback drawn over the preview. */
+export interface Marks {
+  /** The tapped (or lifted) cell. */
+  selected?: number;
+  /** Where a lifted photo would be dropped. */
+  target?: number;
+  /** Number every cell, for picking cells from the keyboard. */
+  numbers?: boolean;
 }
 
 /** Draws a whole scene synchronously from already-decoded images (the preview copies). */
@@ -101,18 +124,43 @@ export function drawScene(
   size: Size,
   scene: Scene,
   imageFor: (photo: number) => Drawable,
-  highlight?: number,
+  marks: Marks = {},
 ) {
   const shapes = cellShapes(scene.layout, scene.style, size);
-  const { radius } = styleScale(scene.layout, scene.style, size);
+  const { radius, border } = styleScale(scene.layout, scene.style, size);
   fillBackground(ctx, size, scene);
-  if (scene.layout.blurBackground) drawBlurredBackground(ctx, size, imageFor(scene.order[0]!));
-  for (const i of drawOrder(scene.layout.cells)) drawCell(ctx, shapes[i]!, imageFor(scene.order[i]!), scene.crops[i]!, radius);
-  if (highlight !== undefined && shapes[highlight]) {
+  if (hasBlurredBackground(scene)) drawBlurredBackground(ctx, size, imageFor(scene.order[0]!));
+  for (const i of drawOrder(scene.layout.cells)) {
+    drawCell(ctx, shapes[i]!, imageFor(scene.order[i]!), scene.crops[i]!, radius, border, scene.style.borderColor);
+  }
+
+  const line = Math.max(3, size.width / 180);
+  const stroke = (cell: number | undefined, dash: number[]) => {
+    if (cell === undefined || !shapes[cell]) return;
     ctx.save();
-    ctx.lineWidth = Math.max(3, size.width / 180);
+    ctx.lineWidth = line;
+    ctx.setLineDash(dash);
     ctx.strokeStyle = HIGHLIGHT_COLOR;
-    ctx.stroke(outlinePath(shapes[highlight].outline, radius));
+    ctx.stroke(outlinePath(shapes[cell].outline, radius));
+    ctx.restore();
+  };
+  stroke(marks.selected, []);
+  if (marks.target !== marks.selected) stroke(marks.target, [line * 4, line * 3]);
+
+  if (marks.numbers) {
+    const r = size.width / 28;
+    ctx.save();
+    ctx.font = `600 ${r * 1.1}px system-ui, sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    shapes.forEach(({ frame }, i) => {
+      ctx.fillStyle = HIGHLIGHT_COLOR;
+      ctx.beginPath();
+      ctx.arc(frame.cx, frame.cy, r, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.fillStyle = "#fff";
+      ctx.fillText(String(i + 1), frame.cx, frame.cy);
+    });
     ctx.restore();
   }
 }

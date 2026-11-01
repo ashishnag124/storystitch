@@ -1,4 +1,4 @@
-import { rankLayouts, smartCrop, type CellTarget, type Crop, type Detection, type SafeInsets } from "@storystitch/layout-engine";
+import { clampCrop, rankLayouts, smartCrop, type CellTarget, type Crop, type Detection, type SafeInsets } from "@storystitch/layout-engine";
 import {
   SAFE_ZONE,
   STORY_CANVAS,
@@ -14,15 +14,36 @@ import {
   type Size,
 } from "@storystitch/shared";
 
+/** A solid color, or a heavily blurred copy of the photo in the first cell. */
+export type Background = { kind: "color"; color: string } | { kind: "blur" };
+
 /** Lengths are pixels on the 1080-wide export and scale with the canvas. */
 export interface Style {
-  background: string;
+  /** Null until the user picks one: each layout then uses its own (see `backgroundOf`). */
+  background: Background | null;
   gap: number;
   margin: number;
   radius: number;
+  /** Null until the user picks one: each layout then uses its own (see `borderOf`). */
+  border: number | null;
+  borderColor: string;
 }
 
-export const DEFAULT_STYLE: Style = { background: "#f4efe6", gap: 14, margin: 28, radius: 20 };
+export const DEFAULT_BACKGROUND = { kind: "color", color: "#f4efe6" } as const satisfies Background;
+/** Border scattered prints get by default, so overlapping photos read as separate prints. */
+export const PRINT_BORDER = 14;
+
+export const DEFAULT_STYLE: Style = { background: null, gap: 14, margin: 28, radius: 20, border: null, borderColor: "#ffffff" };
+
+/** The background a scene shows: the user's pick, else blur for "framed on blur" layouts, else the default color. */
+export function backgroundOf(layout: Layout, style: Style): Background {
+  return style.background ?? (layout.blurBackground ? { kind: "blur" } : DEFAULT_BACKGROUND);
+}
+
+/** The border width a scene shows (export pixels): the user's pick, else PRINT_BORDER on scattered prints. */
+export function borderOf(layout: Layout, style: Style): number {
+  return style.border ?? (layout.family === "scattered" ? PRINT_BORDER : 0);
+}
 
 /** What the user sees: a layout, which photo is in each cell (`order[cell]`) and each cell's crop. */
 export interface Scene {
@@ -120,6 +141,12 @@ export function swapCells(scene: Scene, a: number, b: number, photos: CropSource
   return { ...scene, order, crops };
 }
 
+/** Restyles a scene, keeping each crop (including manual ones) but fitting it to the resized cells. */
+export function withStyle(scene: Scene, style: Style, photos: CropSource[]): Scene {
+  const shapes = cellShapes(scene.layout, style, STORY_CANVAS);
+  return { ...scene, style, crops: scene.crops.map((c, i) => clampCrop(photos[scene.order[i]!]!, shapes[i]!.frame, c)) };
+}
+
 export function withCrop(scene: Scene, cell: number, crop: Crop): Scene {
   const crops = [...scene.crops];
   crops[cell] = crop;
@@ -141,6 +168,7 @@ export function styleScale(layout: Layout, style: Style, size: Size) {
     gap: layout.bleed ? 0 : style.gap * k,
     margin: layout.bleed ? 0 : style.margin * k,
     radius: layout.bleed ? 0 : style.radius * k,
+    border: layout.bleed ? 0 : borderOf(layout, style) * k,
   };
 }
 

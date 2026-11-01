@@ -1,7 +1,22 @@
 import { CENTER_CROP, type Detection } from "@storystitch/layout-engine";
 import { STORY_CANVAS, layouts, layoutsFor } from "@storystitch/shared";
 import { describe, expect, it } from "vitest";
-import { DEFAULT_STYLE, cellShapes, newScene, rankedScenes, safeInsets, swapCells, withCrop, type CropSource } from "./scene";
+import {
+  DEFAULT_BACKGROUND,
+  DEFAULT_STYLE,
+  PRINT_BORDER,
+  backgroundOf,
+  borderOf,
+  cellShapes,
+  newScene,
+  rankedScenes,
+  safeInsets,
+  styleScale,
+  swapCells,
+  withCrop,
+  withStyle,
+  type CropSource,
+} from "./scene";
 
 const byId = (id: string) => layouts.find((l) => l.id === id)!;
 const style = { ...DEFAULT_STYLE, gap: 20, margin: 40 };
@@ -73,5 +88,38 @@ describe("rankedScenes", () => {
     const portrait = [{ width: 1080, height: 1920, detections: [] }];
     expect(rankedScenes(portrait)[0]!.layout.id).toBe("single-bleed");
     expect(rankedScenes(plain(1))[0]!.layout.id).toBe("single-framed");
+  });
+});
+
+describe("style", () => {
+  it("defaults to each layout's own background and border", () => {
+    expect(backgroundOf(byId("single-framed"), DEFAULT_STYLE)).toEqual({ kind: "blur" });
+    expect(backgroundOf(byId("two-stack"), DEFAULT_STYLE)).toEqual(DEFAULT_BACKGROUND);
+    expect(borderOf(byId("three-scattered"), DEFAULT_STYLE)).toBe(PRINT_BORDER);
+    expect(borderOf(byId("three-stack"), DEFAULT_STYLE)).toBe(0);
+  });
+
+  it("uses the user's picks over the layout's defaults", () => {
+    const picked = { ...DEFAULT_STYLE, background: { kind: "color", color: "#111111" } as const, border: 0 };
+    expect(backgroundOf(byId("single-framed"), picked)).toEqual({ kind: "color", color: "#111111" });
+    expect(borderOf(byId("three-scattered"), picked)).toBe(0);
+  });
+
+  it("has no spacing, corners or border on bleed layouts", () => {
+    expect(styleScale(byId("single-bleed"), { ...DEFAULT_STYLE, border: 20 }, STORY_CANVAS)).toEqual({
+      gap: 0,
+      margin: 0,
+      radius: 0,
+      border: 0,
+    });
+  });
+
+  it("keeps manual crops when restyling, fitted to the resized cells", () => {
+    const photos = plain(2);
+    const scene = withCrop(newScene(byId("two-stack"), photos), 0, { cx: 0.3, cy: 0.5, zoom: 2 });
+    const restyled = withStyle(scene, { ...DEFAULT_STYLE, margin: 90 }, photos);
+    expect(restyled.style.margin).toBe(90);
+    expect(restyled.crops[0]).toEqual({ cx: 0.3, cy: 0.5, zoom: 2 });
+    expect(restyled.order).toEqual(scene.order);
   });
 });
