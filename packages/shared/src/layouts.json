@@ -1,10 +1,620 @@
 [
   {
+    "id": "single-bleed",
+    "name": "Full bleed",
+    "family": "single",
+    "bleed": true,
+    "cells": [
+      {
+        "shape": "rect",
+        "x": 0,
+        "y": 0,
+        "w": 1,
+        "h": 1
+      }
+    ]
+  },
+  {
+    "id": "single-framed",
+    "name": "Framed on blur",
+    "family": "single",
+    "blurBackground": true,
+    "cells": [
+      {
+        "shape": "rect",
+        "x": 0.1,
+        "y": 0.2,
+        "w": 0.8,
+        "h": 0.6
+      }
+    ]
+  },
+  {
     "id": "two-stack",
     "name": "Two stacked",
+    "family": "grid",
     "cells": [
-      { "x": 0, "y": 0, "w": 1, "h": 0.5 },
-      { "x": 0, "y": 0.5, "w": 1, "h": 0.5 }
+      {
+        "shape": "rect",
+        "x": 0,
+        "y": 0,
+        "w": 1,
+        "h": 0.5
+      },
+      {
+        "shape": "rect",
+        "x": 0,
+        "y": 0.5,
+        "w": 1,
+        "h": 0.5
+      }
+    ]
+  },
+  {
+    "id": "two-feature",
+    "name": "Big and small",
+    "family": "feature",
+    "cells": [
+      {
+        "shape": "rect",
+        "x": 0,
+        "y": 0,
+        "w": 1,
+        "h": 0.6667
+      },
+      {
+        "shape": "rect",
+        "x": 0,
+        "y": 0.6667,
+        "w": 1,
+        "h": 0.3333
+      }
+    ]
+  },
+  {
+    "id": "three-stack",
+    "name": "Three stacked",
+    "family": "grid",
+    "cells": [
+      {
+        "shape": "rect",
+        "x": 0,
+        "y": 0,
+        "w": 1,
+        "h": 0.3333
+      },
+      {
+        "shape": "rect",
+        "x": 0,
+        "y": 0.3333,
+        "w": 1,
+        "h": 0.3334
+      },
+      {
+        "shape": "rect",
+        "x": 0,
+        "y": 0.6667,
+        "w": 1,
+        "h": 0.3333
+      }
+    ]
+  },
+  {
+    "id": "three-feature",
+    "name": "One big, two below",
+    "family": "feature",
+    "cells": [
+      {
+        "shape": "rect",
+        "x": 0,
+        "y": 0,
+        "w": 1,
+        "h": 0.6
+      },
+      {
+        "shape": "rect",
+        "x": 0,
+        "y": 0.6,
+        "w": 0.5,
+        "h": 0.4
+      },
+      {
+        "shape": "rect",
+        "x": 0.5,
+        "y": 0.6,
+        "w": 0.5,
+        "h": 0.4
+      }
+    ]
+  },
+  {
+    "id": "four-grid",
+    "name": "Grid of four",
+    "family": "grid",
+    "cells": [
+      {
+        "shape": "rect",
+        "x": 0,
+        "y": 0,
+        "w": 0.5,
+        "h": 0.5
+      },
+      {
+        "shape": "rect",
+        "x": 0.5,
+        "y": 0,
+        "w": 0.5,
+        "h": 0.5
+      },
+      {
+        "shape": "rect",
+        "x": 0,
+        "y": 0.5,
+        "w": 0.5,
+        "h": 0.5
+      },
+      {
+        "shape": "rect",
+        "x": 0.5,
+        "y": 0.5,
+        "w": 0.5,
+        "h": 0.5
+      }
+    ]
+  },
+  {
+    "id": "four-feature",
+    "name": "One big, three below",
+    "family": "feature",
+    "cells": [
+      {
+        "shape": "rect",
+        "x": 0,
+        "y": 0,
+        "w": 1,
+        "h": 0.6
+      },
+      {
+        "shape": "rect",
+        "x": 0,
+        "y": 0.6,
+        "w": 0.3333,
+        "h": 0.4
+      },
+      {
+        "shape": "rect",
+        "x": 0.3333,
+        "y": 0.6,
+        "w": 0.3334,
+        "h": 0.4
+      },
+      {
+        "shape": "rect",
+        "x": 0.6667,
+        "y": 0.6,
+        "w": 0.3333,
+        "h": 0.4
+      }
+    ]
+  },
+  {
+    "id": "five-rows",
+    "name": "Rows of two and three",
+    "family": "grid",
+    "cells": [
+      {
+        "shape": "rect",
+        "x": 0,
+        "y": 0,
+        "w": 0.5,
+        "h": 0.5
+      },
+      {
+        "shape": "rect",
+        "x": 0.5,
+        "y": 0,
+        "w": 0.5,
+        "h": 0.5
+      },
+      {
+        "shape": "rect",
+        "x": 0,
+        "y": 0.5,
+        "w": 0.3333,
+        "h": 0.5
+      },
+      {
+        "shape": "rect",
+        "x": 0.3333,
+        "y": 0.5,
+        "w": 0.3334,
+        "h": 0.5
+      },
+      {
+        "shape": "rect",
+        "x": 0.6667,
+        "y": 0.5,
+        "w": 0.3333,
+        "h": 0.5
+      }
+    ]
+  },
+  {
+    "id": "five-feature",
+    "name": "One big, four below",
+    "family": "feature",
+    "cells": [
+      {
+        "shape": "rect",
+        "x": 0,
+        "y": 0,
+        "w": 1,
+        "h": 0.5
+      },
+      {
+        "shape": "rect",
+        "x": 0,
+        "y": 0.5,
+        "w": 0.5,
+        "h": 0.22
+      },
+      {
+        "shape": "rect",
+        "x": 0.5,
+        "y": 0.5,
+        "w": 0.5,
+        "h": 0.22
+      },
+      {
+        "shape": "rect",
+        "x": 0,
+        "y": 0.72,
+        "w": 0.5,
+        "h": 0.28
+      },
+      {
+        "shape": "rect",
+        "x": 0.5,
+        "y": 0.72,
+        "w": 0.5,
+        "h": 0.28
+      }
+    ]
+  },
+  {
+    "id": "six-grid",
+    "name": "Grid of six",
+    "family": "grid",
+    "cells": [
+      {
+        "shape": "rect",
+        "x": 0,
+        "y": 0,
+        "w": 0.5,
+        "h": 0.3333
+      },
+      {
+        "shape": "rect",
+        "x": 0.5,
+        "y": 0,
+        "w": 0.5,
+        "h": 0.3333
+      },
+      {
+        "shape": "rect",
+        "x": 0,
+        "y": 0.3333,
+        "w": 0.5,
+        "h": 0.3334
+      },
+      {
+        "shape": "rect",
+        "x": 0.5,
+        "y": 0.3333,
+        "w": 0.5,
+        "h": 0.3334
+      },
+      {
+        "shape": "rect",
+        "x": 0,
+        "y": 0.6667,
+        "w": 0.5,
+        "h": 0.3333
+      },
+      {
+        "shape": "rect",
+        "x": 0.5,
+        "y": 0.6667,
+        "w": 0.5,
+        "h": 0.3333
+      }
+    ]
+  },
+  {
+    "id": "six-feature",
+    "name": "One big, five below",
+    "family": "feature",
+    "cells": [
+      {
+        "shape": "rect",
+        "x": 0,
+        "y": 0,
+        "w": 1,
+        "h": 0.46
+      },
+      {
+        "shape": "rect",
+        "x": 0,
+        "y": 0.46,
+        "w": 0.3333,
+        "h": 0.24
+      },
+      {
+        "shape": "rect",
+        "x": 0.3333,
+        "y": 0.46,
+        "w": 0.3334,
+        "h": 0.24
+      },
+      {
+        "shape": "rect",
+        "x": 0.6667,
+        "y": 0.46,
+        "w": 0.3333,
+        "h": 0.24
+      },
+      {
+        "shape": "rect",
+        "x": 0,
+        "y": 0.7,
+        "w": 0.5,
+        "h": 0.3
+      },
+      {
+        "shape": "rect",
+        "x": 0.5,
+        "y": 0.7,
+        "w": 0.5,
+        "h": 0.3
+      }
+    ]
+  },
+  {
+    "id": "seven-rows",
+    "name": "Rows of two, three, two",
+    "family": "grid",
+    "cells": [
+      {
+        "shape": "rect",
+        "x": 0,
+        "y": 0,
+        "w": 0.5,
+        "h": 0.3333
+      },
+      {
+        "shape": "rect",
+        "x": 0.5,
+        "y": 0,
+        "w": 0.5,
+        "h": 0.3333
+      },
+      {
+        "shape": "rect",
+        "x": 0,
+        "y": 0.3333,
+        "w": 0.3333,
+        "h": 0.3334
+      },
+      {
+        "shape": "rect",
+        "x": 0.3333,
+        "y": 0.3333,
+        "w": 0.3334,
+        "h": 0.3334
+      },
+      {
+        "shape": "rect",
+        "x": 0.6667,
+        "y": 0.3333,
+        "w": 0.3333,
+        "h": 0.3334
+      },
+      {
+        "shape": "rect",
+        "x": 0,
+        "y": 0.6667,
+        "w": 0.5,
+        "h": 0.3333
+      },
+      {
+        "shape": "rect",
+        "x": 0.5,
+        "y": 0.6667,
+        "w": 0.5,
+        "h": 0.3333
+      }
+    ]
+  },
+  {
+    "id": "seven-feature",
+    "name": "One big, six below",
+    "family": "feature",
+    "cells": [
+      {
+        "shape": "rect",
+        "x": 0,
+        "y": 0,
+        "w": 1,
+        "h": 0.46
+      },
+      {
+        "shape": "rect",
+        "x": 0,
+        "y": 0.46,
+        "w": 0.3333,
+        "h": 0.24
+      },
+      {
+        "shape": "rect",
+        "x": 0.3333,
+        "y": 0.46,
+        "w": 0.3334,
+        "h": 0.24
+      },
+      {
+        "shape": "rect",
+        "x": 0.6667,
+        "y": 0.46,
+        "w": 0.3333,
+        "h": 0.24
+      },
+      {
+        "shape": "rect",
+        "x": 0,
+        "y": 0.7,
+        "w": 0.3333,
+        "h": 0.3
+      },
+      {
+        "shape": "rect",
+        "x": 0.3333,
+        "y": 0.7,
+        "w": 0.3334,
+        "h": 0.3
+      },
+      {
+        "shape": "rect",
+        "x": 0.6667,
+        "y": 0.7,
+        "w": 0.3333,
+        "h": 0.3
+      }
+    ]
+  },
+  {
+    "id": "eight-grid",
+    "name": "Grid of eight",
+    "family": "grid",
+    "cells": [
+      {
+        "shape": "rect",
+        "x": 0,
+        "y": 0,
+        "w": 0.5,
+        "h": 0.24
+      },
+      {
+        "shape": "rect",
+        "x": 0.5,
+        "y": 0,
+        "w": 0.5,
+        "h": 0.24
+      },
+      {
+        "shape": "rect",
+        "x": 0,
+        "y": 0.24,
+        "w": 0.5,
+        "h": 0.23
+      },
+      {
+        "shape": "rect",
+        "x": 0.5,
+        "y": 0.24,
+        "w": 0.5,
+        "h": 0.23
+      },
+      {
+        "shape": "rect",
+        "x": 0,
+        "y": 0.47,
+        "w": 0.5,
+        "h": 0.23
+      },
+      {
+        "shape": "rect",
+        "x": 0.5,
+        "y": 0.47,
+        "w": 0.5,
+        "h": 0.23
+      },
+      {
+        "shape": "rect",
+        "x": 0,
+        "y": 0.7,
+        "w": 0.5,
+        "h": 0.3
+      },
+      {
+        "shape": "rect",
+        "x": 0.5,
+        "y": 0.7,
+        "w": 0.5,
+        "h": 0.3
+      }
+    ]
+  },
+  {
+    "id": "eight-feature",
+    "name": "One big, seven below",
+    "family": "feature",
+    "cells": [
+      {
+        "shape": "rect",
+        "x": 0,
+        "y": 0,
+        "w": 1,
+        "h": 0.4
+      },
+      {
+        "shape": "rect",
+        "x": 0,
+        "y": 0.4,
+        "w": 0.25,
+        "h": 0.3
+      },
+      {
+        "shape": "rect",
+        "x": 0.25,
+        "y": 0.4,
+        "w": 0.25,
+        "h": 0.3
+      },
+      {
+        "shape": "rect",
+        "x": 0.5,
+        "y": 0.4,
+        "w": 0.25,
+        "h": 0.3
+      },
+      {
+        "shape": "rect",
+        "x": 0.75,
+        "y": 0.4,
+        "w": 0.25,
+        "h": 0.3
+      },
+      {
+        "shape": "rect",
+        "x": 0,
+        "y": 0.7,
+        "w": 0.3333,
+        "h": 0.3
+      },
+      {
+        "shape": "rect",
+        "x": 0.3333,
+        "y": 0.7,
+        "w": 0.3334,
+        "h": 0.3
+      },
+      {
+        "shape": "rect",
+        "x": 0.6667,
+        "y": 0.7,
+        "w": 0.3333,
+        "h": 0.3
+      }
     ]
   }
 ]

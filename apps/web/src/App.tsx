@@ -1,51 +1,71 @@
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
-import { layouts } from "@storystitch/shared";
-import { renderLayout } from "./render";
+import { useState, type ChangeEvent } from "react";
+import { Editor } from "./Editor";
+import { ACCEPT, MAX_PHOTOS, UnsupportedPhotoError, loadPhoto, type Photo } from "./photos";
 
-const layout = layouts.find((l) => l.cells.length === 2)!;
+const PRIVACY = "Your photos stay on this device. Nothing is uploaded.";
 
 function App() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [images, setImages] = useState<ImageBitmap[]>([]);
-  const ready = images.length === layout.cells.length;
-
-  useEffect(() => {
-    if (ready && canvasRef.current) renderLayout(canvasRef.current, layout, images);
-  }, [ready, images]);
+  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const [notices, setNotices] = useState<string[]>([]);
 
   async function onPick(e: ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? []).slice(0, layout.cells.length);
-    // "from-image" applies the photo's EXIF orientation.
-    setImages(await Promise.all(files.map((f) => createImageBitmap(f, { imageOrientation: "from-image" }))));
+    const picked = Array.from(e.target.files ?? []);
+    e.target.value = ""; // so picking the same files again still fires change
+    if (!picked.length) return;
+    const notes: string[] = [];
+    if (picked.length > MAX_PHOTOS) notes.push(`StoryStitch uses up to ${MAX_PHOTOS} photos, so it took the first ${MAX_PHOTOS}.`);
+    const files = picked.slice(0, MAX_PHOTOS);
+    const loaded: Photo[] = [];
+    setProgress({ done: 0, total: files.length });
+    for (const [i, file] of files.entries()) {
+      try {
+        loaded.push(await loadPhoto(file));
+      } catch (err) {
+        if (!(err instanceof UnsupportedPhotoError)) console.error(err);
+        notes.push(`Couldn't open ${file.name}. Try a JPEG, PNG, WebP or HEIC photo.`);
+      }
+      setProgress({ done: i + 1, total: files.length });
+    }
+    setProgress(null);
+    setNotices(notes);
+    setPhotos(loaded);
   }
 
-  function onExport() {
-    canvasRef.current?.toBlob(
-      (blob) => {
-        if (!blob) return;
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "storystitch.jpg";
-        a.click();
-        setTimeout(() => URL.revokeObjectURL(url));
-      },
-      "image/jpeg",
-      0.9,
-    );
+  function startOver() {
+    photos.forEach((p) => p.preview.close());
+    setPhotos([]);
+    setNotices([]);
   }
+
+  if (photos.length) return <Editor photos={photos} notices={notices} privacy={PRIVACY} onStartOver={startOver} />;
 
   return (
-    <main>
+    <main className="pick">
       <h1>StoryStitch</h1>
-      <p>Your photos stay on this device. Nothing is uploaded.</p>
-      <label>
-        Choose 2 photos <input type="file" accept="image/*" multiple onChange={onPick} />
+      <p className="lede">Turn 1–8 photos into an Instagram Story collage.</p>
+      <label className={`button primary big${progress ? " disabled" : ""}`}>
+        Choose photos
+        <input
+          className="visually-hidden"
+          type="file"
+          accept={ACCEPT}
+          multiple
+          disabled={!!progress}
+          onChange={onPick}
+        />
       </label>
-      <canvas ref={canvasRef} hidden={!ready} aria-label="Story preview" />
-      <button type="button" disabled={!ready} onClick={onExport}>
-        Export JPEG
-      </button>
+      {progress && (
+        <p role="status">
+          Preparing photos {progress.done} of {progress.total}…
+        </p>
+      )}
+      {notices.map((n) => (
+        <p key={n} className="notice" role="alert">
+          {n}
+        </p>
+      ))}
+      <p className="privacy">{PRIVACY}</p>
     </main>
   );
 }

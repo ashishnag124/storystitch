@@ -1,42 +1,101 @@
-import { STORY_CANVAS, type Layout } from "@storystitch/shared";
+import { CENTER_CROP, sourceRect, type Crop } from "@storystitch/layout-engine";
+import { drawOrder, type Size } from "@storystitch/shared";
+import type { Photo } from "./photos";
+import { cellShapes, styleScale, type CellShape, type Outline, type Scene } from "./scene";
 
-export interface Size {
+/** Anything drawable with its pixel size: a preview copy or a decoded original. */
+export interface Drawable {
+  image: CanvasImageSource;
   width: number;
   height: number;
 }
 
-export interface Rect extends Size {
-  x: number;
-  y: number;
-}
+const HIGHLIGHT_COLOR = "#2563eb";
 
-/** Largest centered region of `source` with the aspect ratio of `target` (like CSS object-fit: cover). */
-export function coverCrop(source: Size, target: Size): Rect {
-  const scale = Math.max(target.width / source.width, target.height / source.height);
-  const width = target.width / scale;
-  const height = target.height / scale;
-  return { x: (source.width - width) / 2, y: (source.height - height) / 2, width, height };
-}
+/** A photo's downscaled working copy, for previews. */
+export const previewOf = (p: Photo): Drawable => ({ image: p.preview, width: p.preview.width, height: p.preview.height });
 
-/** Draws images[i] into layout.cells[i], center-cropped, on a 1080×1920 canvas. */
-export function renderLayout(canvas: HTMLCanvasElement, layout: Layout, images: ImageBitmap[]): void {
-  const { width: W, height: H } = STORY_CANVAS;
-  canvas.width = W;
-  canvas.height = H;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("2D canvas is not supported");
-  ctx.fillStyle = "#fff";
-  ctx.fillRect(0, 0, W, H);
-  layout.cells.forEach((cell, i) => {
-    const image = images[i];
-    if (!image) return;
-    const dest = {
-      x: Math.round(cell.x * W),
-      y: Math.round(cell.y * H),
-      width: Math.round(cell.w * W),
-      height: Math.round(cell.h * H),
-    };
-    const src = coverCrop(image, dest);
-    ctx.drawImage(image, src.x, src.y, src.width, src.height, dest.x, dest.y, dest.width, dest.height);
+function outlinePath(outline: Outline, radius: number): Path2D {
+  const path = new Path2D();
+  if (outline.kind === "circle") {
+    path.arc(outline.cx, outline.cy, outline.r, 0, 2 * Math.PI);
+    return path;
+  }
+  const pts = outline.points;
+  const n = pts.length;
+  const last = pts[n - 1]!;
+  const first = pts[0]!;
+  path.moveTo((last.x + first.x) / 2, (last.y + first.y) / 2);
+  pts.forEach((cur, i) => {
+    const prev = pts[(i + n - 1) % n]!;
+    const next = pts[(i + 1) % n]!;
+    const r = Math.min(radius, Math.hypot(cur.x - prev.x, cur.y - prev.y) / 2, Math.hypot(next.x - cur.x, next.y - cur.y) / 2);
+    path.arcTo(cur.x, cur.y, next.x, next.y, r);
   });
+  path.closePath();
+  return path;
+}
+
+export function drawCell(ctx: CanvasRenderingContext2D, shape: CellShape, img: Drawable, crop: Crop, radius: number) {
+  const { frame } = shape;
+  const src = sourceRect(img, frame, crop);
+  ctx.save();
+  ctx.clip(outlinePath(shape.outline, radius));
+  ctx.translate(frame.cx, frame.cy);
+  ctx.rotate((frame.rotate * Math.PI) / 180);
+  ctx.drawImage(img.image, src.x, src.y, src.width, src.height, -frame.width / 2, -frame.height / 2, frame.width, frame.height);
+  ctx.restore();
+}
+
+/**
+ * Fills the canvas with a heavily blurred copy of the photo. Shrinking to a few pixels and
+ * scaling back up blurs the same in every browser (Safari's canvas `filter` support is unreliable).
+ */
+export function drawBlurredBackground(ctx: CanvasRenderingContext2D, size: Size, img: Drawable) {
+  const src = sourceRect(img, size, CENTER_CROP);
+  let from: CanvasImageSource = img.image;
+  let rect = [src.x, src.y, src.width, src.height] as const;
+  for (const width of [18, 72]) {
+    const step = document.createElement("canvas");
+    step.width = width;
+    step.height = Math.round((width * size.height) / size.width);
+    const sctx = step.getContext("2d")!;
+    sctx.imageSmoothingQuality = "high";
+    sctx.drawImage(from, ...rect, 0, 0, step.width, step.height);
+    from = step;
+    rect = [0, 0, step.width, step.height];
+  }
+  ctx.save();
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(from, ...rect, 0, 0, size.width, size.height);
+  ctx.fillStyle = "rgb(0 0 0 / 0.12)";
+  ctx.fillRect(0, 0, size.width, size.height);
+  ctx.restore();
+}
+
+export function fillBackground(ctx: CanvasRenderingContext2D, size: Size, scene: Scene) {
+  ctx.fillStyle = scene.style.background;
+  ctx.fillRect(0, 0, size.width, size.height);
+}
+
+/** Draws a whole scene synchronously from already-decoded images (the preview copies). */
+export function drawScene(
+  ctx: CanvasRenderingContext2D,
+  size: Size,
+  scene: Scene,
+  imageFor: (photo: number) => Drawable,
+  highlight?: number,
+) {
+  const shapes = cellShapes(scene.layout, scene.style, size);
+  const { radius } = styleScale(scene.layout, scene.style, size);
+  fillBackground(ctx, size, scene);
+  if (scene.layout.blurBackground) drawBlurredBackground(ctx, size, imageFor(scene.order[0]!));
+  for (const i of drawOrder(scene.layout.cells)) drawCell(ctx, shapes[i]!, imageFor(scene.order[i]!), scene.crops[i]!, radius);
+  if (highlight !== undefined && shapes[highlight]) {
+    ctx.save();
+    ctx.lineWidth = Math.max(3, size.width / 180);
+    ctx.strokeStyle = HIGHLIGHT_COLOR;
+    ctx.stroke(outlinePath(shapes[highlight].outline, radius));
+    ctx.restore();
+  }
 }

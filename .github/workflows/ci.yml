@@ -22,6 +22,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
       - run: pnpm build
+      - run: pnpm --filter @storystitch/web exec playwright install --with-deps chromium webkit
+      - run: pnpm e2e
 
   deploy-web-staging:
     needs: check
