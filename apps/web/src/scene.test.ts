@@ -1,7 +1,7 @@
 import { CENTER_CROP, type Detection } from "@storystitch/layout-engine";
-import { STORY_CANVAS, layouts } from "@storystitch/shared";
+import { STORY_CANVAS, layouts, layoutsFor } from "@storystitch/shared";
 import { describe, expect, it } from "vitest";
-import { DEFAULT_STYLE, cellShapes, newScene, safeInsets, swapCells, withCrop, withLayout, type CropSource } from "./scene";
+import { DEFAULT_STYLE, cellShapes, newScene, rankedScenes, safeInsets, swapCells, withCrop, type CropSource } from "./scene";
 
 const byId = (id: string) => layouts.find((l) => l.id === id)!;
 const style = { ...DEFAULT_STYLE, gap: 20, margin: 40 };
@@ -60,9 +60,18 @@ describe("scene edits", () => {
     expect(scene.crops[3]).toEqual(CENTER_CROP);
   });
 
-  it("keeps the photo order when switching layout", () => {
-    const scene = withLayout(swapCells(newScene(byId("four-grid"), photos), 0, 1, photos), byId("four-feature"), photos);
-    expect(scene.layout.id).toBe("four-feature");
-    expect(scene.order).toEqual([1, 0, 2, 3]);
+});
+
+describe("rankedScenes", () => {
+  it("offers every layout for the photo count, each with every photo placed once", () => {
+    const scenes = rankedScenes(plain(5));
+    expect(scenes.map((s) => s.layout.id).sort()).toEqual(layoutsFor(5).map((l) => l.id).sort());
+    for (const s of scenes) expect([...s.order].sort()).toEqual([0, 1, 2, 3, 4]);
+  });
+
+  it("puts a portrait photo full bleed and frames a landscape one", () => {
+    const portrait = [{ width: 1080, height: 1920, detections: [] }];
+    expect(rankedScenes(portrait)[0]!.layout.id).toBe("single-bleed");
+    expect(rankedScenes(plain(1))[0]!.layout.id).toBe("single-framed");
   });
 });
