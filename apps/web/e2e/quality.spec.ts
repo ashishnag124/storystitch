@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
-import { exportImage, fixture, makePhotos, openApp } from "./helpers.js";
+import { exportImage, fixture, makePhotos, openApp, libraryInput } from "./helpers.js";
 
 test.beforeEach(({ page }) => openApp(page));
 
@@ -44,7 +44,7 @@ test("AC-PERF-01 AC-PERF-02 AC-PERF-03 analysis, layout switching and export mee
   test.skip(browserName !== "chromium", "Timed on Chromium; check real-phone timings by hand (AC-PERF-04)");
   test.setTimeout(180_000);
   const photos = await phonePhotos(page);
-  const pick = page.getByLabel(/choose photos/i);
+  const pick = libraryInput(page);
 
   // First pick loads the models; the brief's analysis target applies once they're loaded.
   await pick.setInputFiles(photos);
@@ -110,7 +110,7 @@ test("AC-PRIV-01 nothing leaves the device: every request is a same-origin read"
       buffer: await readFile(fixture(name)),
     })),
   );
-  await page.getByLabel(/choose photos/i).setInputFiles([...files, ...(await makePhotos(page, 2))]);
+  await libraryInput(page).setInputFiles([...files, ...(await makePhotos(page, 2))]);
   await expect(page.getByRole("application")).toBeVisible({ timeout: 45_000 });
   await exportImage(page);
   expect(offending).toEqual([]);
@@ -136,7 +136,7 @@ function smallTargets(page: Page) {
 
 test("AC-A11Y-03 every control is at least 44×44 CSS pixels", async ({ page }) => {
   expect(await smallTargets(page)).toEqual([]);
-  await page.getByLabel(/choose photos/i).setInputFiles(await makePhotos(page, 3));
+  await libraryInput(page).setInputFiles(await makePhotos(page, 3));
   await page.getByRole("radio", { name: "Three stacked" }).click();
   // Select a photo so its zoom controls are on screen too.
   const preview = page.getByRole("application");
@@ -155,7 +155,7 @@ test("AC-MOBILE-01 nothing scrolls sideways at phone width", async ({ page }) =>
     await page.setViewportSize({ width, height: 812 });
     await page.goto("/");
     expect(await overflow(), `pick screen at ${width}px`).toBeLessThanOrEqual(0);
-    await page.getByLabel(/choose photos/i).setInputFiles(await makePhotos(page, 8));
+    await libraryInput(page).setInputFiles(await makePhotos(page, 8));
     await page.getByText("Style", { exact: true }).click();
     expect(await overflow(), `editor at ${width}px`).toBeLessThanOrEqual(0);
   }

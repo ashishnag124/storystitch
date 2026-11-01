@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { ACCOUNTS_PORT, API_PORT, PORT } from "../playwright.config.js";
-import { exportImage, makePhotos, openApp } from "./helpers.js";
+import { exportImage, libraryInput, makePhotos, openApp } from "./helpers.js";
 
 const API = `http://localhost:${API_PORT}`;
 const PASSWORD = "correct horse battery";
@@ -127,7 +127,7 @@ test("AC-AUTH-08 delete the account with its password", async ({ page }) => {
 test("AC-AUTH-01 making and exporting a collage never asks you to sign in", async ({ page }) => {
   const authCalls: string[] = [];
   page.on("request", (r) => r.url().startsWith(API) && authCalls.push(r.url()));
-  await page.getByLabel(/choose photos/i).setInputFiles(await makePhotos(page, 3));
+  await libraryInput(page).setInputFiles(await makePhotos(page, 3));
   await exportImage(page);
   await expect(page.getByRole("link", { name: "Account" })).toBeVisible();
   await expect(page.getByText(/sign in/i)).toHaveCount(0);
@@ -150,12 +150,12 @@ test.describe("accounts switched off (production today)", () => {
     const apiCalls: string[] = [];
     page.on("request", (r) => r.url().startsWith(API) && apiCalls.push(r.url()));
     await expect(page.getByRole("link", { name: "Account" })).toHaveCount(0);
-    await page.getByLabel(/choose photos/i).setInputFiles(await makePhotos(page, 3));
+    await libraryInput(page).setInputFiles(await makePhotos(page, 3));
     await exportImage(page);
     await expect(page.getByRole("link", { name: "Account" })).toHaveCount(0);
 
     await page.goto("/account");
-    await expect(page.getByLabel(/choose photos/i)).toBeAttached(); // just the app, no account screen
+    await expect(libraryInput(page)).toBeAttached(); // just the app, no account screen
     await expect(page.getByRole("heading", { name: "Account" })).toHaveCount(0);
     expect(apiCalls).toEqual([]);
   });

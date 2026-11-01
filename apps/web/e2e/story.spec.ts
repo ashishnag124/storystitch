@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { exportImage, fixture, jpegSize, makePhotos, openApp, workerHasWebGL2 } from "./helpers.js";
+import { exportImage, fixture, jpegSize, makePhotos, openApp, workerHasWebGL2, libraryInput } from "./helpers.js";
 
 test.beforeEach(({ page }) => openApp(page));
 
@@ -8,7 +8,7 @@ for (const count of [1, 4, 8]) {
   test(`AC-PICK-02 AC-EXPORT-01 AC-EXPORT-06 AC-MOBILE-02 ${count} photo${count > 1 ? "s" : ""} → layout options → 1080×1920 JPEG`, async ({
     page,
   }) => {
-    await page.getByLabel(/choose photos/i).setInputFiles(await makePhotos(page, count));
+    await libraryInput(page).setInputFiles(await makePhotos(page, count));
     const options = page.getByRole("radiogroup", { name: "Layouts" }).getByRole("radio");
     await expect(options.first()).toBeVisible();
     expect(await options.count()).toBeGreaterThanOrEqual(2);
@@ -22,7 +22,7 @@ for (const count of [1, 4, 8]) {
 }
 
 test("AC-PICK-05 opens a HEIC photo", async ({ page }) => {
-  await page.getByLabel(/choose photos/i).setInputFiles(fixture("gradient.heic"));
+  await libraryInput(page).setInputFiles(fixture("gradient.heic"));
   await expect(page.getByRole("radiogroup", { name: "Layouts" })).toBeVisible({
     timeout: 30_000,
   });
@@ -38,7 +38,7 @@ test("AC-PICK-06 shows progress while photos are analyzed", async ({ page }) => 
     await new Promise((r) => setTimeout(r, 1500));
     await route.continue();
   });
-  await page.getByLabel(/choose photos/i).setInputFiles(await makePhotos(page, 3));
+  await libraryInput(page).setInputFiles(await makePhotos(page, 3));
   await expect(page.getByRole("status")).toHaveText(/Finding subjects \d of 3…/);
   await expect(page.getByRole("application")).toBeVisible({ timeout: 30_000 });
 });
@@ -52,7 +52,7 @@ test("AC-DETECT-01 downloads the detection models only after photos are picked",
   await page.waitForLoadState("networkidle");
   expect(modelRequests).toEqual([]);
 
-  await page.getByLabel(/choose photos/i).setInputFiles(await makePhotos(page, 2));
+  await libraryInput(page).setInputFiles(await makePhotos(page, 2));
   await expect(page.getByRole("application")).toBeVisible({ timeout: 30_000 });
   // Browsers without WebGL2 in workers skip the download entirely (they use the heuristic).
   if (await workerHasWebGL2(page)) expect(modelRequests.some((u) => u.endsWith(".tflite"))).toBe(true);
@@ -61,8 +61,7 @@ test("AC-DETECT-01 downloads the detection models only after photos are picked",
 test("AC-DETECT-02 finds faces and objects with the real on-device models", async ({ page }) => {
   // Headless Linux WebKit has no GPU, so the app correctly falls back to the heuristic there.
   test.skip(!(await workerHasWebGL2(page)), "No WebGL2 in workers, so MediaPipe can't run in this browser");
-  await page
-    .getByLabel(/choose photos/i)
+  await libraryInput(page)
     .setInputFiles([
       fixture("native-garhwali-women-of-garhwal.jpg"),
       fixture("picography-shiba-inu-dog-forest-walk-sm-1.jpg"),
@@ -79,7 +78,7 @@ test("AC-DETECT-02 finds faces and objects with the real on-device models", asyn
 
 test.describe("error states", () => {
   test("AC-PICK-03 takes the first 8 of more than 8 photos and says so", async ({ page }) => {
-    await page.getByLabel(/choose photos/i).setInputFiles(await makePhotos(page, 9));
+    await libraryInput(page).setInputFiles(await makePhotos(page, 9));
     await expect(page.getByText("StoryStitch uses up to 8 photos, so it took the first 8.")).toBeVisible();
     await expect(page.getByRole("application", { name: /8 photos/ })).toBeVisible();
   });
@@ -90,14 +89,14 @@ test.describe("error states", () => {
       mimeType: "image/jpeg",
       buffer: Buffer.from("not an image"),
     };
-    await page.getByLabel(/choose photos/i).setInputFiles([...(await makePhotos(page, 2)), broken]);
+    await libraryInput(page).setInputFiles([...(await makePhotos(page, 2)), broken]);
     await expect(page.getByText("Couldn't open broken.jpg. Try a JPEG, PNG, WebP or HEIC photo.")).toBeVisible();
     await expect(page.getByRole("application", { name: /2 photos/ })).toBeVisible();
   });
 
   test("AC-DETECT-03 works when the detection models can't load", async ({ page }) => {
     await page.route(/\/(models|mediapipe)\//, (route) => route.abort());
-    await page.getByLabel(/choose photos/i).setInputFiles(await makePhotos(page, 3));
+    await libraryInput(page).setInputFiles(await makePhotos(page, 3));
     expect(jpegSize(await exportImage(page))).toEqual({
       width: 1080,
       height: 1920,
@@ -106,7 +105,7 @@ test.describe("error states", () => {
 
   test("AC-DETECT-04 works when the detection worker can't start", async ({ page }) => {
     await page.route(/\/worker[-.]/, (route) => route.abort());
-    await page.getByLabel(/choose photos/i).setInputFiles(await makePhotos(page, 3));
+    await libraryInput(page).setInputFiles(await makePhotos(page, 3));
     expect(jpegSize(await exportImage(page))).toEqual({
       width: 1080,
       height: 1920,
@@ -117,7 +116,7 @@ test.describe("error states", () => {
 test.describe("editing", () => {
   /** Opens the "Two stacked" layout and returns the canvas-relative center of each cell. */
   async function openTwoStacked(page: Page) {
-    await page.getByLabel(/choose photos/i).setInputFiles(await makePhotos(page, 2));
+    await libraryInput(page).setInputFiles(await makePhotos(page, 2));
     await page.getByRole("radio", { name: "Two stacked" }).click();
     const box = (await page.getByRole("application").boundingBox())!;
     return [0.25, 0.75].map((y) => ({
@@ -137,7 +136,7 @@ test.describe("editing", () => {
   });
 
   test("AC-EDIT-07 tapping a layout opens it", async ({ page }) => {
-    await page.getByLabel(/choose photos/i).setInputFiles(await makePhotos(page, 4));
+    await libraryInput(page).setInputFiles(await makePhotos(page, 4));
     const second = page.getByRole("radio").nth(1);
     const name = (await second.getAttribute("aria-label"))!;
     await second.click();
@@ -146,7 +145,7 @@ test.describe("editing", () => {
   });
 
   test("AC-STYLE-01 the style panel has every control, and Reset restores the defaults", async ({ page }) => {
-    await page.getByLabel(/choose photos/i).setInputFiles(await makePhotos(page, 2));
+    await libraryInput(page).setInputFiles(await makePhotos(page, 2));
     await page.getByRole("radio", { name: "Two stacked" }).click();
     await page.getByText("Style", { exact: true }).click();
     for (const name of ["Cream", "White", "Black", "Sage", "Blush", "Navy", "Blurred photo", "Reset style"]) {
@@ -257,7 +256,7 @@ test("AC-A11Y-01 has no detectable accessibility problems", async ({ page }) => 
     expect(violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(", ")}`)).toEqual([]);
   };
   await check();
-  await page.getByLabel(/choose photos/i).setInputFiles(await makePhotos(page, 3));
+  await libraryInput(page).setInputFiles(await makePhotos(page, 3));
   await page.getByText("Style", { exact: true }).click();
   await expect(page.getByRole("button", { name: "Reset style" })).toBeVisible();
   await check();
