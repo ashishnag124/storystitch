@@ -3,12 +3,12 @@ import { afterAll, describe, expect, it } from "vitest";
 import { createApp } from "./app";
 import { createDb } from "./db/client";
 import { loadEnv } from "./env";
+import { WEB, testApi } from "./test-helpers";
 
 // Real Postgres: `docker compose up` locally, a service container in CI.
-const { pool } = createDb(process.env.DATABASE_URL!);
-const WEB = "https://storystitch.ashishnag.com";
-const app = createApp({ pool, corsOrigins: [WEB], version: "test-sha" });
-afterAll(() => pool.end());
+const api = testApi();
+const app = api.app;
+afterAll(() => api.close());
 
 describe("AC-API-04 health", () => {
   it("reports the API and database as up", async () => {
@@ -19,7 +19,7 @@ describe("AC-API-04 health", () => {
 
   it("returns 503 when the database is unreachable", async () => {
     const down = createDb("postgres://app:app@127.0.0.1:1/app");
-    const res = await createApp({ pool: down.pool, corsOrigins: [WEB], version: "x" }).request("/health");
+    const res = await createApp({ pool: down.pool, auth: api.auth, corsOrigins: [WEB], version: "x" }).request("/health");
     expect(res.status).toBe(503);
     expect(await res.json()).toMatchObject({ ok: false, database: "down" });
     await down.pool.end();
@@ -49,7 +49,13 @@ describe("AC-API-01 CORS", () => {
 });
 
 describe("env", () => {
-  const base = { DATABASE_URL: "postgres://a:b@localhost:5432/db", CORS_ORIGIN: "https://a.example, https://b.example" };
+  const base = {
+    DATABASE_URL: "postgres://a:b@localhost:5432/db",
+    CORS_ORIGIN: "https://a.example, https://b.example",
+    BETTER_AUTH_URL: "https://api.example",
+    BETTER_AUTH_SECRET: "x".repeat(32),
+    TURNSTILE_SECRET_KEY: "secret",
+  };
 
   it("splits the allowed origins and defaults the port", () => {
     expect(loadEnv(base)).toMatchObject({ PORT: 3000, CORS_ORIGIN: ["https://a.example", "https://b.example"] });
@@ -58,5 +64,8 @@ describe("env", () => {
   it("refuses to start with missing or malformed values", () => {
     expect(() => loadEnv({ ...base, DATABASE_URL: undefined })).toThrow();
     expect(() => loadEnv({ ...base, CORS_ORIGIN: "not a url" })).toThrow();
+    expect(() => loadEnv({ ...base, BETTER_AUTH_SECRET: "short" })).toThrow();
+    expect(() => loadEnv({ ...base, EMAIL_TRANSPORT: "resend" })).toThrow(/RESEND_API_KEY/);
+    expect(() => loadEnv({ ...base, DISABLE_RATE_LIMIT: "true" })).toThrow(/tests only/);
   });
 });

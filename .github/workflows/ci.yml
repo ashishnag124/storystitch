@@ -60,4 +60,6 @@ jobs:
       ref: ${{ github.sha }}
       branch: main
       api_url: ${{ vars.API_URL_STAGING }}
+      # Accounts are on in staging only until they're switched on for production.
+      accounts: true
     secrets: inherit

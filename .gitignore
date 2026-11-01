@@ -19,3 +19,7 @@ apps/web/public/mediapipe/
 
 # pnpm qa output
 qa-results/
+
+# End-to-end test builds
+apps/web/dist-e2e/
+apps/web/dist-e2e-accounts/

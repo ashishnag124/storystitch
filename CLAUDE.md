@@ -15,6 +15,7 @@ Product requirements: `docs/product-brief.md`. Acceptance criteria (what QA chec
 | End-to-end tests (Playwright) | `apps/web/e2e/` |
 | API request/response shapes | `packages/shared/src/api.ts` (zod) first, then the API and its callers |
 | API routes, database access | `apps/api/src/` (Hono); tables in `apps/api/src/db/schema.ts` |
+| Accounts (sign-in, sessions, emails) | API: `apps/api/src/auth.ts` (Better Auth), `src/email.ts`; web: `apps/web/src/account/` (loaded only when `VITE_FEATURE_ACCOUNTS=true`) |
 | Database changes | edit `schema.ts`, then `pnpm db:generate`; commit the SQL in `apps/api/drizzle/`. Must keep working with the previous API version: add first, remove in a later release |
 
 A request that needs an app or service not in `project.json` (e.g. "add an iOS app", "send emails", "add a background job") → stop and propose `/add-app` or a plan. Don't bolt it on ad hoc.
@@ -28,7 +29,7 @@ A request that needs an app or service not in `project.json` (e.g. "add an iOS a
 
 ## Commands
 
-- `pnpm dev` (local Postgres in Docker, web :5173, API :3000) · `pnpm db:generate` / `pnpm db:migrate` · `pnpm check` (lint + typecheck + test, run before saying done) · `pnpm build` · `pnpm e2e` (Playwright, Android Chrome + iPhone WebKit emulation) · `pnpm qa` (everything above, graded against the acceptance criteria; CI and every release run it)
+- `pnpm dev` (local Postgres in Docker, web :5173, API :3001; this Mac has an SSH tunnel on :3000) · `pnpm db:generate` / `pnpm db:migrate` · `pnpm check` (lint + typecheck + test, run before saying done) · `pnpm build` · `pnpm e2e` (Playwright, Android Chrome + iPhone WebKit emulation) · `pnpm qa` (everything above, graded against the acceptance criteria; CI and every release run it)
 
 ## Rules
 

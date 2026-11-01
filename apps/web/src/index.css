@@ -8,6 +8,9 @@
   --border: #d6d3d1;
   --warn-bg: #fef3c7;
   --warn-text: #78350f;
+  --ok-bg: #dcfce7;
+  --ok-text: #14532d;
+  --danger: #b91c1c;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   color: var(--text);
   background: var(--bg);
@@ -352,4 +355,145 @@ input[type="range"]:focus-visible {
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--surface);
+}
+
+/* Accounts (behind VITE_FEATURE_ACCOUNTS) */
+.pick {
+  position: relative;
+}
+
+.pick > a.button {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+a.button {
+  text-decoration: none;
+}
+
+.account-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  overflow-y: auto;
+  background: var(--bg);
+}
+
+.account-inner {
+  display: flex;
+  max-width: 480px;
+  margin: 0 auto;
+  flex-direction: column;
+  gap: 16px;
+  padding: 12px 16px calc(24px + env(safe-area-inset-bottom));
+}
+
+.account-inner h1:focus {
+  outline: none;
+}
+
+.account-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.account-form .hint {
+  text-align: left;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.field input {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 1rem; /* 16px keeps iOS Safari from zooming in on focus */
+}
+
+.field input:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.success {
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--ok-bg);
+  color: var(--ok-text);
+}
+
+.account-links {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.account-links a,
+.account-form .hint a,
+.legal a {
+  color: var(--accent);
+}
+
+.turnstile {
+  min-height: 65px;
+}
+
+.danger-zone {
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.danger-zone[open] {
+  padding-bottom: 14px;
+}
+
+.danger-zone summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--danger);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.button.danger {
+  border-color: var(--danger);
+  background: var(--danger);
+  color: #fff;
+}
+
+.legal {
+  line-height: 1.55;
+}
+
+.legal table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.legal th,
+.legal td {
+  padding: 6px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
 }

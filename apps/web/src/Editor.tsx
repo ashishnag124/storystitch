@@ -8,6 +8,7 @@ import {
   upscaleWarnings,
   type ExportFormat,
 } from "./exportImage";
+import { AccountLink } from "./account/AccountLink";
 import { LayoutStrip } from "./LayoutStrip";
 import type { Photo } from "./photos";
 import { drawScene, previewOf } from "./render";
@@ -246,9 +247,12 @@ export function Editor({ photos, summary, notices, privacy, onStartOver }: Props
     <main className="editor">
       <header className="editor-header">
         <h1>StoryStitch</h1>
-        <button type="button" className="button" onClick={onStartOver}>
-          Start over
-        </button>
+        <div className="header-actions">
+          <AccountLink />
+          <button type="button" className="button" onClick={onStartOver}>
+            Start over
+          </button>
+        </div>
       </header>
 
       {notices.map((n) => (

@@ -23,6 +23,11 @@ on:
         type: string
         required: false
         default: ""
+      accounts:
+        description: "Build with accounts switched on (VITE_FEATURE_ACCOUNTS)"
+        type: boolean
+        required: false
+        default: false
 
 jobs:
   deploy:
@@ -43,6 +48,8 @@ jobs:
       - run: pnpm turbo run build --filter="@storystitch/${{ inputs.app }}..."
         env:
           VITE_API_URL: ${{ inputs.api_url }}
+          VITE_FEATURE_ACCOUNTS: ${{ inputs.accounts }}
+          VITE_TURNSTILE_SITE_KEY: ${{ secrets.TURNSTILE_SITE_KEY }}
       - uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}

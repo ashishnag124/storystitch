@@ -137,7 +137,7 @@ reuse IDs.
 
 # v2 (planned)
 
-From the v2 section of `docs/product-brief.md`. Rows marked `auto` have shipped (B1: the API itself). The rest ship behind a feature flag; while it's off, the v1 criteria above
+From the v2 section of `docs/product-brief.md`. Rows marked `auto` or `manual` have shipped (B1: the API; B2: accounts, behind the `VITE_FEATURE_ACCOUNTS` flag). The rest ship behind a feature flag too; while it's off, the v1 criteria above
 describe the app exactly. When saving ships, AC-SAVE-02 and AC-SAVE-07 replace AC-PRIV-01 and AC-PRIV-02.
 
 ## Platform
@@ -146,21 +146,22 @@ describe the app exactly. When saving ships, AC-SAVE-02 and AC-SAVE-07 replace A
 |---|---|---|
 | AC-API-01 | Browsers may call the API only from StoryStitch's own web origins (CORS), with credentials; every other origin gets no access. | auto |
 | AC-API-02 | Database migrations are backward compatible: the previous API version still works against the new schema. | planned |
-| AC-API-03 | With the feature flag off, the app behaves exactly as v1: no sign-in, no saving and no requests to the API. | planned |
+| AC-API-03 | With the accounts flag off (production today), the app behaves exactly as v1: no account features and no requests to the API. | auto |
 | AC-API-04 | `GET /health` reports the deployed version and whether the database is up, with status 503 when it isn't. | auto |
-| AC-API-05 | Requests that change data are protected against cross-site request forgery. | planned |
+| AC-API-05 | Account requests that change data are refused unless they come from StoryStitch's own web origins (cross-site request forgery). | auto |
 
 ## Accounts
 
 | ID | Criterion | Check |
 |---|---|---|
-| AC-AUTH-01 | Picking, editing, exporting and sharing work without an account; sign-in is asked for only when saving. | planned |
-| AC-AUTH-04 | Sign-up, sign-in and password reset require the bot check to pass, and failed attempts are limited per account and per IP address. | planned |
-| AC-AUTH-05 | Users register and sign in with email and password, verify their email, and reset a forgotten password by email. | planned |
-| AC-AUTH-06 | Signed-in sessions persist across reloads in iPhone Safari (WebKit) and Android Chrome. | planned |
-| AC-AUTH-07 | Users can sign out, and sign out of every device. | planned |
-| AC-AUTH-08 | Deleting an account removes the user, their sessions, their saved collages and the stored files. | planned |
-| AC-AUTH-10 | On staging, a real verification email and password-reset email arrive, and sign-up and sign-in work on iPhone Safari and Android Chrome. | planned |
+| AC-AUTH-01 | Picking, editing, exporting and sharing work without an account; sign-in is asked for only when saving. | auto |
+| AC-AUTH-04 | Sign-up, sign-in and password reset require the bot check to pass, and attempts are limited per IP address. | auto |
+| AC-AUTH-05 | Users register and sign in with email and password, must verify their email first, and reset a forgotten password by email (which signs out their other sessions). | auto |
+| AC-AUTH-06 | Signed-in sessions persist across reloads in iPhone Safari (WebKit) and Android Chrome. | auto |
+| AC-AUTH-07 | Users can sign out, and sign out of every device. | auto |
+| AC-AUTH-08 | Deleting an account needs the account's password and removes the user and their sessions (and, once saving ships, their saved collages and files). | auto |
+| AC-AUTH-11 | Sign-up links to the privacy policy and terms, and both are readable in the app. | auto |
+| AC-AUTH-10 | On staging, a real verification email and password-reset email arrive, and sign-up and sign-in work on iPhone Safari and Android Chrome. | manual |
 
 ## Saved collages
 
