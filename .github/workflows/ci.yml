@@ -12,6 +12,21 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
+    # Real Postgres for the API's tests and migrations.
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: app
+          POSTGRES_DB: app
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U app -d app"
+          --health-interval 2s --health-timeout 3s --health-retries 20
+    env:
+      DATABASE_URL: postgres://app:app@localhost:5432/app
+      CORS_ORIGIN: http://localhost:5173
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -42,4 +57,5 @@ jobs:
       project: ${{ vars.PAGES_PROJECT }}
       ref: ${{ github.sha }}
       branch: main
+      api_url: ${{ vars.API_URL_STAGING }}
     secrets: inherit

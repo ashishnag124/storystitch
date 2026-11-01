@@ -137,17 +137,18 @@ reuse IDs.
 
 # v2 (planned)
 
-From the v2 section of `docs/product-brief.md`. These ship behind a feature flag; while it's off, the v1 criteria above
+From the v2 section of `docs/product-brief.md`. Rows marked `auto` have shipped (B1: the API itself). The rest ship behind a feature flag; while it's off, the v1 criteria above
 describe the app exactly. When saving ships, AC-SAVE-02 and AC-SAVE-07 replace AC-PRIV-01 and AC-PRIV-02.
 
 ## Platform
 
 | ID | Criterion | Check |
 |---|---|---|
-| AC-API-01 | The API accepts requests only from StoryStitch's own web origins, and requests that change data are protected against cross-site forgery. | planned |
+| AC-API-01 | Browsers may call the API only from StoryStitch's own web origins (CORS), with credentials; every other origin gets no access. | auto |
 | AC-API-02 | Database migrations are backward compatible: the previous API version still works against the new schema. | planned |
 | AC-API-03 | With the feature flag off, the app behaves exactly as v1: no sign-in, no saving and no requests to the API. | planned |
-| AC-API-04 | A health endpoint reports whether the API and its database are up, in staging and production. | planned |
+| AC-API-04 | `GET /health` reports the deployed version and whether the database is up, with status 503 when it isn't. | auto |
+| AC-API-05 | Requests that change data are protected against cross-site request forgery. | planned |
 
 ## Accounts
 
