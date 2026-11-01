@@ -26,6 +26,10 @@ jobs:
   deploy-web-staging:
     needs: check
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # the called workflow can't get more than this job grants; the repo's default token is read-only
+    permissions:
+      contents: read
+      deployments: write
     uses: ./.github/workflows/_deploy-pages.yml
     with:
       app: web
