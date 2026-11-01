@@ -1,7 +1,7 @@
 import { UPSCALE_WARNING_FACTOR, upscaleFactor } from "@storystitch/layout-engine";
 import { STORY_CANVAS, drawOrder } from "@storystitch/shared";
 import { decodeFull, type Photo } from "./photos";
-import { drawBlurredBackground, drawCell, fillBackground, type Drawable } from "./render";
+import { drawBlurredBackground, drawCell, fillBackground, hasBlurredBackground, type Drawable } from "./render";
 import { cellShapes, styleScale, type Scene } from "./scene";
 
 export type ExportFormat = "image/jpeg" | "image/png";
@@ -24,17 +24,17 @@ export async function renderExport(scene: Scene, photos: Photo[], format: Export
   const ctx = canvas.getContext("2d")!;
   ctx.imageSmoothingQuality = "high";
   const shapes = cellShapes(scene.layout, scene.style, size);
-  const { radius } = styleScale(scene.layout, scene.style, size);
+  const { radius, border } = styleScale(scene.layout, scene.style, size);
 
   fillBackground(ctx, size, scene);
-  if (scene.layout.blurBackground) {
+  if (hasBlurredBackground(scene)) {
     const img = await decode(photos[scene.order[0]!]!);
     drawBlurredBackground(ctx, size, img);
     img.image.close();
   }
   for (const i of drawOrder(scene.layout.cells)) {
     const img = await decode(photos[scene.order[i]!]!);
-    drawCell(ctx, shapes[i]!, img, scene.crops[i]!, radius);
+    drawCell(ctx, shapes[i]!, img, scene.crops[i]!, radius, border, scene.style.borderColor);
     img.image.close();
   }
   return new Promise((resolve, reject) =>
