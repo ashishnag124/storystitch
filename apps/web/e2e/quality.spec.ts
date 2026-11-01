@@ -6,7 +6,8 @@ test.beforeEach(({ page }) => openApp(page));
 
 /** The brief's performance targets, in milliseconds. */
 const BUDGET = { analysis: 3000, layoutSwitch: 100, export: 2000 } as const;
-const EXPORT_DEBOUNCE_MS = 400;
+/** Must match EXPORT_MEASURE in src/exportImage.ts. */
+const EXPORT_MEASURE = "storystitch:export";
 
 /** Eight phone-sized (12 MP) JPEGs with enough texture to be photo-sized files. */
 async function phonePhotos(page: Page) {
@@ -72,16 +73,17 @@ test("AC-PERF-01 AC-PERF-02 AC-PERF-03 analysis, layout switching and export mee
     layoutSwitch = Math.max(layoutSwitch, ms);
   }
 
-  // Export: wait for any earlier render to settle, then time a fresh one (less the debounce before it starts).
+  // Export: the app measures each render itself (decode originals → encoded JPEG). Let earlier renders
+  // settle, then time a fresh one.
   const download = page.getByRole("button", { name: "Download" });
   await expect(download).toBeEnabled({ timeout: 30_000 });
-  const exportStart = Date.now();
+  await page.evaluate((name) => performance.clearMeasures(name), EXPORT_MEASURE);
   await radios.nth(0).click();
   await expect(download).toBeEnabled({ timeout: 30_000 });
-  const exportMs = Date.now() - exportStart - EXPORT_DEBOUNCE_MS;
+  const exportMs = await page.evaluate((name) => performance.getEntriesByName(name).at(-1)!.duration, EXPORT_MEASURE);
 
   console.log(
-    `timings: analysis ${analysis} ms, worst layout switch ${layoutSwitch.toFixed(1)} ms, export ${exportMs} ms`,
+    `timings: analysis ${analysis} ms, worst layout switch ${layoutSwitch.toFixed(1)} ms, export ${exportMs.toFixed(0)} ms`,
   );
   expect.soft(analysis, "analysis of 8 photos").toBeLessThan(BUDGET.analysis);
   expect.soft(layoutSwitch, "layout switch").toBeLessThan(BUDGET.layoutSwitch);

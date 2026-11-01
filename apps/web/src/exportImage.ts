@@ -6,6 +6,8 @@ import { cellShapes, styleScale, type Scene } from "./scene";
 
 export type ExportFormat = "image/jpeg" | "image/png";
 export const JPEG_QUALITY = 0.9;
+/** Name of the performance measure covering one export render, from decoding the originals to the encoded file. */
+export const EXPORT_MEASURE = "storystitch:export";
 
 async function decode(photo: Photo): Promise<Drawable & { image: ImageBitmap }> {
   const image = await decodeFull(photo.source);
@@ -17,6 +19,7 @@ async function decode(photo: Photo): Promise<Drawable & { image: ImageBitmap }> 
  * so memory stays at a single full-resolution photo.
  */
 export async function renderExport(scene: Scene, photos: Photo[], format: ExportFormat): Promise<Blob> {
+  const start = performance.now();
   const size = STORY_CANVAS;
   const canvas = document.createElement("canvas");
   canvas.width = size.width;
@@ -37,9 +40,12 @@ export async function renderExport(scene: Scene, photos: Photo[], format: Export
     drawCell(ctx, shapes[i]!, img, scene.crops[i]!, radius, border, scene.style.borderColor);
     img.image.close();
   }
-  return new Promise((resolve, reject) =>
-    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("Export failed"))), format, JPEG_QUALITY),
+  const blob = await new Promise<Blob>((resolve, reject) =>
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Export failed"))), format, JPEG_QUALITY),
   );
+  // Recorded for the performance acceptance test (AC-PERF-03) and visible in browser dev tools.
+  performance.measure(EXPORT_MEASURE, { start });
+  return blob;
 }
 
 export interface UpscaleWarning {
