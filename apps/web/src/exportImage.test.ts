@@ -1,0 +1,17 @@
+import { layouts } from "@storystitch/shared";
+import { describe, expect, it } from "vitest";
+import { upscaleWarnings } from "./exportImage";
+import type { Photo } from "./photos";
+import { newScene } from "./scene";
+
+const photo = (name: string, width: number, height: number) => ({ name, width, height }) as Photo;
+
+describe("upscaleWarnings", () => {
+  it("flags only photos enlarged more than 1.5× in the export", () => {
+    const scene = newScene(layouts.find((l) => l.id === "two-stack")!);
+    const warnings = upscaleWarnings(scene, [photo("big.jpg", 4000, 3000), photo("tiny.jpg", 400, 300)]);
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toMatchObject({ photo: 1, name: "tiny.jpg" });
+    expect(warnings[0]!.factor).toBeGreaterThan(1.5);
+  });
+});
