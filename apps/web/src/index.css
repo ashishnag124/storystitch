@@ -496,6 +496,7 @@ a.button {
   border-bottom: 1px solid var(--border);
   text-align: left;
   vertical-align: top;
+}
 
 /* Photo sources: per-platform buttons, desktop drop zone, camera tray */
 .sources {
@@ -571,6 +572,8 @@ a.button {
 
 .tray-thumbs button {
   position: absolute;
+  /* Above the next thumbnail, which the 44px touch target overlaps. */
+  z-index: 1;
   top: -10px;
   right: -10px;
   width: 44px;
