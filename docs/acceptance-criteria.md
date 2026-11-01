@@ -62,7 +62,7 @@ reuse IDs.
 | AC-ASSIGN-03 | Photos go to the cells that fit their shape, and faces stay out of cells under the overlay bands when another photo can go there. | auto |
 | AC-RANK-01 | Layouts are ranked best fit first for the picked photos. | auto |
 | AC-RANK-02 | Ranking is deterministic and doesn't depend on the order layouts are listed in. | auto |
-| AC-RANK-03 | The strip offers every layout for the photo count, each previewed with every photo placed exactly once. | auto |
+| AC-RANK-03 | The strip offers every layout for the photo count, each with every photo placed exactly once. | auto |
 
 ## Layout library
 
@@ -90,6 +90,7 @@ reuse IDs.
 | AC-EDIT-10 | A selected photo gets a floating tooltip over the preview with Fit (back to the automatic crop) and Done; the tool panel shows its zoom. | auto |
 | AC-EDIT-11 | Double-tapping a photo zooms in around the tap, and double-tapping again goes back to fit. | auto |
 | AC-EDIT-12 | On a real phone the motion feels natural: a held photo lifts and follows the finger, swapped photos glide into place, a flicked photo keeps gliding, layouts crossfade, and Android vibrates briefly on lift and drop. With "reduce motion" on, changes are instant. | manual |
+| AC-EDIT-13 | The Layouts tool shows each layout as a plain diagram of its cells (one shape per photo, no photos drawn on it), with the current one highlighted. | auto |
 
 ## Style
 

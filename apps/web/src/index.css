@@ -412,11 +412,28 @@ input[type="range"]:focus-visible {
   transform: scale(1.04);
 }
 
-.thumb canvas {
+.thumb svg {
   display: block;
   width: 54px;
   height: 96px;
   border-radius: 6px;
+}
+
+.diagram-frame {
+  fill: var(--surface);
+  stroke: var(--border);
+  stroke-width: 2;
+}
+
+.diagram-cell {
+  fill: var(--border);
+  stroke: var(--surface);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.thumb[aria-checked="true"] .diagram-cell {
+  fill: color-mix(in srgb, var(--accent) 40%, var(--surface));
 }
 
 .export-tool {
