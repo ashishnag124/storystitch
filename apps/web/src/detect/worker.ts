@@ -24,6 +24,9 @@ let models: Promise<Models | null> | undefined;
 
 function loadModels(): Promise<Models | null> {
   models ??= (async () => {
+    // MediaPipe feeds images through WebGL2 even on the CPU delegate. Without it (Safari < 17,
+    // GPU-less browsers) the models can't run, so don't download them.
+    if (!new OffscreenCanvas(1, 1).getContext("webgl2")) throw new Error("No WebGL2 in workers");
     // ES-module + SIMD runtime, served from our own origin (scripts/copy-mediapipe.mjs).
     const fileset = await FilesetResolver.forVisionTasks(asset("mediapipe"), true);
     const [faces, objects] = await Promise.all([
