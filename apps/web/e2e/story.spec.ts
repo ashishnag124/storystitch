@@ -79,3 +79,13 @@ test("opens a HEIC photo", async ({ page }) => {
   await expect(page.getByRole("radiogroup", { name: "Layouts" })).toBeVisible({ timeout: 30_000 });
   expect(jpegSize(await exportImage(page))).toEqual({ width: 1080, height: 1920 });
 });
+
+test("finds faces and objects with the real on-device models", async ({ page }) => {
+  const fixture = (name: string) => fileURLToPath(new URL(`fixtures/${name}`, import.meta.url));
+  await page
+    .getByLabel(/choose photos/i)
+    .setInputFiles([fixture("native-garhwali-women-of-garhwal.jpg"), fixture("picography-shiba-inu-dog-forest-walk-sm-1.jpg")]);
+  // CC0 fixtures from Wikimedia Commons: a portrait (one face) and a dog in a forest (no face).
+  await expect(page.getByText("Found 1 face and a dog.")).toBeVisible({ timeout: 45_000 });
+  expect(jpegSize(await exportImage(page))).toEqual({ width: 1080, height: 1920 });
+});

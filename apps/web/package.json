@@ -4,8 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
+    "dev": "node scripts/copy-mediapipe.mjs && vite",
+    "build": "node scripts/copy-mediapipe.mjs && tsc -b && vite build",
     "lint": "eslint .",
     "typecheck": "tsc -b",
     "test": "vitest run",
@@ -13,6 +13,7 @@
     "e2e": "playwright test"
   },
   "dependencies": {
+    "@mediapipe/tasks-vision": "^1.2.0",
     "@storystitch/layout-engine": "workspace:*",
     "@storystitch/shared": "workspace:*",
     "heic-to": "^1.6.7",

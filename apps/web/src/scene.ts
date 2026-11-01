@@ -1,5 +1,6 @@
-import { CENTER_CROP, type Crop } from "@storystitch/layout-engine";
+import { smartCrop, type Crop, type Detection, type SafeInsets } from "@storystitch/layout-engine";
 import {
+  SAFE_ZONE,
   STORY_CANVAS,
   cellFrame,
   cellPolygon,
@@ -28,21 +29,55 @@ export interface Scene {
   crops: Crop[];
 }
 
-export function newScene(layout: Layout, style: Style = DEFAULT_STYLE): Scene {
-  return { layout, style, order: layout.cells.map((_, i) => i), crops: layout.cells.map(() => CENTER_CROP) };
+/** What cropping needs to know about a photo. */
+export interface CropSource extends Size {
+  detections: Detection[];
 }
 
-/** Switches layout, keeping which photo goes where. Crops reset because the cell shapes change. */
-export function withLayout(scene: Scene, layout: Layout): Scene {
-  return { ...newScene(layout, scene.style), order: scene.order };
+/** Fractions of a frame's edges under Instagram's overlays (SAFE_ZONE), ignoring rotation. */
+export function safeInsets(frame: Frame, canvas: Size = STORY_CANVAS): SafeInsets {
+  const clamp01 = (v: number) => Math.min(Math.max(v, 0), 1);
+  const [left, top] = [frame.cx - frame.width / 2, frame.cy - frame.height / 2];
+  const [right, bottom] = [left + frame.width, top + frame.height];
+  return {
+    top: clamp01((SAFE_ZONE.top * canvas.height - top) / frame.height),
+    bottom: clamp01((bottom - (1 - SAFE_ZONE.bottom) * canvas.height) / frame.height),
+    left: clamp01((SAFE_ZONE.sides * canvas.width - left) / frame.width),
+    right: clamp01((right - (1 - SAFE_ZONE.sides) * canvas.width) / frame.width),
+  };
 }
 
-export function swapCells(scene: Scene, a: number, b: number): Scene {
+/** The automatic crop for the photo in `cell`, framed around its subject and clear of the safe-zone bands. */
+export function autoCrop(layout: Layout, style: Style, photo: CropSource, cell: number): Crop {
+  const { frame } = cellShapes(layout, style, STORY_CANVAS)[cell]!;
+  return smartCrop(photo, frame, photo.detections, safeInsets(frame));
+}
+
+function autoCrops(layout: Layout, style: Style, order: number[], photos: CropSource[]): Crop[] {
+  const shapes = cellShapes(layout, style, STORY_CANVAS);
+  return shapes.map(({ frame }, i) => {
+    const photo = photos[order[i]!]!;
+    return smartCrop(photo, frame, photo.detections, safeInsets(frame));
+  });
+}
+
+export function newScene(layout: Layout, photos: CropSource[], style: Style = DEFAULT_STYLE, order?: number[]): Scene {
+  const o = order ?? layout.cells.map((_, i) => i);
+  return { layout, style, order: o, crops: autoCrops(layout, style, o, photos) };
+}
+
+/** Switches layout, keeping which photo goes where. Crops are redone because the cell shapes change. */
+export function withLayout(scene: Scene, layout: Layout, photos: CropSource[]): Scene {
+  return newScene(layout, photos, scene.style, scene.order);
+}
+
+/** Swaps the photos in two cells; both get fresh automatic crops for their new cells. */
+export function swapCells(scene: Scene, a: number, b: number, photos: CropSource[]): Scene {
   const order = [...scene.order];
   [order[a], order[b]] = [order[b]!, order[a]!];
   const crops = [...scene.crops];
-  crops[a] = CENTER_CROP;
-  crops[b] = CENTER_CROP;
+  crops[a] = autoCrop(scene.layout, scene.style, photos[order[a]!]!, a);
+  crops[b] = autoCrop(scene.layout, scene.style, photos[order[b]!]!, b);
   return { ...scene, order, crops };
 }
 

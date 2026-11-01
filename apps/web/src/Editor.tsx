@@ -1,4 +1,4 @@
-import { MAX_ZOOM, clampCrop, panCrop } from "@storystitch/layout-engine";
+import { MAX_ZOOM, MIN_ZOOM, clampCrop, panCrop } from "@storystitch/layout-engine";
 import { STORY_CANVAS, hitTest, layoutsFor } from "@storystitch/shared";
 import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import {
@@ -20,14 +20,16 @@ const TAP_SLOP_PX = 6;
 
 interface Props {
   photos: Photo[];
+  /** What subject detection found, e.g. "Found 2 faces and a dog." */
+  summary: string | null;
   notices: string[];
   privacy: string;
   onStartOver: () => void;
 }
 
-export function Editor({ photos, notices, privacy, onStartOver }: Props) {
+export function Editor({ photos, summary, notices, privacy, onStartOver }: Props) {
   const options = useMemo(() => layoutsFor(photos.length), [photos.length]);
-  const [scene, setScene] = useState<Scene>(() => newScene(options[0]!));
+  const [scene, setScene] = useState<Scene>(() => newScene(options[0]!, photos));
   const [selected, setSelected] = useState<number | null>(null);
   const [format, setFormat] = useState<ExportFormat>("image/jpeg");
   const [exported, setExported] = useState<{ scene: Scene; format: ExportFormat; blob: Blob } | null>(null);
@@ -94,7 +96,7 @@ export function Editor({ photos, notices, privacy, onStartOver }: Props) {
     if (selected === null) setSelected(d.cell);
     else if (selected === d.cell) setSelected(null);
     else {
-      setScene((s) => swapCells(s, selected, d.cell));
+      setScene((s) => swapCells(s, selected, d.cell, photos));
       setSelected(null);
     }
   }
@@ -135,7 +137,9 @@ export function Editor({ photos, notices, privacy, onStartOver }: Props) {
       </div>
 
       {selected === null ? (
-        <p className="hint">Drag a photo to reposition it. Tap a photo to zoom or swap it.</p>
+        <p className="hint">
+          {summary && `${summary} `}Drag a photo to reposition it. Tap a photo to zoom or swap it.
+        </p>
       ) : (
         <div className="cell-controls">
           <p className="hint">Tap another photo to swap, or adjust the zoom.</p>
@@ -143,7 +147,7 @@ export function Editor({ photos, notices, privacy, onStartOver }: Props) {
             Zoom
             <input
               type="range"
-              min={1}
+              min={MIN_ZOOM}
               max={MAX_ZOOM}
               step={0.01}
               value={scene.crops[selected]!.zoom}
@@ -161,7 +165,7 @@ export function Editor({ photos, notices, privacy, onStartOver }: Props) {
         current={scene}
         photos={photos}
         onSelect={(layout) => {
-          setScene((s) => withLayout(s, layout));
+          setScene((s) => withLayout(s, layout, photos));
           setSelected(null);
         }}
       />

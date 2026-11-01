@@ -39,11 +39,28 @@ function outlinePath(outline: Outline, radius: number): Path2D {
 export function drawCell(ctx: CanvasRenderingContext2D, shape: CellShape, img: Drawable, crop: Crop, radius: number) {
   const { frame } = shape;
   const src = sourceRect(img, frame, crop);
+  // A zoomed-out crop reaches past the photo; draw only the part that exists (Safari won't clip for us).
+  const x0 = Math.max(src.x, 0);
+  const y0 = Math.max(src.y, 0);
+  const x1 = Math.min(src.x + src.width, img.width);
+  const y1 = Math.min(src.y + src.height, img.height);
+  const kx = frame.width / src.width;
+  const ky = frame.height / src.height;
   ctx.save();
   ctx.clip(outlinePath(shape.outline, radius));
   ctx.translate(frame.cx, frame.cy);
   ctx.rotate((frame.rotate * Math.PI) / 180);
-  ctx.drawImage(img.image, src.x, src.y, src.width, src.height, -frame.width / 2, -frame.height / 2, frame.width, frame.height);
+  ctx.drawImage(
+    img.image,
+    x0,
+    y0,
+    x1 - x0,
+    y1 - y0,
+    -frame.width / 2 + (x0 - src.x) * kx,
+    -frame.height / 2 + (y0 - src.y) * ky,
+    (x1 - x0) * kx,
+    (y1 - y0) * ky,
+  );
   ctx.restore();
 }
 

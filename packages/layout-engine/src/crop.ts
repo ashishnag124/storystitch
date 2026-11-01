@@ -3,7 +3,8 @@ import type { Size } from "@storystitch/shared";
 /**
  * How a photo sits in its cell: the point of the photo at the frame's center (0–1 of the photo's
  * width and height) and a zoom where 1 is the smallest crop that still covers the frame.
- * It's resolution-independent, so preview copies and originals share it.
+ * It's resolution-independent, so preview copies and originals share it. Below 1 the whole photo
+ * shrinks inside the frame and the cell background shows around it.
  */
 export interface Crop {
   cx: number;
@@ -20,12 +21,22 @@ export interface Rect {
 
 export const CENTER_CROP: Crop = { cx: 0.5, cy: 0.5, zoom: 1 };
 export const MAX_ZOOM = 4;
+/** Smart crops zoom out this far at most, when that's the only way to keep every face whole. */
+export const MIN_ZOOM = 0.5;
 /** Above this, the export warns that the photo will look soft. */
 export const UPSCALE_WARNING_FACTOR = 1.5;
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
 
-/** The region of the photo (in its own pixels) shown in a frame of `frame` size. Always inside the photo. */
+/** Places a region of `size` along an axis of `length`: inside it when it fits, else centered on it. */
+function place(center: number, size: number, length: number): number {
+  return size <= length ? clamp(center - size / 2, 0, length - size) : (length - size) / 2;
+}
+
+/**
+ * The region of the photo (in its own pixels) shown in a frame of `frame` size. It stays inside the
+ * photo unless zoom < 1, where it's larger than the photo along at least one axis.
+ */
 export function sourceRect(image: Size, frame: Size, crop: Crop): Rect {
   const aspect = frame.width / frame.height;
   let width = image.width;
@@ -34,12 +45,12 @@ export function sourceRect(image: Size, frame: Size, crop: Crop): Rect {
     height = image.height;
     width = height * aspect;
   }
-  const zoom = clamp(crop.zoom, 1, MAX_ZOOM);
+  const zoom = clamp(crop.zoom, MIN_ZOOM, MAX_ZOOM);
   width /= zoom;
   height /= zoom;
   return {
-    x: clamp(crop.cx * image.width - width / 2, 0, image.width - width),
-    y: clamp(crop.cy * image.height - height / 2, 0, image.height - height),
+    x: place(crop.cx * image.width, width, image.width),
+    y: place(crop.cy * image.height, height, image.height),
     width,
     height,
   };
@@ -51,7 +62,7 @@ export function clampCrop(image: Size, frame: Size, crop: Crop): Crop {
   return {
     cx: (r.x + r.width / 2) / image.width,
     cy: (r.y + r.height / 2) / image.height,
-    zoom: clamp(crop.zoom, 1, MAX_ZOOM),
+    zoom: clamp(crop.zoom, MIN_ZOOM, MAX_ZOOM),
   };
 }
 

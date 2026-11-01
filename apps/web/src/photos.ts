@@ -1,8 +1,11 @@
+import type { Detection } from "@storystitch/layout-engine";
 import { heicToJpeg, isHeic } from "./heic";
 
 export const MAX_PHOTOS = 8;
 /** Long side of the working copies used for previews. Exports always use the originals. */
 export const PREVIEW_LONG_SIDE = 1280;
+/** Long side of the copies subject detection runs on. */
+export const ANALYSIS_LONG_SIDE = 512;
 export const ACCEPT = "image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif";
 
 export interface Photo {
@@ -13,6 +16,8 @@ export interface Photo {
   width: number;
   height: number;
   preview: ImageBitmap;
+  /** What subject detection found; empty until analyzed or when nothing was found. */
+  detections: Detection[];
 }
 
 export class UnsupportedPhotoError extends Error {
@@ -28,7 +33,7 @@ export function decodeFull(source: Blob): Promise<ImageBitmap> {
   return createImageBitmap(source, { imageOrientation: "from-image" });
 }
 
-async function downscale(full: ImageBitmap, longSide: number): Promise<ImageBitmap> {
+export async function downscale(full: ImageBitmap, longSide: number): Promise<ImageBitmap> {
   const scale = Math.min(1, longSide / Math.max(full.width, full.height));
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(full.width * scale);
@@ -58,7 +63,8 @@ export async function loadPhoto(file: File): Promise<Photo> {
     }
   }
   try {
-    return { name: file.name, source, width: full.width, height: full.height, preview: await downscale(full, PREVIEW_LONG_SIDE) };
+    const preview = await downscale(full, PREVIEW_LONG_SIDE);
+    return { name: file.name, source, width: full.width, height: full.height, preview, detections: [] };
   } finally {
     full.close();
   }
