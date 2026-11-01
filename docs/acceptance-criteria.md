@@ -26,10 +26,9 @@ reuse IDs.
 | AC-PICK-05 | HEIC photos open, natively or through the bundled decoder. | auto |
 | AC-PICK-06 | Progress is shown while photos are prepared and analyzed. | auto |
 | AC-PICK-07 | HEIC photos straight from an iPhone camera roll open on iPhone Safari. | manual |
-| AC-PICK-08 | "Take photo" opens the camera; each shot joins a tray (up to 8, removable, with "Take another" and adding from the library) until "Make collage". | auto |
-| AC-PICK-09 | Each device gets one-tap sources: Android "Take photo", "Photo library", "Files"; iPhone "Take photo", "Choose photos" (Safari routes library and files through one Apple menu); desktop "Upload photos" and a drag-and-drop area. | auto |
+| AC-PICK-09 | Each device gets one-tap sources and no camera button: Android "Photo library" and "Files"; iPhone one "Choose photos" (Safari routes library and files through one Apple menu); desktop "Upload photos" and a drag-and-drop area. | auto |
 | AC-PICK-10 | On desktop, dropping photos onto the drop area opens them like uploading. | auto |
-| AC-PICK-11 | On real phones, "Take photo" opens the camera, and on Android "Photo library" and "Files" open the photo picker and the file browser directly. | manual |
+| AC-PICK-11 | On a real Android phone, "Photo library" and "Files" open the photo picker and the file browser directly. | manual |
 
 ## Subject detection
 
@@ -96,8 +95,8 @@ reuse IDs.
 
 | ID | Criterion | Check |
 |---|---|---|
-| AC-STYLE-01 | The Style tool offers labeled controls for background (presets, custom color, blurred photo), spacing, margin, corners, border width and color, and a reset; chips pick which one shows. | auto |
-| AC-STYLE-02 | Defaults come from the layout until changed: white borders on scattered prints, blur for "Framed on blur", cream elsewhere. | auto |
+| AC-STYLE-01 | The Style tool offers labeled controls for color (presets, custom color, blurred photo), spacing, margin, corners, border width and color, and a reset; chips pick which one shows. | auto |
+| AC-STYLE-02 | Defaults come from the layout until changed: white borders on scattered prints, blur for "Framed on blur", white elsewhere. | auto |
 | AC-STYLE-03 | Style changes appear in the exported image. | auto |
 | AC-STYLE-04 | Changing the style keeps manual crops. | auto |
 | AC-STYLE-05 | Full-bleed layouts have no spacing, corners or border. | auto |

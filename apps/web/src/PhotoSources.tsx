@@ -1,12 +1,11 @@
-import { useEffect, useMemo, useState, type ChangeEvent, type DragEvent } from "react";
+import { useState, type ChangeEvent, type DragEvent } from "react";
 import type { Platform } from "./platform";
-import { ACCEPT, MAX_PHOTOS } from "./photos";
+import { ACCEPT } from "./photos";
 
-/** A button that opens a file input. `capture` opens the camera directly on phones. */
+/** A button that opens a file input. */
 function FileButton(props: {
   label: string;
   accept?: string;
-  capture?: boolean;
   multiple?: boolean;
   className?: string;
   disabled: boolean;
@@ -24,7 +23,6 @@ function FileButton(props: {
         className="visually-hidden"
         type="file"
         accept={props.accept}
-        capture={props.capture ? "environment" : undefined}
         multiple={props.multiple}
         disabled={props.disabled}
         onChange={onChange}
@@ -40,21 +38,20 @@ const libraryLabel = (platform: Platform) =>
 interface SourcesProps {
   platform: Platform;
   disabled: boolean;
-  /** `fromCamera` shots go to the tray; anything else opens the editor directly (unless the tray has photos). */
-  onFiles: (files: File[], fromCamera: boolean) => void;
+  onFiles: (files: File[]) => void;
 }
 
 /** How to get photos in: per-platform buttons, plus drag and drop on desktop. */
 export function PhotoSources({ platform, disabled, onFiles }: SourcesProps) {
   const [dragging, setDragging] = useState(false);
-  const library = (className: string) => (
+  const library = (
     <FileButton
       label={libraryLabel(platform)}
       accept={ACCEPT}
       multiple
-      className={className}
+      className="primary big"
       disabled={disabled}
-      onFiles={(f) => onFiles(f, false)}
+      onFiles={onFiles}
     />
   );
 
@@ -63,7 +60,7 @@ export function PhotoSources({ platform, disabled, onFiles }: SourcesProps) {
       e.preventDefault();
       setDragging(false);
       const files = Array.from(e.dataTransfer.files);
-      if (files.length && !disabled) onFiles(files, false);
+      if (files.length && !disabled) onFiles(files);
     };
     return (
       <div
@@ -77,74 +74,18 @@ export function PhotoSources({ platform, disabled, onFiles }: SourcesProps) {
       >
         <p className="dropzone-title">Drag and drop photos here</p>
         <p className="hint">or</p>
-        {library("primary big")}
+        {library}
       </div>
     );
   }
 
   return (
     <div className="sources">
-      <FileButton
-        label="Take photo"
-        accept="image/*"
-        capture
-        className="primary big"
-        disabled={disabled}
-        onFiles={(f) => onFiles(f, true)}
-      />
-      {library("big")}
+      {library}
       {platform === "android" && (
         // No `accept` filter, so Android opens its file browser rather than the photo picker.
-        <FileButton label="Files" multiple className="big" disabled={disabled} onFiles={(f) => onFiles(f, false)} />
+        <FileButton label="Files" multiple className="big" disabled={disabled} onFiles={onFiles} />
       )}
     </div>
-  );
-}
-
-/** Thumbnails of the camera shots so far, with "Take another", "add more" and "Make collage". */
-export function Tray(props: {
-  files: File[];
-  platform: Platform;
-  disabled: boolean;
-  onAdd: (files: File[]) => void;
-  onRemove: (index: number) => void;
-  onDone: () => void;
-}) {
-  const { files, platform, disabled } = props;
-  const urls = useMemo(() => files.map((f) => URL.createObjectURL(f)), [files]);
-  useEffect(() => () => urls.forEach((u) => URL.revokeObjectURL(u)), [urls]);
-  const full = files.length >= MAX_PHOTOS;
-
-  return (
-    <section className="tray" aria-label="Photos for your collage">
-      <p className="tray-count" role="status">
-        {files.length} of {MAX_PHOTOS} photos
-      </p>
-      <ul className="tray-thumbs">
-        {files.map((_, i) => (
-          <li key={urls[i]}>
-            <img src={urls[i]} alt={`Photo ${i + 1}`} />
-            <button type="button" aria-label={`Remove photo ${i + 1}`} onClick={() => props.onRemove(i)}>
-              ×
-            </button>
-          </li>
-        ))}
-      </ul>
-      {!full && (
-        <div className="sources">
-          <FileButton label="Take another" accept="image/*" capture disabled={disabled} onFiles={props.onAdd} />
-          <FileButton
-            label={platform === "ios" ? "Add photos" : "Add from library"}
-            accept={ACCEPT}
-            multiple
-            disabled={disabled}
-            onFiles={props.onAdd}
-          />
-        </div>
-      )}
-      <button type="button" className="button primary big" disabled={disabled || !files.length} onClick={props.onDone}>
-        Make collage
-      </button>
-    </section>
   );
 }
