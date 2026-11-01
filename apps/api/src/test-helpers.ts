@@ -1,0 +1,73 @@
+// Test-only: an API wired to the local database, with emails captured in memory and Cloudflare's Turnstile test keys.
+import { randomUUID } from "node:crypto";
+import { createApp } from "./app";
+import { createAuth } from "./auth";
+import { createDb } from "./db/client";
+import { memoryMailer } from "./email";
+
+export const WEB = "https://storystitch.ashishnag.com";
+export const API = "https://api.storystitch.ashishnag.com";
+/** Cloudflare's documented test secrets: one accepts every token, the other rejects every token. */
+export const TURNSTILE_PASS = "1x0000000000000000000000000000000AA";
+export const TURNSTILE_FAIL = "2x0000000000000000000000000000000AA";
+export const CAPTCHA = { "x-captcha-response": "XXXX.DUMMY.TOKEN.XXXX" };
+
+export function testApi({ turnstileSecret = TURNSTILE_PASS } = {}) {
+  const { pool, db } = createDb(process.env.DATABASE_URL!);
+  const mailer = memoryMailer();
+  const auth = createAuth({
+    db,
+    secret: "test-secret-test-secret-test-secret-0123",
+    baseURL: API,
+    webOrigins: [WEB],
+    mailer,
+    turnstileSecret,
+  });
+  const app = createApp({ pool, auth, corsOrigins: [WEB], version: "test-sha", testEmails: mailer.sent });
+  /** A browser-like client with its own IP address (so rate limits don't leak between tests) and cookies. */
+  function client() {
+    const ip = `10.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}`;
+    const jar = new Map<string, string>();
+    async function call(path: string, init: { method?: string; body?: unknown; headers?: Record<string, string> } = {}) {
+      const res = await app.request(new URL(path, API).toString(), {
+        method: init.method ?? (init.body ? "POST" : "GET"),
+        headers: {
+          Origin: WEB,
+          "x-forwarded-for": ip,
+          ...(init.body ? { "Content-Type": "application/json" } : {}),
+          ...(jar.size ? { Cookie: [...jar].map(([k, v]) => `${k}=${v}`).join("; ") } : {}),
+          ...init.headers,
+        },
+        body: init.body ? JSON.stringify(init.body) : undefined,
+        redirect: "manual",
+      });
+      for (const c of res.headers.getSetCookie()) {
+        const [pair] = c.split(";");
+        const [k, v] = pair!.split("=");
+        if (v) jar.set(k!, v);
+        else jar.delete(k!);
+      }
+      return res;
+    }
+    return { call, jar };
+  }
+
+  /** The most recent email sent to `to`, and the first link in it. */
+  function lastEmail(to: string) {
+    const email = mailer.sent.findLast((e) => e.to === to);
+    if (!email) throw new Error(`No email to ${to}`);
+    return { ...email, link: email.text.match(/https?:\/\/\S+/)![0] };
+  }
+
+  const email = () => `test-${randomUUID()}@example.com`;
+  return { app, pool, auth, client, lastEmail, email, close: () => pool.end() };
+}
+
+/** Signs up, follows the verification link and returns the signed-in client. */
+export async function verifiedUser(api: ReturnType<typeof testApi>, password = "correct horse battery") {
+  const email = api.email();
+  const c = api.client();
+  await c.call("/api/auth/sign-up/email", { body: { email, password, name: "Test" }, headers: CAPTCHA });
+  await c.call(api.lastEmail(email).link);
+  return { email, password, c };
+}

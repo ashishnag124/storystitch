@@ -10,13 +10,16 @@
     "typecheck": "tsc -b",
     "test": "vitest run",
     "preview": "vite preview",
-    "e2e": "playwright test"
+    "e2e": "pnpm run build:e2e && playwright test",
+    "build:e2e": "VITE_FEATURE_ACCOUNTS=false vite build --outDir dist-e2e --emptyOutDir --mode e2e && VITE_FEATURE_ACCOUNTS=true VITE_API_URL=http://localhost:3010 VITE_TURNSTILE_SITE_KEY=1x00000000000000000000AA vite build --outDir dist-e2e-accounts --emptyOutDir --mode e2e"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "^1.2.0",
     "@storystitch/layout-engine": "workspace:*",
     "@storystitch/shared": "workspace:*",
+    "better-auth": "^1.7.14",
     "heic-to": "^1.6.7",
+    "marked": "^18.1.2",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },

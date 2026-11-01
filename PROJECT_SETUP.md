@@ -8,7 +8,7 @@ Web app on Cloudflare Pages, plus an API with Postgres on Railway (from v2). All
 |---|---|---|---|
 | Trigger | `pnpm dev` | merge to `main` (CI deploys) | `/release` → `production` branch |
 | Web | http://localhost:5173 | https://staging.storystitch.ashishnag.com (also https://storystitch-web-staging.pages.dev) | https://storystitch.ashishnag.com (also https://storystitch-web.pages.dev) |
-| API | http://localhost:3000 | https://api-staging.storystitch.ashishnag.com (also https://api-staging-d014.up.railway.app) | https://api.storystitch.ashishnag.com (set up before the next `/release`) |
+| API | http://localhost:3001 | https://api-staging.storystitch.ashishnag.com (also https://api-staging-d014.up.railway.app) | https://api.storystitch.ashishnag.com (set up before the next `/release`) |
 | Database | Docker Postgres (`docker compose`) | Railway Postgres, `staging` environment | Railway Postgres, `production` environment |
 
 - GitHub: https://github.com/ashishnag124/storystitch (private)
@@ -25,6 +25,9 @@ Web app on Cloudflare Pages, plus an API with Postgres on Railway (from v2). All
 | `PAGES_PROJECT` = `storystitch-web`, `PAGES_PROJECT_STAGING` = `storystitch-web-staging` | GitHub variables | `release.yml` (production), `ci.yml` (staging) |
 | `API_URL_STAGING`, `API_URL_PRODUCTION` | GitHub variables | web builds (`VITE_API_URL`) in `ci.yml` / `release.yml` |
 | `DATABASE_URL` (reference `${{Postgres.DATABASE_URL}}`), `CORS_ORIGIN`, `NODE_ENV` | Railway variables on `api`, per environment | the API |
+| `BETTER_AUTH_URL` (the API's own URL), `BETTER_AUTH_SECRET` (random, per environment), `EMAIL_TRANSPORT=resend`, `EMAIL_FROM`, `RESEND_API_KEY`, `TURNSTILE_SECRET_KEY` | Railway variables on `api`, per environment | accounts (B2) |
+| `TURNSTILE_SITE_KEY` (public), plus the Cloudflare and Resend keys | GitHub secrets, synced with `gh secret set -f ~/.config/new-project/secrets.env` | web builds (`VITE_TURNSTILE_SITE_KEY`) |
+| Accounts flag (`VITE_FEATURE_ACCOUNTS`) | `accounts:` input to `_deploy-pages.yml`: `true` in `ci.yml` (staging), off in `release.yml` (production) | web builds |
 | Local values (`DATABASE_URL`, `PORT`, `CORS_ORIGIN`, `VITE_API_URL`) | `.env` (copy of `.env.example`) | `pnpm dev`, tests |
 
 ## Open checklist
@@ -43,7 +46,7 @@ What and why: the v2 section of `docs/product-brief.md`. Acceptance criteria: th
 |---|---|---|
 | B0 | Brief v2, planned criteria, legal drafts, accounts and DNS (checklist below) | docs merged; checklist in progress |
 | B1 | API + Postgres on Railway (staging, production), custom domains, CI/release/QA wiring | in progress: staging API live; checklist below |
-| B2 | Optional email and password accounts (Better Auth, Resend, Turnstile), account deletion. Text-message sign-in deferred | not started |
+| B2 | Optional email and password accounts (Better Auth, Resend, Turnstile), account deletion. On in staging only, behind `VITE_FEATURE_ACCOUNTS` | in progress: checklist below |
 | B3 | Save collages to Cloudflare R2, "My stories", storage limits | not started |
 | B4 | Supporter pass (Lemon Squeezy) | deferred: see "Later" in the brief |
 | B5 | Admin analytics (`/admin`, desktop, admin login with authenticator code) | not started |
@@ -92,6 +95,23 @@ Claude never reads that file; it loads values from it into Railway and GitHub wh
   ```
 - [ ] **Railway dashboard → `api` → Settings**, in each environment: turn on "Wait for CI", so Railway deploys only
   commits whose GitHub checks passed.
+
+### B2 checklist (yours)
+
+- [ ] **Load the two private keys into Railway staging.** Claude can't read the secrets file, so run this from the
+  repo folder (it pipes the values without printing them):
+  ```bash
+  ( set -a; . ~/.config/new-project/secrets.env; set +a
+    printf %s "$RESEND_API_KEY" | railway variable set RESEND_API_KEY --stdin -s api -e staging --skip-deploys
+    printf %s "$TURNSTILE_SECRET_KEY" | railway variable set TURNSTILE_SECRET_KEY --stdin -s api -e staging --skip-deploys )
+  ```
+- [ ] **Resend sending domain**: in Resend, add `storystitch.ashishnag.com`, add the DNS records it shows in
+  Squarespace and wait for "Verified". Until then staging sends from Resend's test address (`onboarding@resend.dev`),
+  which only delivers to the email on your Resend account. Once verified, tell Claude to switch `EMAIL_FROM` to
+  `StoryStitch <no-reply@storystitch.ashishnag.com>`.
+- [ ] **Turnstile widget hostnames**: make sure the widget lists `staging.storystitch.ashishnag.com` and
+  `storystitch.ashishnag.com`.
+- [ ] **Legal drafts**: fill in the `[TODO]`s; the drafts are what `/privacy` and `/terms` show on staging.
 
 ### DNS records (Squarespace → Domains → ashishnag.com → DNS)
 

@@ -1,5 +1,6 @@
 import { useState, type ChangeEvent } from "react";
 import { createWorkerDetector, describeSubjects, type Detector } from "./detect/detector";
+import { AccountLink } from "./account/AccountLink";
 import { Editor } from "./Editor";
 import { ACCEPT, ANALYSIS_LONG_SIDE, MAX_PHOTOS, UnsupportedPhotoError, downscale, loadPhoto, type Photo } from "./photos";
 
@@ -56,6 +57,7 @@ function App() {
   return (
     <main className="pick">
       <h1>StoryStitch</h1>
+      <AccountLink />
       <p className="lede">Turn 1–8 photos into an Instagram Story collage.</p>
       <label className={`button primary big${progress ? " disabled" : ""}`}>
         Choose photos
