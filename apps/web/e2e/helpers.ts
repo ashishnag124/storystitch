@@ -94,3 +94,6 @@ export async function workerHasWebGL2(page: Page) {
       }),
   );
 }
+
+/** The main "pick photos" input: "Photo library" on Android, "Choose photos" on iPhone, "Upload photos" on desktop. */
+export const libraryInput = (page: Page) => page.getByLabel(/^(Choose photos|Photo library|Upload photos)$/);

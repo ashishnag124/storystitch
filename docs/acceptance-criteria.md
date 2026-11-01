@@ -20,12 +20,16 @@ reuse IDs.
 | ID | Criterion | Check |
 |---|---|---|
 | AC-PICK-01 | The picker accepts JPEG, PNG, WebP and HEIC and allows choosing several photos at once. | auto |
-| AC-PICK-02 | Picking 1 to 8 photos opens the editor with a preview and a strip of layout options. | auto |
+| AC-PICK-02 | Picking 1 to 8 photos from the library opens the editor with a preview and a strip of layout options. | auto |
 | AC-PICK-03 | Picking more than 8 photos uses the first 8 and says so. | auto |
 | AC-PICK-04 | A file that can't be opened is skipped with a message naming it; the other photos still load. | auto |
 | AC-PICK-05 | HEIC photos open, natively or through the bundled decoder. | auto |
 | AC-PICK-06 | Progress is shown while photos are prepared and analyzed. | auto |
 | AC-PICK-07 | HEIC photos straight from an iPhone camera roll open on iPhone Safari. | manual |
+| AC-PICK-08 | "Take photo" opens the camera; each shot joins a tray (up to 8, removable, with "Take another" and adding from the library) until "Make collage". | auto |
+| AC-PICK-09 | Each device gets one-tap sources: Android "Take photo", "Photo library", "Files"; iPhone "Take photo", "Choose photos" (Safari routes library and files through one Apple menu); desktop "Upload photos" and a drag-and-drop area. | auto |
+| AC-PICK-10 | On desktop, dropping photos onto the drop area opens them like uploading. | auto |
+| AC-PICK-11 | On real phones, "Take photo" opens the camera, and on Android "Photo library" and "Files" open the photo picker and the file browser directly. | manual |
 
 ## Subject detection
 

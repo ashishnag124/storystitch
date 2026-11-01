@@ -5,7 +5,7 @@ import App from "./App";
 describe("App", () => {
   it("AC-PICK-01 AC-PRIV-02 starts on photo picking and says photos stay on the device", () => {
     render(<App />);
-    const input = screen.getByLabelText(/choose photos/i) as HTMLInputElement;
+    const input = screen.getByLabelText("Upload photos") as HTMLInputElement; // jsdom counts as desktop
     expect(input.type).toBe("file");
     expect(input.multiple).toBe(true);
     expect(input.accept).toContain(".heic");

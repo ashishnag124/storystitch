@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { exportImage, makePhotos, openApp } from "./helpers.js";
+import { exportImage, makePhotos, openApp, libraryInput } from "./helpers.js";
 
 test.beforeEach(({ page }) => openApp(page));
 
@@ -73,12 +73,12 @@ function pixels(page: Page, image: Buffer, points: [number, number][]) {
 }
 
 async function pickOne(page: Page, buffer: Buffer, layout: string) {
-  await page.getByLabel(/choose photos/i).setInputFiles({ name: "photo.jpg", mimeType: "image/jpeg", buffer });
+  await libraryInput(page).setInputFiles({ name: "photo.jpg", mimeType: "image/jpeg", buffer });
   await page.getByRole("radio", { name: layout }).click();
 }
 
 test("AC-EXPORT-02 PNG export is a 1080×1920 PNG", async ({ page }) => {
-  await page.getByLabel(/choose photos/i).setInputFiles(await makePhotos(page, 2));
+  await libraryInput(page).setInputFiles(await makePhotos(page, 2));
   await page.getByLabel("Format").selectOption("image/png");
   const png = await exportImage(page);
   expect(png.subarray(0, 8)).toEqual(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
@@ -138,7 +138,7 @@ test("AC-EXPORT-05 Share hands a 1080×1920 image to the share sheet", async ({ 
     });
   });
   await page.reload();
-  await page.getByLabel(/choose photos/i).setInputFiles(await makePhotos(page, 3));
+  await libraryInput(page).setInputFiles(await makePhotos(page, 3));
   const share = page.getByRole("button", { name: "Share" });
   await expect(share).toBeEnabled({ timeout: 20_000 });
   await share.click();
