@@ -1,5 +1,6 @@
 // Test-only: an API wired to the local database, with emails captured in memory and Cloudflare's Turnstile test keys.
 import { randomUUID } from "node:crypto";
+import { createServer } from "node:http";
 import { createApp } from "./app";
 import { createAuth } from "./auth";
 import { createDb } from "./db/client";
@@ -12,6 +13,28 @@ export const TURNSTILE_PASS = "1x0000000000000000000000000000000AA";
 export const TURNSTILE_FAIL = "2x0000000000000000000000000000000AA";
 export const CAPTCHA = { "x-captcha-response": "XXXX.DUMMY.TOKEN.XXXX" };
 
+/**
+ * A local stand-in for Cloudflare's siteverify endpoint with the same behavior as its test secrets: TURNSTILE_PASS
+ * accepts any token, anything else rejects it. Keeps the API tests off the network.
+ */
+const turnstileVerifyUrl = await new Promise<string>((resolve) => {
+  const server = createServer((req, res) => {
+    let body = "";
+    req.on("data", (chunk: Buffer) => (body += chunk));
+    req.on("end", () => {
+      const { secret, response } = JSON.parse(body || "{}") as { secret?: string; response?: string };
+      const success = secret === TURNSTILE_PASS && !!response;
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify({ success, "error-codes": success ? [] : ["invalid-input-response"] }));
+    });
+  });
+  server.unref();
+  server.listen(0, "127.0.0.1", () => {
+    const address = server.address();
+    resolve(`http://127.0.0.1:${typeof address === "object" && address ? address.port : 0}/siteverify`);
+  });
+});
+
 export function testApi({ turnstileSecret = TURNSTILE_PASS } = {}) {
   const { pool, db } = createDb(process.env.DATABASE_URL!);
   const mailer = memoryMailer();
@@ -22,6 +45,7 @@ export function testApi({ turnstileSecret = TURNSTILE_PASS } = {}) {
     webOrigins: [WEB],
     mailer,
     turnstileSecret,
+    turnstileVerifyUrl,
   });
   const app = createApp({ pool, auth, corsOrigins: [WEB], version: "test-sha", testEmails: mailer.sent });
   /** A browser-like client with its own IP address (so rate limits don't leak between tests) and cookies. */
@@ -33,7 +57,7 @@ export function testApi({ turnstileSecret = TURNSTILE_PASS } = {}) {
         method: init.method ?? (init.body ? "POST" : "GET"),
         headers: {
           Origin: WEB,
-          "x-forwarded-for": ip,
+          "x-real-ip": ip,
           ...(init.body ? { "Content-Type": "application/json" } : {}),
           ...(jar.size ? { Cookie: [...jar].map(([k, v]) => `${k}=${v}`).join("; ") } : {}),
           ...init.headers,

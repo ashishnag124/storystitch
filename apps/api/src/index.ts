@@ -2,11 +2,14 @@ import { serve } from "@hono/node-server";
 import { createApp } from "./app";
 import { createAuth } from "./auth";
 import { createDb } from "./db/client";
+import { applyMigrations } from "./db/migrate";
 import { consoleMailer, memoryMailer, resendMailer, type Mailer } from "./email";
 import { loadEnv } from "./env";
 
 const env = loadEnv();
 const { pool, db } = createDb(env.DATABASE_URL);
+await applyMigrations(db);
+console.log("Migrations applied");
 const memory = memoryMailer();
 const mailer: Mailer =
   env.EMAIL_TRANSPORT === "resend"

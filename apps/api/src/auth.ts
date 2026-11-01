@@ -17,6 +17,8 @@ export interface AuthOptions {
   turnstileSecret: string;
   /** Off only for end-to-end tests, whose requests all come from one address (the limits have their own tests). */
   rateLimit?: boolean;
+  /** Tests only: a local stand-in for Cloudflare's verification endpoint, so they don't depend on the network. */
+  turnstileVerifyUrl?: string;
 }
 
 /** Limits on top of Better Auth's default (100 requests per 10 s per IP and path). */
@@ -31,7 +33,8 @@ export const AUTH_RATE_LIMITS = {
  * Optional email-and-password accounts. Users verify their email before they can sign in, reset passwords by
  * email, and can delete their account (with their password). Sign-up, sign-in and reset require a Turnstile token.
  */
-export function createAuth({ db, secret, baseURL, webOrigins, mailer, turnstileSecret, rateLimit = true }: AuthOptions) {
+export function createAuth(options: AuthOptions) {
+  const { db, secret, baseURL, webOrigins, mailer, turnstileSecret, rateLimit = true, turnstileVerifyUrl } = options;
   return betterAuth({
     appName: "StoryStitch",
     secret,
@@ -76,8 +79,16 @@ export function createAuth({ db, secret, baseURL, webOrigins, mailer, turnstileS
     rateLimit: { enabled: rateLimit, storage: "database", customRules: AUTH_RATE_LIMITS },
     // Refuse requests that change data unless they come from our web origins. Set explicitly: Better Auth turns
     // this check off by default when NODE_ENV=test, and tests must see production behavior.
-    advanced: { disableOriginCheck: false, disableCSRFCheck: false },
-    plugins: [captcha({ provider: "cloudflare-turnstile", secretKey: turnstileSecret })],
+    advanced: {
+      disableOriginCheck: false,
+      disableCSRFCheck: false,
+      // Railway's edge proxy sets X-Real-IP to the visitor's address (X-Forwarded-For can carry client-supplied
+      // entries), so attempt limits are per visitor rather than one shared bucket.
+      ipAddress: { ipAddressHeaders: ["x-real-ip"] },
+    },
+    plugins: [
+      captcha({ provider: "cloudflare-turnstile", secretKey: turnstileSecret, siteVerifyURLOverride: turnstileVerifyUrl }),
+    ],
   });
 }
 
