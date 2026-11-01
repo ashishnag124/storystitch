@@ -158,7 +158,7 @@ test.describe("editing", () => {
     await libraryInput(page).setInputFiles(await makePhotos(page, 2));
     await page.getByRole("radio", { name: "Two stacked" }).click();
     await page.getByRole("tab", { name: "Style" }).click();
-    // Background is the first property: swatches, blurred photo and a custom color.
+    // Color is the first property: swatches, blurred photo and a custom color.
     for (const name of ["Cream", "White", "Black", "Sage", "Blush", "Navy", "Blurred photo", "Reset style"]) {
       await expect(page.getByRole("button", { name, exact: true })).toBeVisible();
     }
@@ -178,8 +178,8 @@ test.describe("editing", () => {
 
     await page.getByRole("button", { name: "Reset style" }).click();
     await expect(page.getByRole("slider", { name: "Spacing" })).toHaveValue("14");
-    await chip("Background").click();
-    await expect(page.getByRole("button", { name: "Cream" })).toHaveAttribute("aria-pressed", "true");
+    await chip("Color").click();
+    await expect(page.getByRole("button", { name: "White" })).toHaveAttribute("aria-pressed", "true");
   });
 
   test("AC-EDIT-10 a selected photo gets a floating Fit / Done tooltip, and Fit restores the automatic crop", async ({ page }) => {

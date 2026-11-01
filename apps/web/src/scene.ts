@@ -29,7 +29,7 @@ export interface Style {
   borderColor: string;
 }
 
-export const DEFAULT_BACKGROUND = { kind: "color", color: "#f4efe6" } as const satisfies Background;
+export const DEFAULT_BACKGROUND = { kind: "color", color: "#ffffff" } as const satisfies Background;
 /** Border scattered prints get by default, so overlapping photos read as separate prints. */
 export const PRINT_BORDER = 14;
 

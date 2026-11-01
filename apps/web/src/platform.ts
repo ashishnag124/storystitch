@@ -1,7 +1,7 @@
 /**
- * Which photo-source buttons a device can offer. The camera opens directly everywhere (`capture`); Android also
- * opens its photo picker and file browser directly, but iPhone Safari routes every file input through Apple's own
- * menu (Photo Library / Take Photo / Choose File), so it gets one "Choose photos" button instead of two.
+ * Which photo-source buttons a device can offer. Android opens its photo picker and file browser directly, but
+ * iPhone Safari routes every file input through Apple's own menu (Photo Library / Take Photo / Choose File), so it
+ * gets one "Choose photos" button instead of two.
  */
 export type Platform = "ios" | "android" | "desktop";
 

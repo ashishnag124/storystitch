@@ -15,7 +15,7 @@ const SWATCHES = [
 const RANGES = { gap: 48, margin: 96, radius: 60, border: 40 } as const;
 
 const PROPERTIES = [
-  { id: "background", label: "Background" },
+  { id: "background", label: "Color" },
   { id: "gap", label: "Spacing" },
   { id: "margin", label: "Margin" },
   { id: "radius", label: "Corners" },
@@ -79,7 +79,7 @@ export function StylePanel({ layout, style, onChange }: Props) {
 
       <div className="style-control" key={property}>
         {property === "background" && (
-          <div className="swatches" role="group" aria-label="Background">
+          <div className="swatches" role="group" aria-label="Color">
             {SWATCHES.map((s) => (
               <button
                 key={s.color}

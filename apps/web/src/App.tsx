@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { createWorkerDetector, describeSubjects, type Detector } from "./detect/detector";
 import { AccountLink } from "./account/AccountLink";
 import { Editor } from "./Editor";
-import { PhotoSources, Tray } from "./PhotoSources";
+import { PhotoSources } from "./PhotoSources";
 import { ANALYSIS_LONG_SIDE, MAX_PHOTOS, UnsupportedPhotoError, downscale, loadPhoto, type Photo } from "./photos";
 import { detectPlatform } from "./platform";
 
@@ -16,21 +16,8 @@ function App() {
   const [progress, setProgress] = useState<{ step: string; done: number; total: number } | null>(null);
   const [summary, setSummary] = useState<string | null>(null);
   const [notices, setNotices] = useState<string[]>([]);
-  /** Camera shots (and anything added after them) waiting for "Make collage". */
-  const [tray, setTray] = useState<File[]>([]);
   const platform = useMemo(() => detectPlatform(navigator), []);
   const tooMany = `StoryStitch uses up to ${MAX_PHOTOS} photos, so it took the first ${MAX_PHOTOS}.`;
-
-  function onFiles(files: File[], fromCamera: boolean) {
-    if (!fromCamera && !tray.length) return void openPhotos(files);
-    addToTray(files);
-  }
-
-  function addToTray(files: File[]) {
-    const next = [...tray, ...files];
-    setNotices(next.length > MAX_PHOTOS ? [tooMany] : []);
-    setTray(next.slice(0, MAX_PHOTOS));
-  }
 
   async function openPhotos(picked: File[]) {
     const notes: string[] = [];
@@ -56,7 +43,6 @@ function App() {
     setNotices(notes);
     setSummary(describeSubjects(loaded.map((p) => p.detections)));
     setPhotos(loaded);
-    setTray([]);
   }
 
   function startOver() {
@@ -74,18 +60,7 @@ function App() {
       <h1>StoryStitch</h1>
       <AccountLink />
       <p className="lede">Turn 1–8 photos into an Instagram Story collage.</p>
-      {tray.length ? (
-        <Tray
-          files={tray}
-          platform={platform}
-          disabled={!!progress}
-          onAdd={addToTray}
-          onRemove={(i) => setTray(tray.filter((_, j) => j !== i))}
-          onDone={() => void openPhotos(tray)}
-        />
-      ) : (
-        <PhotoSources platform={platform} disabled={!!progress} onFiles={onFiles} />
-      )}
+      <PhotoSources platform={platform} disabled={!!progress} onFiles={(files) => void openPhotos(files)} />
       {progress && (
         <p role="status">
           {progress.step} {Math.min(progress.done + 1, progress.total)} of {progress.total}…
