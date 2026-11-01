@@ -13,11 +13,20 @@
       "Bash(gh run watch*)",
       "Bash(gh pr view*)",
       "Bash(gh pr checks*)",
-      "Bash(curl -fsS localhost*)"
+      "Bash(curl -fsS localhost*)",
+      "Bash(railway *)"
     ],
     "ask": [
       "Bash(gh workflow run *)",
-      "Bash(railway *)",
+      "Bash(railway delete*)",
+      "Bash(railway down*)",
+      "Bash(railway environment delete*)",
+      "Bash(railway env delete*)",
+      "Bash(railway service delete*)",
+      "Bash(railway volume delete*)",
+      "Bash(railway domain delete*)",
+      "Bash(railway variable delete*)",
+      "Bash(railway unlink*)",
       "Bash(npx wrangler *)",
       "Bash(npx eas-cli *)",
       "Bash(eas *)",

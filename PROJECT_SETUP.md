@@ -15,7 +15,7 @@ Web app on Cloudflare Pages, plus an API with Postgres on Railway (from v2). All
 - Cloudflare Pages projects (classic Pages, Direct Upload):
   - `storystitch-web`: production, deploys the `production` branch (via `/release`).
   - `storystitch-web-staging`: staging, deploys `main` as its own production. It's a separate project because Pages routes a custom domain to a branch only through Cloudflare-proxied DNS, and ashishnag.com's DNS is at Squarespace. The old staging alias `main.storystitch-web.pages.dev` no longer updates.
-- Railway project: `storystitch`, services `api` and `Postgres`, environments `staging` (deploys `main`) and `production` (deploys the `production` branch, so only `/release` moves it). Migrations run before each deploy (`railway.json` → `preDeployCommand`), and Railway only switches traffic once `/health` answers.
+- Railway project: `storystitch`, services `api` and `Postgres`, environments `staging` (deploys `main`) and `production` (deploys the `production` branch, so only `/release` moves it). The API applies pending migrations itself at startup, before it serves requests (`apps/api/src/db/migrate.ts`; Railway never ran the `railway.json` pre-deploy command for this service), and Railway only switches traffic once `/health` answers.
 
 ## Where config lives
 

@@ -3,10 +3,14 @@
   "build": {
     "builder": "DOCKERFILE",
     "dockerfilePath": "apps/api/Dockerfile",
-    "watchPatterns": ["apps/api/**", "packages/**", "pnpm-lock.yaml", "railway.json"]
+    "watchPatterns": [
+      "apps/api/**",
+      "packages/**",
+      "pnpm-lock.yaml",
+      "railway.json"
+    ]
   },
   "deploy": {
-    "preDeployCommand": ["node dist/migrate.js"],
     "healthcheckPath": "/health",
     "healthcheckTimeout": 120,
     "restartPolicyType": "ON_FAILURE",
