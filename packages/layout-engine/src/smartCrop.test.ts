@@ -27,11 +27,11 @@ const disjoint = (a: Rect, b: Rect) =>
   a.x + a.width <= b.x + tol || b.x + b.width <= a.x + tol || a.y + a.height <= b.y + tol || b.y + b.height <= a.y + tol;
 
 describe("smartCrop", () => {
-  it("uses the center crop when nothing was detected", () => {
+  it("AC-CROP-04 uses the center crop when nothing was detected", () => {
     expect(smartCrop(wide, tallFrame, [])).toEqual(CENTER_CROP);
   });
 
-  it("slides to keep an off-center face in frame, centered", () => {
+  it("AC-CROP-01 slides to keep an off-center face in frame, centered", () => {
     const f = face(0.6, 0.3, 0.08, 0.1);
     const crop = sourceRect(wide, tallFrame, smartCrop(wide, tallFrame, [f]));
     const head = px(padFace(f.box), wide);
@@ -39,7 +39,7 @@ describe("smartCrop", () => {
     expect(crop.x + crop.width / 2).toBeCloseTo(head.x + head.width / 2, 0);
   });
 
-  it("drops whole faces it can't fit, never slicing one, and keeps the most important", () => {
+  it("AC-CROP-02 drops whole faces it can't fit, never slicing one, and keeps the most important", () => {
     const faces = [face(0.05, 0.3, 0.1, 0.13, 0.7), face(0.45, 0.3, 0.12, 0.16), face(0.85, 0.3, 0.1, 0.13, 0.7)];
     const crop = sourceRect(wide, tallFrame, smartCrop(wide, tallFrame, faces));
     for (const f of faces) {
@@ -49,7 +49,7 @@ describe("smartCrop", () => {
     expect(contains(crop, px(padFace(faces[1]!.box), wide))).toBe(true);
   });
 
-  it("zooms out when no position avoids cutting a face", () => {
+  it("AC-CROP-05 zooms out when no position avoids cutting a face", () => {
     // Two heads side by side, together wider than the crop (37.5% of the photo), with no gap between them.
     const faces = [face(0.28, 0.3, 0.16, 0.2), face(0.46, 0.3, 0.16, 0.2)];
     const result = smartCrop(wide, tallFrame, faces);
@@ -58,7 +58,7 @@ describe("smartCrop", () => {
     for (const f of faces) expect(contains(crop, px(padFace(f.box), wide))).toBe(true);
   });
 
-  it("moves the subject out of a safe-zone band", () => {
+  it("AC-CROP-03 moves the subject out of a safe-zone band", () => {
     const tall = { width: 3000, height: 4000 };
     const wideFrame = { width: 1000, height: 500 }; // crop slides along y
     const subject = [object(0.4, 0.45, 0.2, 0.1)];
@@ -69,7 +69,7 @@ describe("smartCrop", () => {
     expect(banded.y).toBeLessThan(plain.y);
   });
 
-  it("is deterministic", () => {
+  it("AC-CROP-01 is deterministic", () => {
     const d = [face(0.2, 0.2, 0.1, 0.1), object(0.6, 0.5, 0.3, 0.3)];
     expect(smartCrop(wide, tallFrame, d)).toEqual(smartCrop(wide, tallFrame, d));
   });
@@ -119,7 +119,7 @@ describe("smartCrop properties", () => {
     return x1 - x0 <= widest.width * (1 - 2 * SUBJECT_MARGIN) && y1 - y0 <= widest.height * (1 - 2 * SUBJECT_MARGIN);
   }
 
-  it("never cuts through a face", () => {
+  it("AC-CROP-02 never cuts through a face", () => {
     let checked = 0;
     for (const { image, frame, detections } of cases) {
       if (!facesCanFit(image, frame, detections)) continue;
@@ -135,7 +135,7 @@ describe("smartCrop properties", () => {
     expect(checked).toBeGreaterThan(400);
   });
 
-  it("keeps the whole subject when it fits and no other face is in the way", () => {
+  it("AC-CROP-01 keeps the whole subject when it fits and no other face is in the way", () => {
     let checked = 0;
     for (const { image, frame, detections } of cases) {
       const subject = subjectBox(detections);

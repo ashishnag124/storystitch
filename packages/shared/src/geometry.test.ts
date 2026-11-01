@@ -5,7 +5,7 @@ import { CellSchema } from "./layout";
 const size = { width: 100, height: 100 };
 const cell = (raw: unknown) => CellSchema.parse(raw);
 
-describe("geometry", () => {
+describe("AC-LAYOUT-05 geometry", () => {
   it("insets a square by d on every side", () => {
     const square = [
       { x: 0, y: 0 },

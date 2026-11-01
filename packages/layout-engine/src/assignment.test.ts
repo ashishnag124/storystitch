@@ -29,7 +29,7 @@ const portrait = photo(3000, 4000);
 const wideCell = cell(1000, 500);
 const tallCell = cell(500, 1000);
 
-describe("hungarian", () => {
+describe("AC-ASSIGN-01 hungarian", () => {
   it("solves a known case", () => {
     const cost = [
       [4, 1, 3],
@@ -52,7 +52,7 @@ describe("hungarian", () => {
   });
 });
 
-describe("placement", () => {
+describe("AC-ASSIGN-02 placement", () => {
   it("costs less when the photo's shape matches the cell", () => {
     expect(placement(landscape, wideCell).cost).toBeLessThan(placement(landscape, tallCell).cost);
     expect(placement(portrait, tallCell).cost).toBeLessThan(placement(portrait, wideCell).cost);
@@ -82,7 +82,7 @@ describe("placement", () => {
   });
 });
 
-describe("assignPhotos", () => {
+describe("AC-ASSIGN-03 assignPhotos", () => {
   it("puts each photo in the cell that fits its shape", () => {
     expect(assignPhotos([portrait, landscape], [wideCell, tallCell]).order).toEqual([1, 0]);
     expect(assignPhotos([landscape, portrait], [wideCell, tallCell]).order).toEqual([0, 1]);
@@ -112,12 +112,12 @@ describe("rankLayouts", () => {
     { layout: { id: "columns-copy" }, cells: [tallCell, tallCell] },
   ];
 
-  it("puts the best fit first", () => {
+  it("AC-RANK-01 puts the best fit first", () => {
     expect(rankLayouts(options, [landscape, landscape]).map((r) => r.layout.id)[0]).toBe("rows");
     expect(rankLayouts(options, [portrait, portrait]).map((r) => r.layout.id)[0]).toBe("columns");
   });
 
-  it("is deterministic and independent of how the options are listed", () => {
+  it("AC-RANK-02 is deterministic and independent of how the options are listed", () => {
     const photos = [portrait, landscape];
     const ids = rankLayouts(options, photos).map((r) => r.layout.id);
     expect(rankLayouts(options, photos).map((r) => r.layout.id)).toEqual(ids);

@@ -14,8 +14,9 @@ Release to production. Bump type: `$ARGUMENTS` (default `minor`).
    - commits since the last tag (`git log --oneline <last>..$MAIN_SHA`)
    - migration files added since the last tag (`git diff --name-only <last>..$MAIN_SHA -- apps/api/drizzle`), and flag any `DROP`, `RENAME`, or `ALTER ... TYPE` in them as needing a backward-compatibility check
    - the staging URLs from `PROJECT_SETUP.md` so they can confirm staging looks right
+   - the `manual` rows of `docs/acceptance-criteria.md`, as the hand checks to confirm on staging (the workflow re-runs every `auto` row itself)
 5. Ask for explicit confirmation of version and commit. Stop unless the user says yes.
-6. `gh workflow run release.yml -f version=<version> -f sha=$MAIN_SHA`, then find the run and `gh run watch` it.
+6. `gh workflow run release.yml -f version=<version> -f sha=$MAIN_SHA`, then find the run and `gh run watch` it. Its `qa` job re-runs `pnpm qa` on that commit before anything is promoted; if it fails, report the failing criteria from the job summary (or the `qa-results-<version>` artifact) and stop.
 7. After success: `curl -fsS -o /dev/null <production web URL>` succeeds. Report production URLs and the release link.
 
 Never push to the `production` branch yourself. If the workflow fails, report the failing step; don't retry with a different method.

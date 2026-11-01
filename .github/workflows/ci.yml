@@ -20,10 +20,14 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm check
-      - run: pnpm build
       - run: pnpm --filter @storystitch/web exec playwright install --with-deps chromium webkit
-      - run: pnpm e2e
+      # Lint, typecheck, unit + end-to-end tests, and every criterion in docs/acceptance-criteria.md.
+      - run: pnpm qa
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qa-results
+          path: qa-results/
 
   deploy-web-staging:
     needs: check

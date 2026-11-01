@@ -4,7 +4,7 @@ import { describeSubjects } from "./detector";
 
 const d = (kind: Detection["kind"], label?: string): Detection => ({ kind, label, score: 0.9, box: { x: 0, y: 0, w: 0.1, h: 0.1 } });
 
-describe("describeSubjects", () => {
+describe("AC-DETECT-06 describeSubjects", () => {
   it("lists faces and labelled objects", () => {
     expect(describeSubjects([[d("face"), d("face")], [d("object", "dog"), d("person", "person")]])).toBe("Found 2 faces and a dog.");
     expect(describeSubjects([[d("face")]])).toBe("Found 1 face.");

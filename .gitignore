@@ -16,3 +16,6 @@ playwright-report/
 
 # Copied from node_modules by apps/web/scripts/copy-mediapipe.mjs
 apps/web/public/mediapipe/
+
+# pnpm qa output
+qa-results/

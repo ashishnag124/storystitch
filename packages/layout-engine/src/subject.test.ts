@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { salientRegion } from "./saliency";
 import { padFace, subjectBox, type Detection } from "./subject";
 
-describe("subjectBox", () => {
+describe("AC-DETECT-05 subjectBox", () => {
   it("pads faces to cover the whole head", () => {
     const head = padFace({ x: 0.4, y: 0.4, w: 0.1, h: 0.1 });
     expect(head.y).toBeCloseTo(0.36);
@@ -36,7 +36,7 @@ function image(w: number, h: number, rect?: { x: number; y: number; w: number; h
   return { width: w, height: h, data };
 }
 
-describe("salientRegion", () => {
+describe("AC-DETECT-03 salientRegion", () => {
   it("finds a distinct object away from the center", () => {
     const rect = { x: 56 / 96, y: 12 / 64, w: 20 / 96, h: 16 / 64 };
     const region = salientRegion(image(96, 64, { x: 56, y: 12, w: 20, h: 16 }))!;

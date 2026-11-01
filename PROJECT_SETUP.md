@@ -31,7 +31,7 @@ There are no app config values yet; `.env.example` is empty.
 
 ## Release
 
-Run `/release` in Claude Code from this repo. It checks CI on `main`, shows what's shipping, asks for confirmation, then runs the Release workflow, which fast-forwards `production`, tags `vX.Y.Z` and deploys the web app to production.
+Run `/release` in Claude Code from this repo. It checks CI on `main`, shows what's shipping and the manual acceptance checks, asks for confirmation, then runs the Release workflow. That workflow re-runs `pnpm qa` (every criterion in `docs/acceptance-criteria.md`) on the exact commit, and only if it passes fast-forwards `production`, tags `vX.Y.Z` and deploys the web app to production. The QA report is attached to the run as the `qa-results-vX.Y.Z` artifact.
 
 ## Add an app or service
 
