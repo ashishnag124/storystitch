@@ -1,12 +1,25 @@
 {
   "name": "storystitch",
   "apps": {
-    "web": { "path": "apps/web", "stack": "vite-react", "host": "cloudflare-pages", "pagesProject": "storystitch-web" }
+    "web": {
+      "path": "apps/web",
+      "stack": "vite-react",
+      "host": "cloudflare-pages",
+      "pagesProject": "storystitch-web"
+    }
   },
   "features": {},
   "environments": {
-    "local": { "web": "http://localhost:5173" },
-    "staging": { "branch": "main", "web": "" },
-    "production": { "branch": "production", "web": "" }
+    "local": {
+      "web": "http://localhost:5173"
+    },
+    "staging": {
+      "branch": "main",
+      "web": "https://main.storystitch-web.pages.dev"
+    },
+    "production": {
+      "branch": "production",
+      "web": "https://storystitch-web.pages.dev"
+    }
   }
 }
