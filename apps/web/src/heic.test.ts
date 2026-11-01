@@ -3,7 +3,7 @@ import { isHeic } from "./heic";
 
 const header = (brand: string) => new Blob([new Uint8Array([0, 0, 0, 24]), "ftyp" + brand, "rest of file"]);
 
-describe("isHeic", () => {
+describe("AC-PICK-05 isHeic", () => {
   it("recognises HEIC and HEIF brands", async () => {
     expect(await isHeic(header("heic"))).toBe(true);
     expect(await isHeic(header("mif1"))).toBe(true);

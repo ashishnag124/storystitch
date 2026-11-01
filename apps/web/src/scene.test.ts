@@ -22,7 +22,7 @@ const byId = (id: string) => layouts.find((l) => l.id === id)!;
 const style = { ...DEFAULT_STYLE, gap: 20, margin: 40 };
 const plain = (n: number): CropSource[] => Array.from({ length: n }, () => ({ width: 4000, height: 3000, detections: [] }));
 
-describe("cellShapes", () => {
+describe("AC-STYLE-06 cellShapes", () => {
   it("keeps the outer margin and a full gap between neighbours", () => {
     const [top, bottom] = cellShapes(byId("two-stack"), style, STORY_CANVAS);
     expect(top!.frame).toMatchObject({ width: 1000, height: 910, cx: 540, cy: 40 + 455 });
@@ -41,7 +41,7 @@ describe("cellShapes", () => {
   });
 });
 
-describe("safeInsets", () => {
+describe("AC-CROP-03 safeInsets", () => {
   it("measures how much of a full-bleed frame sits under each band", () => {
     expect(safeInsets({ cx: 540, cy: 960, width: 1080, height: 1920, rotate: 0 })).toEqual({
       top: 0.14,
@@ -56,7 +56,7 @@ describe("safeInsets", () => {
   });
 });
 
-describe("scene edits", () => {
+describe("AC-EDIT-08 scene edits", () => {
   const moved = { cx: 0.2, cy: 0.3, zoom: 2 };
   // A face near the right edge of photo 3.
   const face: Detection = { kind: "face", score: 0.9, box: { x: 0.85, y: 0.3, w: 0.08, h: 0.1 } };
@@ -78,13 +78,13 @@ describe("scene edits", () => {
 });
 
 describe("rankedScenes", () => {
-  it("offers every layout for the photo count, each with every photo placed once", () => {
+  it("AC-RANK-03 offers every layout for the photo count, each with every photo placed once", () => {
     const scenes = rankedScenes(plain(5));
     expect(scenes.map((s) => s.layout.id).sort()).toEqual(layoutsFor(5).map((l) => l.id).sort());
     for (const s of scenes) expect([...s.order].sort()).toEqual([0, 1, 2, 3, 4]);
   });
 
-  it("puts a portrait photo full bleed and frames a landscape one", () => {
+  it("AC-RANK-01 puts a portrait photo full bleed and frames a landscape one", () => {
     const portrait = [{ width: 1080, height: 1920, detections: [] }];
     expect(rankedScenes(portrait)[0]!.layout.id).toBe("single-bleed");
     expect(rankedScenes(plain(1))[0]!.layout.id).toBe("single-framed");
@@ -92,20 +92,20 @@ describe("rankedScenes", () => {
 });
 
 describe("style", () => {
-  it("defaults to each layout's own background and border", () => {
+  it("AC-STYLE-02 defaults to each layout's own background and border", () => {
     expect(backgroundOf(byId("single-framed"), DEFAULT_STYLE)).toEqual({ kind: "blur" });
     expect(backgroundOf(byId("two-stack"), DEFAULT_STYLE)).toEqual(DEFAULT_BACKGROUND);
     expect(borderOf(byId("three-scattered"), DEFAULT_STYLE)).toBe(PRINT_BORDER);
     expect(borderOf(byId("three-stack"), DEFAULT_STYLE)).toBe(0);
   });
 
-  it("uses the user's picks over the layout's defaults", () => {
+  it("AC-STYLE-02 uses the user's picks over the layout's defaults", () => {
     const picked = { ...DEFAULT_STYLE, background: { kind: "color", color: "#111111" } as const, border: 0 };
     expect(backgroundOf(byId("single-framed"), picked)).toEqual({ kind: "color", color: "#111111" });
     expect(borderOf(byId("three-scattered"), picked)).toBe(0);
   });
 
-  it("has no spacing, corners or border on bleed layouts", () => {
+  it("AC-STYLE-05 has no spacing, corners or border on bleed layouts", () => {
     expect(styleScale(byId("single-bleed"), { ...DEFAULT_STYLE, border: 20 }, STORY_CANVAS)).toEqual({
       gap: 0,
       margin: 0,
@@ -114,7 +114,7 @@ describe("style", () => {
     });
   });
 
-  it("keeps manual crops when restyling, fitted to the resized cells", () => {
+  it("AC-STYLE-04 keeps manual crops when restyling, fitted to the resized cells", () => {
     const photos = plain(2);
     const scene = withCrop(newScene(byId("two-stack"), photos), 0, { cx: 0.3, cy: 0.5, zoom: 2 });
     const restyled = withStyle(scene, { ...DEFAULT_STYLE, margin: 90 }, photos);

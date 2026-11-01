@@ -18,10 +18,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  promote:
+  resolve:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
       actions: read
     outputs:
       sha: ${{ steps.resolve.outputs.sha }}
@@ -49,10 +49,48 @@ jobs:
           [ "$CONCLUSION" = "success" ] || { echo "CI on $SHA is '$CONCLUSION', not success"; exit 1; }
           echo "sha=$SHA" >> "$GITHUB_OUTPUT"
 
+  # Re-run the full acceptance suite on the exact commit being released; production only moves if it passes.
+  qa:
+    needs: resolve
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @storystitch/web exec playwright install --with-deps chromium webkit
+      - run: pnpm qa
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qa-results-${{ inputs.version }}
+          path: qa-results/
+
+  promote:
+    needs: [resolve, qa]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ inputs.version }}
+      SHA: ${{ needs.resolve.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
       - name: Fast-forward production and tag
         run: |
           set -euo pipefail
-          SHA="${{ steps.resolve.outputs.sha }}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git push origin "$SHA:refs/heads/production"   # fails if not a fast-forward
@@ -61,7 +99,7 @@ jobs:
           gh release create "$VERSION" --verify-tag --generate-notes
 
   deploy-web:
-    needs: promote
+    needs: [resolve, promote]
     # the called workflow can't get more than this job grants; the repo's default token is read-only
     permissions:
       contents: read
@@ -70,6 +108,6 @@ jobs:
     with:
       app: web
       project: ${{ vars.PAGES_PROJECT }}
-      ref: ${{ needs.promote.outputs.sha }}
+      ref: ${{ needs.resolve.outputs.sha }}
       branch: production
     secrets: inherit

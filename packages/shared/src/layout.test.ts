@@ -5,29 +5,29 @@ import { layoutProblems } from "./validate";
 const parse = (raw: unknown): Layout => LayoutSchema.parse(raw);
 
 describe("layout library", () => {
-  it("has unique ids", () => {
+  it("AC-LAYOUT-04 has unique ids", () => {
     const ids = layouts.map((l) => l.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("has at least 2 layouts for 1 photo", () => {
+  it("AC-LAYOUT-02 has at least 2 layouts for 1 photo", () => {
     expect(layoutsFor(1).length).toBeGreaterThanOrEqual(2);
   });
 
-  it.each([2, 3, 4, 5, 6, 7, 8])("has at least 4 layouts for %i photos", (n) => {
+  it.each([2, 3, 4, 5, 6, 7, 8])("AC-LAYOUT-02 has at least 4 layouts for %i photos", (n) => {
     expect(layoutsFor(n).length).toBeGreaterThanOrEqual(4);
   });
 
-  it("covers every family", () => {
+  it("AC-LAYOUT-03 covers every family", () => {
     expect(new Set(layouts.map((l) => l.family))).toEqual(new Set(LAYOUT_FAMILIES));
   });
 
-  it.each(layouts.map((l) => [l.id, l] as const))("%s is valid", (_, layout) => {
+  it.each(layouts.map((l) => [l.id, l] as const))("AC-LAYOUT-01 %s is valid", (_, layout) => {
     expect(layoutProblems(layout)).toEqual([]);
   });
 });
 
-describe("layoutProblems", () => {
+describe("AC-LAYOUT-01 layoutProblems", () => {
   it("reports a cell that leaves the canvas", () => {
     const layout = parse({ id: "bad", name: "Bad", family: "grid", cells: [{ shape: "rect", x: 0.5, y: 0, w: 0.6, h: 1 }] });
     expect(layoutProblems(layout)).toContain("bad cell 0 leaves the canvas");
