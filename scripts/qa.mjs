@@ -13,7 +13,7 @@ const root = join(import.meta.dirname, "..");
 const out = join(root, "qa-results");
 const CRITERIA_FILE = join(root, "docs/acceptance-criteria.md");
 const ID = /\bAC-[A-Z0-9]+-\d{2}\b/g;
-const ROW = /^\|\s*(AC-[A-Z0-9]+-\d{2})\s*\|\s*(.+?)\s*\|\s*(auto|manual)\s*\|\s*$/;
+const ROW = /^\|\s*(AC-[A-Z0-9]+-\d{2})\s*\|\s*(.+?)\s*\|\s*(auto|manual|planned)\s*\|\s*$/;
 
 rmSync(out, { recursive: true, force: true });
 mkdirSync(out, { recursive: true });
@@ -125,6 +125,7 @@ const graded = criteria.map((c) => {
   const [passed, failed, skipped] = [count("passed"), count("failed"), count("skipped")];
   let result;
   if (c.check === "manual") result = "MANUAL";
+  else if (c.check === "planned") result = "PLANNED";
   else if (!tests.length) result = "NO TEST";
   else if (failed) result = "FAIL";
   else if (!passed) result = "SKIPPED";
@@ -151,13 +152,14 @@ const icon = {
   "NO TEST": "❌",
   SKIPPED: "⚠️",
   MANUAL: "👀",
+  PLANNED: "🗓️",
 };
 const lines = [
   `# QA report: ${ok ? "PASS" : "FAIL"}`,
   "",
   `${new Date().toISOString()} · commit \`${spawnSync("git", ["rev-parse", "--short", "HEAD"], { cwd: root }).stdout.toString().trim()}\``,
   "",
-  `**${tally("PASS")} of ${graded.filter((g) => g.check === "auto").length} automated criteria pass**, ${tally("FAIL")} fail, ${tally("NO TEST")} have no test, ${tally("SKIPPED")} only skipped. ${tally("MANUAL")} need a check by hand on staging before release. ${results.length} tests ran (${results.filter((r) => r.status === "passed").length} passed, ${failedTests.length} failed, ${results.filter((r) => r.status === "skipped").length} skipped).`,
+  `**${tally("PASS")} of ${graded.filter((g) => g.check === "auto").length} automated criteria pass**, ${tally("FAIL")} fail, ${tally("NO TEST")} have no test, ${tally("SKIPPED")} only skipped. ${tally("MANUAL")} need a check by hand on staging before release; ${tally("PLANNED")} are planned for features not built yet. ${results.length} tests ran (${results.filter((r) => r.status === "passed").length} passed, ${failedTests.length} failed, ${results.filter((r) => r.status === "skipped").length} skipped).`,
   "",
   "## Steps",
   "",
@@ -180,7 +182,7 @@ lines.push(
   "|---|---|---|---|",
   ...graded.map(
     (g) =>
-      `| ${icon[g.result]} ${g.result} | ${g.id} | ${g.text} | ${g.check === "manual" ? "check by hand" : `${g.passed} / ${g.failed} / ${g.skipped}${g.flaky ? ` (${g.flaky} flaky)` : ""}`} |`,
+      `| ${icon[g.result]} ${g.result} | ${g.id} | ${g.text} | ${g.check === "manual" ? "check by hand" : g.check === "planned" ? "not built yet" : `${g.passed} / ${g.failed} / ${g.skipped}${g.flaky ? ` (${g.flaky} flaky)` : ""}`} |`,
   ),
   "",
 );
@@ -190,11 +192,11 @@ if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMM
 
 console.log(`\n${"─".repeat(60)}`);
 for (const g of graded)
-  if (g.result !== "PASS") console.log(`${icon[g.result]} ${g.result.padEnd(8)} ${g.id}  ${g.text}`);
+  if (g.result !== "PASS" && g.result !== "PLANNED") console.log(`${icon[g.result]} ${g.result.padEnd(8)} ${g.id}  ${g.text}`);
 for (const id of unknown) console.log(`❌ UNKNOWN  ${id}  named by a test but not in docs/acceptance-criteria.md`);
 for (const t of failedTests) console.log(`❌ FAILED   ${t.title} (${t.where})`);
 for (const s of steps.filter((s) => !s.ok)) console.log(`❌ STEP     ${s.name}`);
 console.log(
-  `\nQA ${ok ? "PASSED" : "FAILED"}: ${tally("PASS")}/${graded.filter((g) => g.check === "auto").length} automated criteria pass; ${tally("MANUAL")} manual. Report: qa-results/report.md`,
+  `\nQA ${ok ? "PASSED" : "FAILED"}: ${tally("PASS")}/${graded.filter((g) => g.check === "auto").length} automated criteria pass; ${tally("MANUAL")} manual; ${tally("PLANNED")} planned. Report: qa-results/report.md`,
 );
 process.exit(ok ? 0 : 1);

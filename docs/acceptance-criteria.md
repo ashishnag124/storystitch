@@ -6,6 +6,8 @@ runs the whole test suite and checks each criterion here:
 - **auto** criteria pass only when at least one test names their ID in its title (or a `describe` around it),
   every such test passes, and at least one of them actually ran (not skipped in every browser).
 - **manual** criteria are checked by hand on staging before running `/release`. `pnpm qa` lists them as reminders.
+- **planned** criteria belong to features that haven't shipped yet (the v2 sections at the end). `pnpm qa` lists them
+  without failing; when the feature ships, switch each row to `auto` or `manual` in the same PR as its tests.
 
 `pnpm qa` also fails if a test names an ID that isn't listed here. Results land in `qa-results/report.md`.
 
@@ -132,3 +134,62 @@ reuse IDs.
 | AC-MOBILE-01 | Nothing scrolls sideways at phone width, on the pick screen or in the editor. | auto |
 | AC-MOBILE-02 | The full flow passes in emulated iPhone Safari (WebKit) and Android Chrome (Chromium). | auto |
 | AC-MOBILE-03 | Staging is checked by hand on a real iPhone (Safari) and Android phone (Chrome) before each release. | manual |
+
+# v2 (planned)
+
+From the v2 section of `docs/product-brief.md`. These ship behind a feature flag; while it's off, the v1 criteria above
+describe the app exactly. When saving ships, AC-SAVE-02 and AC-SAVE-07 replace AC-PRIV-01 and AC-PRIV-02.
+
+## Platform
+
+| ID | Criterion | Check |
+|---|---|---|
+| AC-API-01 | The API accepts requests only from StoryStitch's own web origins, and requests that change data are protected against cross-site forgery. | planned |
+| AC-API-02 | Database migrations are backward compatible: the previous API version still works against the new schema. | planned |
+| AC-API-03 | With the feature flag off, the app behaves exactly as v1: no sign-in, no saving and no requests to the API. | planned |
+| AC-API-04 | A health endpoint reports whether the API and its database are up, in staging and production. | planned |
+
+## Accounts
+
+| ID | Criterion | Check |
+|---|---|---|
+| AC-AUTH-01 | Picking, editing, exporting and sharing work without an account; sign-in is asked for only when saving or buying the Supporter pass. | planned |
+| AC-AUTH-02 | Users register and sign in with a phone number and a 6-digit text code, offered as the primary option. | planned |
+| AC-AUTH-03 | Text codes are sent only to US and Canadian numbers. | planned |
+| AC-AUTH-04 | A code is sent only after the bot check passes; sends are limited per number and per IP address, and wrong codes are limited per code. | planned |
+| AC-AUTH-05 | Users register and sign in with email and password, verify their email, and reset a forgotten password by email. | planned |
+| AC-AUTH-06 | Signed-in sessions persist across reloads in iPhone Safari (WebKit) and Android Chrome. | planned |
+| AC-AUTH-07 | Users can sign out, and sign out of every device. | planned |
+| AC-AUTH-08 | Deleting an account removes the user, their sessions, their saved collages and the stored files. | planned |
+| AC-AUTH-09 | A real text code arrives on a real phone, and sign-in works on iPhone Safari and Android Chrome. | planned |
+
+## Saved collages
+
+| ID | Criterion | Check |
+|---|---|---|
+| AC-SAVE-01 | A signed-in user can save the exported collage; a signed-out user who taps Save is asked to sign in, then the collage saves. | planned |
+| AC-SAVE-02 | Only the finished collage and its thumbnail are uploaded; original photos never leave the device. | planned |
+| AC-SAVE-03 | Saved images carry no EXIF or location metadata. | planned |
+| AC-SAVE-04 | "My stories" lists saved collages newest first; each can be opened full size, shared or downloaded again, and deleted. | planned |
+| AC-SAVE-05 | Users can reach only their own collages, through signed links that expire. | planned |
+| AC-SAVE-06 | An account holds up to 200 saved collages (1,000 with the Supporter pass) and says clearly when it's full. | planned |
+| AC-SAVE-07 | The UI says original photos stay on the device and saved collages are stored privately in the account. | planned |
+
+## Supporter pass
+
+| ID | Criterion | Check |
+|---|---|---|
+| AC-SUPPORT-01 | After each successful export or share, a dismissible Supporter card appears; it never blocks exporting. | planned |
+| AC-SUPPORT-02 | The card opens Lemon Squeezy checkout (pay what you want, $3 minimum); signed-out users sign in first. | planned |
+| AC-SUPPORT-03 | Only a correctly signed Lemon Squeezy webhook grants the perks (higher limit, badge), and a repeated webhook grants them once. | planned |
+| AC-SUPPORT-04 | A test-mode purchase on staging grants the perks to the buyer's account. | planned |
+
+## Admin analytics
+
+| ID | Criterion | Check |
+|---|---|---|
+| AC-ADMIN-01 | The app records first-party events: visit, photos picked (count), layout chosen, export, share, save, sign-up, Supporter pass and error. | planned |
+| AC-ADMIN-02 | Events never contain image data, phone numbers, emails or IP addresses; visitors are counted with a hash that changes daily. | planned |
+| AC-ADMIN-03 | `/admin` opens only for admin accounts signed in with email, password and an authenticator code; everyone else is refused. | planned |
+| AC-ADMIN-04 | The dashboard shows daily totals, the picked → exported → saved → Supporter funnel, most-used layouts and errors. | planned |
+| AC-ADMIN-05 | At phone width, `/admin` says to open it on a desktop. | planned |

@@ -61,3 +61,68 @@ Accounts, saved projects, text/stickers/filters, video, posting through Instagra
 - **Detection tests:** detection sits behind an interface so most tests use fixed subject boxes. One integration test runs the real model on 2–3 CC0 fixture photos.
 - **End-to-end (Playwright):** upload 1, 4 and 8 fixture images → layout options appear → export produces a 1080×1920 image.
 - **Before any release:** checked by hand on staging on a real phone.
+
+---
+
+# v2: accounts, saved collages, Supporter pass, admin analytics
+
+Decided 2026-10-31. Everything above is the v1 brief, kept as written; this section adds to it and, where it says so,
+replaces parts of it. Build order and status: see "Backend milestones" in `PROJECT_SETUP.md`.
+
+## What changes from v1
+
+- **Privacy.** v1: "images are never uploaded, and the UI says so." v2: original photos still never leave the device,
+  and all analysis and rendering stays in the browser. The only image that is ever uploaded is a finished collage the
+  signed-in user chooses to save. The UI says: "Your photos stay on this device. Collages you save are stored privately
+  in your account."
+- **Out of scope.** Accounts and saved images move into scope (finished collages only, not editable projects).
+- **Analytics.** v1: "No analytics." v2: first-party, aggregate analytics only (below). Still no third-party trackers and
+  no tracking cookies.
+- **Cost.** v1: Cloudflare Pages only, $0. v2 adds a Railway API and Postgres (about $5–10/month), and per-use costs for
+  text-message codes and payments.
+- **Domain.** `storystitch.ashishnag.com` (production) and `staging.storystitch.ashishnag.com`, with the API at
+  `api.storystitch.ashishnag.com` and `api-staging.storystitch.ashishnag.com`. One parent domain, so sign-in cookies
+  work in iPhone Safari.
+
+## Accounts
+
+- The core flow still works without an account; sign-in is asked for only when saving or buying the Supporter pass.
+- **Text message first.** Enter a phone number, receive a 6-digit code, done (passwordless). This is the primary,
+  most prominent option. US and Canadian numbers only to start.
+- **Email and password second.** A smaller "Use email instead" path, with email verification and password reset.
+- No Google or Apple sign-in for now.
+- Protection against SMS abuse from day one: a bot check (Cloudflare Turnstile) before a code is sent, per-number and
+  per-IP limits, and the SMS provider's fraud protection.
+- Users can sign out of all devices and delete their account, which deletes their saved collages and data.
+
+## Saved collages
+
+- A Save button next to Share on the export step. It uploads the exported image and a small thumbnail, both made in
+  the browser. Exports are re-encoded by the canvas, so they carry no EXIF or location data.
+- "My stories": a grid of saved collages, newest first. Open one to view it full size, share or download it again, or
+  delete it.
+- Storage is private; images are served only through short-lived signed links.
+- Limits: 200 saved collages per account (1,000 with the Supporter pass), with a clear message when full.
+
+## Supporter pass
+
+- A pay-what-you-want, one-time purchase ($3 minimum) through Lemon Squeezy as merchant of record.
+- It must deliver a real product (Lemon Squeezy prohibits donations with no product): the higher saved-collage limit
+  and a supporter badge on the account.
+- Offered in a small, dismissible card after each successful export or share. It never blocks exporting.
+- Requires an account, so the perks attach to the right person.
+
+## Admin analytics
+
+- First-party events stored in our own database: visits, photos picked (count only), layout chosen, export, share,
+  save, sign-up, Supporter pass bought, and errors. Never image content, phone numbers, emails or IP addresses;
+  visitors are counted with a hash that changes every day.
+- A `/admin` dashboard: daily totals, the picked → exported → saved → supporter funnel, most-used layouts, and errors.
+- Only accounts marked as admin can open it, signing in with email, password and an authenticator-app code. It's
+  built for desktop; on a phone it says to open it on a desktop.
+
+## Acceptance
+
+- Each feature above gets rows in `docs/acceptance-criteria.md` (listed there as `planned` until it ships) and tests
+  that `pnpm qa` runs before every release.
+- Everything ships hidden behind a feature flag until it's switched on, so `main` stays releasable.
