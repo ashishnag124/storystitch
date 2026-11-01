@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { LayoutSchema, layouts, layoutsFor, type Layout } from "./layout";
+import { LAYOUT_FAMILIES, LayoutSchema, layouts, layoutsFor, type Layout } from "./layout";
 import { layoutProblems } from "./validate";
 
 const parse = (raw: unknown): Layout => LayoutSchema.parse(raw);
@@ -10,8 +10,16 @@ describe("layout library", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it.each([1, 2, 3, 4, 5, 6, 7, 8])("has at least 2 layouts for %i photos", (n) => {
-    expect(layoutsFor(n).length).toBeGreaterThanOrEqual(2);
+  it("has at least 2 layouts for 1 photo", () => {
+    expect(layoutsFor(1).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it.each([2, 3, 4, 5, 6, 7, 8])("has at least 4 layouts for %i photos", (n) => {
+    expect(layoutsFor(n).length).toBeGreaterThanOrEqual(4);
+  });
+
+  it("covers every family", () => {
+    expect(new Set(layouts.map((l) => l.family))).toEqual(new Set(LAYOUT_FAMILIES));
   });
 
   it.each(layouts.map((l) => [l.id, l] as const))("%s is valid", (_, layout) => {

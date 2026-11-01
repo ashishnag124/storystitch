@@ -8,6 +8,7 @@ describe("describeSubjects", () => {
   it("lists faces and labelled objects", () => {
     expect(describeSubjects([[d("face"), d("face")], [d("object", "dog"), d("person", "person")]])).toBe("Found 2 faces and a dog.");
     expect(describeSubjects([[d("face")]])).toBe("Found 1 face.");
+    expect(describeSubjects([[d("object", "airplane")]])).toBe("Found an airplane.");
   });
 
   it("says nothing when only the heuristic found something", () => {

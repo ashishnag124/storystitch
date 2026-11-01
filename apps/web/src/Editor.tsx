@@ -1,5 +1,5 @@
 import { MAX_ZOOM, MIN_ZOOM, clampCrop, panCrop } from "@storystitch/layout-engine";
-import { STORY_CANVAS, hitTest, layoutsFor } from "@storystitch/shared";
+import { STORY_CANVAS, hitTest } from "@storystitch/shared";
 import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import {
   canShareFiles,
@@ -11,7 +11,7 @@ import {
 import { LayoutStrip } from "./LayoutStrip";
 import type { Photo } from "./photos";
 import { drawScene, previewOf } from "./render";
-import { cellShapes, newScene, swapCells, withCrop, withLayout, type Scene } from "./scene";
+import { cellShapes, rankedScenes, swapCells, withCrop, type Scene } from "./scene";
 
 /** How long the preview must be still before the export is rendered in the background. */
 const EXPORT_DEBOUNCE_MS = 400;
@@ -28,8 +28,9 @@ interface Props {
 }
 
 export function Editor({ photos, summary, notices, privacy, onStartOver }: Props) {
-  const options = useMemo(() => layoutsFor(photos.length), [photos.length]);
-  const [scene, setScene] = useState<Scene>(() => newScene(options[0]!, photos));
+  // Every layout with its own best photo assignment, best fit first. Picking one starts from that.
+  const options = useMemo(() => rankedScenes(photos), [photos]);
+  const [scene, setScene] = useState<Scene>(() => options[0]!);
   const [selected, setSelected] = useState<number | null>(null);
   const [format, setFormat] = useState<ExportFormat>("image/jpeg");
   const [exported, setExported] = useState<{ scene: Scene; format: ExportFormat; blob: Blob } | null>(null);
@@ -164,8 +165,8 @@ export function Editor({ photos, summary, notices, privacy, onStartOver }: Props
         options={options}
         current={scene}
         photos={photos}
-        onSelect={(layout) => {
-          setScene((s) => withLayout(s, layout, photos));
+        onSelect={(option) => {
+          setScene(option);
           setSelected(null);
         }}
       />

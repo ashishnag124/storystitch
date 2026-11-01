@@ -1,10 +1,13 @@
-import { smartCrop, type Crop, type Detection, type SafeInsets } from "@storystitch/layout-engine";
+import { rankLayouts, smartCrop, type CellTarget, type Crop, type Detection, type SafeInsets } from "@storystitch/layout-engine";
 import {
   SAFE_ZONE,
   STORY_CANVAS,
+  cellContains,
   cellFrame,
   cellPolygon,
+  hitTest,
   insetPolygon,
+  layoutsFor,
   type Frame,
   type Layout,
   type Point,
@@ -66,9 +69,45 @@ export function newScene(layout: Layout, photos: CropSource[], style: Style = DE
   return { layout, style, order: o, crops: autoCrops(layout, style, o, photos) };
 }
 
-/** Switches layout, keeping which photo goes where. Crops are redone because the cell shapes change. */
-export function withLayout(scene: Scene, layout: Layout, photos: CropSource[]): Scene {
-  return newScene(layout, photos, scene.style, scene.order);
+function outlineArea(outline: Outline): number {
+  if (outline.kind === "circle") return Math.PI * outline.r ** 2;
+  const p = outline.points;
+  return Math.abs(p.reduce((s, a, i) => s + a.x * p[(i + 1) % p.length]!.y - p[(i + 1) % p.length]!.x * a.y, 0)) / 2;
+}
+
+/** Sampling step (canvas pixels) for measuring how much of each overlapping cell stays uncovered. */
+const UNCOVERED_STEP_PX = 12;
+
+/** Share of each cell not covered by cells drawn above it; all 1 unless the layout allows overlap. */
+function uncovered(layout: Layout): number[] {
+  if (!layout.allowOverlap) return layout.cells.map(() => 1);
+  const inside = layout.cells.map(() => 0);
+  const shown = layout.cells.map(() => 0);
+  for (let y = UNCOVERED_STEP_PX / 2; y < STORY_CANVAS.height; y += UNCOVERED_STEP_PX) {
+    for (let x = UNCOVERED_STEP_PX / 2; x < STORY_CANVAS.width; x += UNCOVERED_STEP_PX) {
+      const top = hitTest(layout.cells, { x, y });
+      layout.cells.forEach((cell, i) => {
+        if (cellContains(cell, { x, y })) inside[i]!++;
+      });
+      if (top >= 0) shown[top]!++;
+    }
+  }
+  return inside.map((n, i) => (n ? shown[i]! / n : 1));
+}
+
+function cellTargets(layout: Layout, style: Style): CellTarget[] {
+  const visible = uncovered(layout);
+  return cellShapes(layout, style, STORY_CANVAS).map(({ frame, outline }, i) => ({
+    frame,
+    insets: safeInsets(frame),
+    fill: (outlineArea(outline) / (frame.width * frame.height)) * visible[i]!,
+  }));
+}
+
+/** A scene for every layout that fits this many photos, best fit first, with photos assigned to cells. */
+export function rankedScenes(photos: CropSource[], style: Style = DEFAULT_STYLE): Scene[] {
+  const options = layoutsFor(photos.length).map((layout) => ({ layout, cells: cellTargets(layout, style) }));
+  return rankLayouts(options, photos).map(({ layout, assignment: { order, crops } }) => ({ layout, style, order, crops }));
 }
 
 /** Swaps the photos in two cells; both get fresh automatic crops for their new cells. */
