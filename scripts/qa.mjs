@@ -45,6 +45,11 @@ const workspaces = ["apps", "packages"].flatMap((dir) =>
 );
 
 run("Lint and typecheck", "pnpm", ["turbo", "run", "lint", "typecheck"]);
+// The API's tests use a real Postgres: Docker locally, a service container in CI (which sets DATABASE_URL).
+if (workspaces.some((w) => w.scripts["db:migrate"])) {
+  if (!process.env.CI) run("Start local Postgres", "docker", ["compose", "up", "-d", "--wait"]);
+  run("Database migrations", "pnpm", ["db:migrate"]);
+}
 for (const ws of workspaces.filter((w) => w.scripts.test)) {
   run(
     `Unit tests: ${ws.name}`,

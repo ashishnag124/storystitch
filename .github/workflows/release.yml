@@ -1,5 +1,5 @@
 # Promote a commit that passed CI on main to production.
-# Railway's production environment autodeploys from the `production` branch;
+# Railway's production environment autodeploys the API from the `production` branch (migrations run first);
 # web is deployed explicitly below because GITHUB_TOKEN pushes don't trigger workflows.
 name: Release
 
@@ -55,6 +55,21 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    # Real Postgres for the API's tests and migrations.
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: app
+          POSTGRES_DB: app
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U app -d app"
+          --health-interval 2s --health-timeout 3s --health-retries 20
+    env:
+      DATABASE_URL: postgres://app:app@localhost:5432/app
+      CORS_ORIGIN: http://localhost:5173
     steps:
       - uses: actions/checkout@v4
         with:
@@ -110,4 +125,5 @@ jobs:
       project: ${{ vars.PAGES_PROJECT }}
       ref: ${{ needs.resolve.outputs.sha }}
       branch: production
+      api_url: ${{ vars.API_URL_PRODUCTION }}
     secrets: inherit

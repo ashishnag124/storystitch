@@ -1,26 +1,31 @@
 # storystitch — project setup
 
-Web-only product: no API, database or backend. All image processing runs in the browser.
+Web app on Cloudflare Pages, plus an API with Postgres on Railway (from v2). All image processing still runs in the browser.
 
 ## Services and URLs
 
 | | Local | Staging | Production |
 |---|---|---|---|
 | Trigger | `pnpm dev` | merge to `main` (CI deploys) | `/release` → `production` branch |
-| Web | http://localhost:5173 | https://main.storystitch-web.pages.dev | https://storystitch-web.pages.dev |
+| Web | http://localhost:5173 | https://staging.storystitch.ashishnag.com (also https://storystitch-web-staging.pages.dev) | https://storystitch.ashishnag.com (also https://storystitch-web.pages.dev) |
+| API | http://localhost:3000 | https://api-staging.storystitch.ashishnag.com (also https://api-staging-d014.up.railway.app) | https://api.storystitch.ashishnag.com (set up before the next `/release`) |
+| Database | Docker Postgres (`docker compose`) | Railway Postgres, `staging` environment | Railway Postgres, `production` environment |
 
 - GitHub: https://github.com/ashishnag124/storystitch (private)
-- Cloudflare Pages project: `storystitch-web` (classic Pages, Direct Upload; production branch `production`)
-- Production shows "Deployment Not Found" until the first `/release`.
+- Cloudflare Pages projects (classic Pages, Direct Upload):
+  - `storystitch-web`: production, deploys the `production` branch (via `/release`).
+  - `storystitch-web-staging`: staging, deploys `main` as its own production. It's a separate project because Pages routes a custom domain to a branch only through Cloudflare-proxied DNS, and ashishnag.com's DNS is at Squarespace. The old staging alias `main.storystitch-web.pages.dev` no longer updates.
+- Railway project: `storystitch`, services `api` and `Postgres`, environments `staging` (deploys `main`) and `production` (deploys the `production` branch, so only `/release` moves it). Migrations run before each deploy (`railway.json` → `preDeployCommand`), and Railway only switches traffic once `/health` answers.
 
 ## Where config lives
 
 | Value | Where | Used by |
 |---|---|---|
 | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` | GitHub secrets (loaded from `~/.config/new-project/secrets.env`) | `_deploy-pages.yml` |
-| `PAGES_PROJECT` = `storystitch-web` | GitHub variable | `ci.yml`, `release.yml` |
-
-There are no app config values yet; `.env.example` is empty.
+| `PAGES_PROJECT` = `storystitch-web`, `PAGES_PROJECT_STAGING` = `storystitch-web-staging` | GitHub variables | `release.yml` (production), `ci.yml` (staging) |
+| `API_URL_STAGING`, `API_URL_PRODUCTION` | GitHub variables | web builds (`VITE_API_URL`) in `ci.yml` / `release.yml` |
+| `DATABASE_URL` (reference `${{Postgres.DATABASE_URL}}`), `CORS_ORIGIN`, `NODE_ENV` | Railway variables on `api`, per environment | the API |
+| Local values (`DATABASE_URL`, `PORT`, `CORS_ORIGIN`, `VITE_API_URL`) | `.env` (copy of `.env.example`) | `pnpm dev`, tests |
 
 ## Open checklist
 
@@ -37,7 +42,7 @@ What and why: the v2 section of `docs/product-brief.md`. Acceptance criteria: th
 | | What | Status |
 |---|---|---|
 | B0 | Brief v2, planned criteria, legal drafts, accounts and DNS (checklist below) | docs merged; checklist in progress |
-| B1 | API + Postgres on Railway (staging, production), custom domains, CI/release/QA wiring, feature flag | not started |
+| B1 | API + Postgres on Railway (staging, production), custom domains, CI/release/QA wiring | in progress: staging API live; checklist below |
 | B2 | Optional email and password accounts (Better Auth, Resend, Turnstile), account deletion. Text-message sign-in deferred | not started |
 | B3 | Save collages to Cloudflare R2, "My stories", storage limits | not started |
 | B4 | Supporter pass (Lemon Squeezy) | deferred: see "Later" in the brief |
@@ -62,15 +67,41 @@ Claude never reads that file; it loads values from it into Railway and GitHub wh
 - [ ] **Legal drafts**: fill in the `[TODO]`s in `docs/legal/privacy-policy.md` and `docs/legal/terms.md` and have them
   reviewed.
 
+### B1 checklist (yours)
+
+- [ ] **Staging web domain**: Cloudflare dashboard → Workers & Pages → `storystitch-web-staging` → Custom domains →
+  add `staging.storystitch.ashishnag.com`, then in Squarespace add `staging.storystitch` · CNAME ·
+  `storystitch-web-staging.pages.dev`. (The project fills in after this PR merges and CI deploys `main` to it.)
+- [ ] **DNS for the staging API** (Squarespace), then tell Claude so it can check the certificate:
+  - `api-staging.storystitch` · CNAME · `y17fnxjl.up.railway.app`
+  - `_railway-verify.api-staging.storystitch` · TXT ·
+    `railway-verify=4d8d6b576613c4f6735b1188f2f6a7e761b045b8c1b9d68ab5ec268aa1da0e8d`
+- [ ] **Production API** (Claude can't touch Railway's production environment). From the repo folder, run these and
+  share the output of the last one:
+  ```bash
+  railway variable set 'DATABASE_URL=${{Postgres.DATABASE_URL}}' -s api -e production --skip-deploys
+  railway variable set NODE_ENV=production -s api -e production --skip-deploys
+  railway variable set 'CORS_ORIGIN=https://storystitch.ashishnag.com,https://storystitch-web.pages.dev' -s api -e production --skip-deploys
+  railway domain api.storystitch.ashishnag.com -s api -e production --json
+  ```
+  Then add the CNAME and TXT records it prints (like the staging ones) in Squarespace.
+- [ ] **Before the next `/release`** (when the `production` branch will contain the API): connect production to its
+  branch. Doing it earlier starts a deploy of v0.1.0, which has no API, and fails.
+  ```bash
+  railway service source connect --repo ashishnag124/storystitch --branch production --service api -e production
+  ```
+- [ ] **Railway dashboard → `api` → Settings**, in each environment: turn on "Wait for CI", so Railway deploys only
+  commits whose GitHub checks passed.
+
 ### DNS records (Squarespace → Domains → ashishnag.com → DNS)
 
 | Host | Type | Value | When |
 |---|---|---|---|
 | `storystitch` | CNAME | `storystitch-web.pages.dev` | done |
 | Records Resend shows (MX and TXT on `send.storystitch`, TXT `resend._domainkey.storystitch`) | as shown | as shown | B0 |
-| `staging.storystitch` | CNAME | `main.storystitch-web.pages.dev` | B1, once Claude confirms Pages accepts a custom domain for the `main` branch |
-| `api.storystitch` | CNAME | given by Railway | B1 |
-| `api-staging.storystitch` | CNAME | given by Railway | B1 |
+| `staging.storystitch` | CNAME | `storystitch-web-staging.pages.dev` | B1, after adding the domain to the `storystitch-web-staging` Pages project |
+| `api-staging.storystitch` + `_railway-verify.api-staging.storystitch` | CNAME + TXT | see the B1 checklist | B1 |
+| `api.storystitch` + `_railway-verify.api.storystitch` | CNAME + TXT | printed by the production `railway domain` command | B1 |
 
 ## Release
 
@@ -83,4 +114,4 @@ Run `/add-app` (e.g. an iOS app, API + database, accounts). It updates `project.
 ## Rollback
 
 - Web: Cloudflare dashboard → Workers & Pages → `storystitch-web` → Deployments → roll back to a previous production deployment. Then fix forward on `main` and `/release` again.
-- There is no database, so there are no migrations to roll back.
+- API: Railway dashboard → `api` → Deployments → redeploy the previous one. Migrations aren't rolled back: they're written to work with the previous API version (add first, remove later), so the older API keeps working against the newer schema.

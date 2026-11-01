@@ -5,21 +5,33 @@
       "path": "apps/web",
       "stack": "vite-react",
       "host": "cloudflare-pages",
-      "pagesProject": "storystitch-web"
+      "pagesProject": "storystitch-web",
+      "pagesProjectStaging": "storystitch-web-staging"
+    },
+    "api": {
+      "path": "apps/api",
+      "stack": "hono-drizzle",
+      "host": "railway",
+      "railwayProject": "storystitch",
+      "railwayService": "api",
+      "database": "railway-postgres"
     }
   },
   "features": {},
   "environments": {
     "local": {
-      "web": "http://localhost:5173"
+      "web": "http://localhost:5173",
+      "api": "http://localhost:3000"
     },
     "staging": {
       "branch": "main",
-      "web": "https://main.storystitch-web.pages.dev"
+      "web": "https://staging.storystitch.ashishnag.com",
+      "api": "https://api-staging.storystitch.ashishnag.com"
     },
     "production": {
       "branch": "production",
-      "web": "https://storystitch-web.pages.dev"
+      "web": "https://storystitch.ashishnag.com",
+      "api": "https://api.storystitch.ashishnag.com"
     }
   }
 }
