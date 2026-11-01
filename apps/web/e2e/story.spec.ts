@@ -144,24 +144,57 @@ test.describe("editing", () => {
     await expect(page.getByRole("application")).toHaveAccessibleName(new RegExp(`^Story preview: ${name},`));
   });
 
-  test("AC-STYLE-01 the style panel has every control, and Reset restores the defaults", async ({ page }) => {
+  test("AC-STYLE-01 the style tool has every control, and Reset restores the defaults", async ({ page }) => {
     await libraryInput(page).setInputFiles(await makePhotos(page, 2));
     await page.getByRole("radio", { name: "Two stacked" }).click();
-    await page.getByText("Style", { exact: true }).click();
+    await page.getByRole("tab", { name: "Style" }).click();
+    // Background is the first property: swatches, blurred photo and a custom color.
     for (const name of ["Cream", "White", "Black", "Sage", "Blush", "Navy", "Blurred photo", "Reset style"]) {
       await expect(page.getByRole("button", { name, exact: true })).toBeVisible();
     }
     await expect(page.getByLabel("Custom background color")).toBeAttached();
-    await expect(page.getByLabel("Border color")).toBeVisible();
-    const spacing = page.getByRole("slider", { name: "Spacing" });
-    for (const name of ["Margin", "Corners", "Border"]) await expect(page.getByRole("slider", { name })).toBeEnabled();
-
-    await spacing.fill("40");
     await page.getByRole("button", { name: "Navy" }).click();
     await expect(page.getByRole("button", { name: "Navy" })).toHaveAttribute("aria-pressed", "true");
+
+    // Each other property shows its own control when its chip is picked.
+    const chip = (name: string) => page.getByRole("radio", { name, exact: true });
+    for (const name of ["Margin", "Corners", "Border"]) {
+      await chip(name).click();
+      await expect(page.getByRole("slider", { name })).toBeEnabled();
+    }
+    await expect(page.getByLabel("Border color")).toBeVisible();
+    await chip("Spacing").click();
+    await page.getByRole("slider", { name: "Spacing" }).fill("40");
+
     await page.getByRole("button", { name: "Reset style" }).click();
-    await expect(spacing).toHaveValue("14");
+    await expect(page.getByRole("slider", { name: "Spacing" })).toHaveValue("14");
+    await chip("Background").click();
     await expect(page.getByRole("button", { name: "Cream" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  test("AC-EDIT-10 a selected photo gets a floating Fit / Done tooltip, and Fit restores the automatic crop", async ({ page }) => {
+    const [top] = await openTwoStacked(page);
+    await page.mouse.click(top!.x, top!.y);
+    const tip = page.getByRole("toolbar", { name: "Photo 1" });
+    await expect(tip).toBeVisible();
+    const zoom = page.getByRole("slider", { name: "Zoom" });
+    const auto = await zoom.inputValue();
+    await zoom.fill("3");
+    await tip.getByRole("button", { name: "Fit" }).click();
+    await expect.poll(() => zoom.inputValue()).toBe(auto);
+    await tip.getByRole("button", { name: "Done" }).click();
+    await expect(tip).toBeHidden();
+    await expect(page.getByRole("status")).toHaveText("Done.");
+  });
+
+  test("AC-EDIT-11 double-tap zooms a photo in, and again goes back to fit", async ({ page }) => {
+    const [top] = await openTwoStacked(page);
+    const zoom = page.getByRole("slider", { name: "Zoom" });
+    await page.mouse.dblclick(top!.x, top!.y);
+    await expect.poll(async () => Number(await zoom.inputValue())).toBeGreaterThan(1.9);
+    await page.waitForTimeout(400);
+    await page.mouse.dblclick(top!.x, top!.y);
+    await expect.poll(async () => Number(await zoom.inputValue())).toBeLessThan(1.1);
   });
 
   test("AC-EDIT-02 press and hold a photo, then drag it onto another to swap", async ({ page }) => {
@@ -251,6 +284,8 @@ test.describe("editing", () => {
 });
 
 test("AC-A11Y-01 has no detectable accessibility problems", async ({ page }) => {
+  // Measure the settled UI, not panels halfway through their fade-in.
+  await page.emulateMedia({ reducedMotion: "reduce" });
   const check = async () => {
     const { violations } = await new AxeBuilder({ page }).analyze();
     expect(violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(", ")}`)).toEqual([]);

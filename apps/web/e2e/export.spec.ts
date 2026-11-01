@@ -79,6 +79,7 @@ async function pickOne(page: Page, buffer: Buffer, layout: string) {
 
 test("AC-EXPORT-02 PNG export is a 1080×1920 PNG", async ({ page }) => {
   await libraryInput(page).setInputFiles(await makePhotos(page, 2));
+  await page.getByRole("tab", { name: "Export" }).click();
   await page.getByLabel("Format").selectOption("image/png");
   const png = await exportImage(page);
   expect(png.subarray(0, 8)).toEqual(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));

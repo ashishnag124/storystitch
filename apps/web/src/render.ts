@@ -116,6 +116,40 @@ export interface Marks {
   target?: number;
   /** Number every cell, for picking cells from the keyboard. */
   numbers?: boolean;
+  /** Cells left empty because their photo is being animated on top (lift, swap). */
+  hidden?: number[];
+  /** A cell shown as an empty slot while its photo is lifted. */
+  dim?: number;
+}
+
+/** Axis-aligned bounds of a cell's outline, in canvas pixels. */
+export interface Box {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+export function outlineBounds(outline: Outline): Box {
+  if (outline.kind === "circle") return { x: outline.cx - outline.r, y: outline.cy - outline.r, w: 2 * outline.r, h: 2 * outline.r };
+  const xs = outline.points.map((p) => p.x);
+  const ys = outline.points.map((p) => p.y);
+  const [x, y] = [Math.min(...xs), Math.min(...ys)];
+  return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y };
+}
+
+/** One cell rendered on its own (photo clipped to its outline), for animating it over the scene. */
+export function snapshotCell(scene: Scene, size: Size, cell: number, imageFor: (photo: number) => Drawable) {
+  const shape = cellShapes(scene.layout, scene.style, size)[cell]!;
+  const { radius, border } = styleScale(scene.layout, scene.style, size);
+  const box = outlineBounds(shape.outline);
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.ceil(box.w));
+  canvas.height = Math.max(1, Math.ceil(box.h));
+  const ctx = canvas.getContext("2d")!;
+  ctx.translate(-box.x, -box.y);
+  drawCell(ctx, shape, imageFor(scene.order[cell]!), scene.crops[cell]!, radius, border, scene.style.borderColor);
+  return { canvas, box };
 }
 
 /** Draws a whole scene synchronously from already-decoded images (the preview copies). */
@@ -131,7 +165,15 @@ export function drawScene(
   fillBackground(ctx, size, scene);
   if (hasBlurredBackground(scene)) drawBlurredBackground(ctx, size, imageFor(scene.order[0]!));
   for (const i of drawOrder(scene.layout.cells)) {
+    if (marks.hidden?.includes(i)) continue;
     drawCell(ctx, shapes[i]!, imageFor(scene.order[i]!), scene.crops[i]!, radius, border, scene.style.borderColor);
+  }
+  const dimmed = marks.dim === undefined ? undefined : shapes[marks.dim];
+  if (dimmed) {
+    ctx.save();
+    ctx.fillStyle = "rgb(28 25 23 / 0.45)";
+    ctx.fill(outlinePath(dimmed.outline, radius));
+    ctx.restore();
   }
 
   const line = Math.max(3, size.width / 180);

@@ -87,12 +87,15 @@ reuse IDs.
 | AC-EDIT-07 | Tapping a layout in the strip opens it in the preview. | auto |
 | AC-EDIT-08 | New and swapped photos get fresh smart crops for their cells. | auto |
 | AC-EDIT-09 | Pinch, press-and-hold swap and dragging feel right one-handed on a real iPhone and Android phone. | manual |
+| AC-EDIT-10 | A selected photo gets a floating tooltip over the preview with Fit (back to the automatic crop) and Done; the tool panel shows its zoom. | auto |
+| AC-EDIT-11 | Double-tapping a photo zooms in around the tap, and double-tapping again goes back to fit. | auto |
+| AC-EDIT-12 | On a real phone the motion feels natural: a held photo lifts and follows the finger, swapped photos glide into place, a flicked photo keeps gliding, layouts crossfade, and Android vibrates briefly on lift and drop. With "reduce motion" on, changes are instant. | manual |
 
 ## Style
 
 | ID | Criterion | Check |
 |---|---|---|
-| AC-STYLE-01 | The style panel offers labeled controls for background (presets, custom color, blurred photo), spacing, margin, corners, border width and color, and a reset. | auto |
+| AC-STYLE-01 | The Style tool offers labeled controls for background (presets, custom color, blurred photo), spacing, margin, corners, border width and color, and a reset; chips pick which one shows. | auto |
 | AC-STYLE-02 | Defaults come from the layout until changed: white borders on scattered prints, blur for "Framed on blur", cream elsewhere. | auto |
 | AC-STYLE-03 | Style changes appear in the exported image. | auto |
 | AC-STYLE-04 | Changing the style keeps manual crops. | auto |
@@ -136,6 +139,7 @@ reuse IDs.
 | AC-A11Y-02 | The editor works from the keyboard (pick, move, zoom, swap), and a status line announces each action. | auto |
 | AC-A11Y-03 | Every control is at least 44 × 44 CSS pixels. | auto |
 | AC-MOBILE-01 | Nothing scrolls sideways at phone width, on the pick screen or in the editor. | auto |
+| AC-MOBILE-04 | On phones the editor is one screen with no page scrolling: top bar with Share, the preview, the current tool and the tab bar all fit, in every tool and with a photo selected. | auto |
 | AC-MOBILE-02 | The full flow passes in emulated iPhone Safari (WebKit) and Android Chrome (Chromium). | auto |
 | AC-MOBILE-03 | Staging is checked by hand on a real iPhone (Safari) and Android phone (Chrome) before each release. | manual |
 
