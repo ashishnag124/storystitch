@@ -1,0 +1,12 @@
+{
+  "name": "storystitch",
+  "apps": {
+    "web": { "path": "apps/web", "stack": "vite-react", "host": "cloudflare-pages", "pagesProject": "storystitch-web" }
+  },
+  "features": {},
+  "environments": {
+    "local": { "web": "http://localhost:5173" },
+    "staging": { "branch": "main", "web": "" },
+    "production": { "branch": "production", "web": "" }
+  }
+}

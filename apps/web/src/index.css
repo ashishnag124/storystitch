@@ -1,0 +1,23 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color: #1a1a1a;
+  background: #fafafa;
+}
+
+body {
+  margin: 0;
+}
+
+main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+}
+
+canvas {
+  height: 70vh;
+  aspect-ratio: 9 / 16;
+  box-shadow: 0 1px 6px rgb(0 0 0 / 0.2);
+}

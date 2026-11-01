@@ -1,0 +1,71 @@
+# Promote a commit that passed CI on main to production.
+# Railway's production environment autodeploys from the `production` branch;
+# web is deployed explicitly below because GITHUB_TOKEN pushes don't trigger workflows.
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version tag, e.g. v1.4.0"
+        required: true
+      sha:
+        description: "Commit on main to release (default: current main)"
+        required: false
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    outputs:
+      sha: ${{ steps.resolve.outputs.sha }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ inputs.version }}
+      SHA_INPUT: ${{ inputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - id: resolve
+        name: Resolve and verify commit
+        run: |
+          set -euo pipefail
+          [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Version must look like v1.2.3"; exit 1; }
+          if git rev-parse -q --verify "refs/tags/$VERSION" >/dev/null; then echo "Tag $VERSION already exists"; exit 1; fi
+          SHA="$SHA_INPUT"
+          [ -n "$SHA" ] || SHA=$(git rev-parse origin/main)
+          SHA=$(git rev-parse "$SHA^{commit}")
+          git merge-base --is-ancestor "$SHA" origin/main || { echo "$SHA is not on main"; exit 1; }
+          CONCLUSION=$(gh run list --workflow ci.yml --commit "$SHA" --event push --limit 1 --json conclusion --jq '.[0].conclusion // ""')
+          [ "$CONCLUSION" = "success" ] || { echo "CI on $SHA is '$CONCLUSION', not success"; exit 1; }
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Fast-forward production and tag
+        run: |
+          set -euo pipefail
+          SHA="${{ steps.resolve.outputs.sha }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git push origin "$SHA:refs/heads/production"   # fails if not a fast-forward
+          git tag -a "$VERSION" "$SHA" -m "Release $VERSION"
+          git push origin "$VERSION"
+          gh release create "$VERSION" --verify-tag --generate-notes
+
+  deploy-web:
+    needs: promote
+    uses: ./.github/workflows/_deploy-pages.yml
+    with:
+      app: web
+      project: ${{ vars.PAGES_PROJECT }}
+      ref: ${{ needs.promote.outputs.sha }}
+      branch: production
+    secrets: inherit

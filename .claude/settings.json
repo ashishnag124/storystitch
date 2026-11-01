@@ -1,0 +1,44 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm *)",
+      "Bash(docker compose *)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git switch *)",
+      "Bash(git checkout -b *)",
+      "Bash(gh run list*)",
+      "Bash(gh run view*)",
+      "Bash(gh run watch*)",
+      "Bash(gh pr view*)",
+      "Bash(gh pr checks*)",
+      "Bash(curl -fsS localhost*)"
+    ],
+    "ask": [
+      "Bash(gh workflow run *)",
+      "Bash(railway *)",
+      "Bash(npx wrangler *)",
+      "Bash(npx eas-cli *)",
+      "Bash(eas *)",
+      "Bash(gh secret *)",
+      "Bash(gh variable *)"
+    ],
+    "deny": [
+      "Read(~/.config/new-project/**)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-prod.mjs\""
+          }
+        ]
+      }
+    ]
+  }
+}

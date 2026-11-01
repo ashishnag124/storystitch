@@ -1,0 +1,50 @@
+# Reusable: build one Pages app (apps/web or apps/site) and deploy it to Cloudflare Pages.
+# branch=main -> preview alias (staging); branch=production -> production.
+name: Deploy to Pages
+
+on:
+  workflow_call:
+    inputs:
+      app:
+        description: "web or site"
+        type: string
+        required: true
+      project:
+        description: "Cloudflare Pages project name"
+        type: string
+        required: true
+      ref:
+        type: string
+        required: true
+      branch:
+        type: string
+        required: true
+      api_url:
+        type: string
+        required: false
+        default: ""
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm turbo run build --filter="@storystitch/${{ inputs.app }}..."
+        env:
+          VITE_API_URL: ${{ inputs.api_url }}
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy apps/${{ inputs.app }}/dist --project-name=${{ inputs.project }} --branch=${{ inputs.branch }} --commit-hash=${{ inputs.ref }}

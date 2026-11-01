@@ -1,0 +1,31 @@
+# storystitch
+
+pnpm + Turborepo monorepo. `project.json` lists exactly which apps, services and environments exist. Read it before any structural change. `PROJECT_SETUP.md` has hosted URLs and where config lives.
+
+Product requirements: `docs/product-brief.md`.
+
+## Where code goes
+
+| Change | Location |
+|---|---|
+| Data shape / shared contract (layouts and their types) | `packages/shared/src/` (zod) first, then implement |
+| Web app UI | `apps/web/src/` |
+
+A request that needs an app or service not in `project.json` (e.g. "add an iOS app", "send emails", "add a background job") → stop and propose `/add-app` or a plan. Don't bolt it on ad hoc.
+
+## Environments
+
+- **Local** is the default for everything: `.env`, `pnpm dev`. Run, test and debug here.
+- **Staging** = whatever is on `main`. You get there by merging a PR, nothing else.
+- **Production** = the `production` branch, moved only by `/release` after the user confirms.
+- Never deploy to or change settings on staging or production yourself. If debugging needs hosted logs, ask the user to run the command and paste the output.
+
+## Commands
+
+- `pnpm dev` (web :5173) · `pnpm check` (lint + typecheck + test, run before saying done) · `pnpm build`
+
+## Rules
+
+- Work on a branch, open a PR with `gh pr create`; CI must pass.
+- Gate unfinished user-facing features behind a flag so `main` stays releasable.
+- New config value → add to `.env.example` and the "where config lives" table in `PROJECT_SETUP.md`; tell the user which hosted environments need it.
