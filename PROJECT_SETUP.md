@@ -7,12 +7,14 @@ Web app on Cloudflare Pages, plus an API with Postgres on Railway (from v2). All
 | | Local | Staging | Production |
 |---|---|---|---|
 | Trigger | `pnpm dev` | merge to `main` (CI deploys) | `/release` → `production` branch |
-| Web | http://localhost:5173 | https://main.storystitch-web.pages.dev | https://storystitch.ashishnag.com (also https://storystitch-web.pages.dev) |
+| Web | http://localhost:5173 | https://staging.storystitch.ashishnag.com (also https://storystitch-web-staging.pages.dev) | https://storystitch.ashishnag.com (also https://storystitch-web.pages.dev) |
 | API | http://localhost:3000 | https://api-staging.storystitch.ashishnag.com (also https://api-staging-d014.up.railway.app) | https://api.storystitch.ashishnag.com (set up before the next `/release`) |
 | Database | Docker Postgres (`docker compose`) | Railway Postgres, `staging` environment | Railway Postgres, `production` environment |
 
 - GitHub: https://github.com/ashishnag124/storystitch (private)
-- Cloudflare Pages project: `storystitch-web` (classic Pages, Direct Upload; production branch `production`)
+- Cloudflare Pages projects (classic Pages, Direct Upload):
+  - `storystitch-web`: production, deploys the `production` branch (via `/release`).
+  - `storystitch-web-staging`: staging, deploys `main` as its own production. It's a separate project because Pages routes a custom domain to a branch only through Cloudflare-proxied DNS, and ashishnag.com's DNS is at Squarespace. The old staging alias `main.storystitch-web.pages.dev` no longer updates.
 - Railway project: `storystitch`, services `api` and `Postgres`, environments `staging` (deploys `main`) and `production` (deploys the `production` branch, so only `/release` moves it). Migrations run before each deploy (`railway.json` → `preDeployCommand`), and Railway only switches traffic once `/health` answers.
 
 ## Where config lives
@@ -20,7 +22,7 @@ Web app on Cloudflare Pages, plus an API with Postgres on Railway (from v2). All
 | Value | Where | Used by |
 |---|---|---|
 | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` | GitHub secrets (loaded from `~/.config/new-project/secrets.env`) | `_deploy-pages.yml` |
-| `PAGES_PROJECT` = `storystitch-web` | GitHub variable | `ci.yml`, `release.yml` |
+| `PAGES_PROJECT` = `storystitch-web`, `PAGES_PROJECT_STAGING` = `storystitch-web-staging` | GitHub variables | `release.yml` (production), `ci.yml` (staging) |
 | `API_URL_STAGING`, `API_URL_PRODUCTION` | GitHub variables | web builds (`VITE_API_URL`) in `ci.yml` / `release.yml` |
 | `DATABASE_URL` (reference `${{Postgres.DATABASE_URL}}`), `CORS_ORIGIN`, `NODE_ENV` | Railway variables on `api`, per environment | the API |
 | Local values (`DATABASE_URL`, `PORT`, `CORS_ORIGIN`, `VITE_API_URL`) | `.env` (copy of `.env.example`) | `pnpm dev`, tests |
@@ -67,6 +69,9 @@ Claude never reads that file; it loads values from it into Railway and GitHub wh
 
 ### B1 checklist (yours)
 
+- [ ] **Staging web domain**: Cloudflare dashboard → Workers & Pages → `storystitch-web-staging` → Custom domains →
+  add `staging.storystitch.ashishnag.com`, then in Squarespace add `staging.storystitch` · CNAME ·
+  `storystitch-web-staging.pages.dev`. (The project fills in after this PR merges and CI deploys `main` to it.)
 - [ ] **DNS for the staging API** (Squarespace), then tell Claude so it can check the certificate:
   - `api-staging.storystitch` · CNAME · `y17fnxjl.up.railway.app`
   - `_railway-verify.api-staging.storystitch` · TXT ·
@@ -94,7 +99,7 @@ Claude never reads that file; it loads values from it into Railway and GitHub wh
 |---|---|---|---|
 | `storystitch` | CNAME | `storystitch-web.pages.dev` | done |
 | Records Resend shows (MX and TXT on `send.storystitch`, TXT `resend._domainkey.storystitch`) | as shown | as shown | B0 |
-| `staging.storystitch` | CNAME | on hold: Pages routes a custom domain to a branch only through a proxied Cloudflare DNS record, so a Squarespace CNAME would show production. Decision pending | — |
+| `staging.storystitch` | CNAME | `storystitch-web-staging.pages.dev` | B1, after adding the domain to the `storystitch-web-staging` Pages project |
 | `api-staging.storystitch` + `_railway-verify.api-staging.storystitch` | CNAME + TXT | see the B1 checklist | B1 |
 | `api.storystitch` + `_railway-verify.api.storystitch` | CNAME + TXT | printed by the production `railway domain` command | B1 |
 

@@ -5,7 +5,8 @@
       "path": "apps/web",
       "stack": "vite-react",
       "host": "cloudflare-pages",
-      "pagesProject": "storystitch-web"
+      "pagesProject": "storystitch-web",
+      "pagesProjectStaging": "storystitch-web-staging"
     },
     "api": {
       "path": "apps/api",
@@ -24,7 +25,7 @@
     },
     "staging": {
       "branch": "main",
-      "web": "https://main.storystitch-web.pages.dev",
+      "web": "https://staging.storystitch.ashishnag.com",
       "api": "https://api-staging.storystitch.ashishnag.com"
     },
     "production": {
