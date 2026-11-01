@@ -85,7 +85,22 @@ test("opens a HEIC photo", async ({ page }) => {
   expect(jpegSize(await exportImage(page))).toEqual({ width: 1080, height: 1920 });
 });
 
+/** Whether a Web Worker here can create a WebGL2 context, which MediaPipe needs even on its CPU delegate. */
+async function workerHasWebGL2(page: Page) {
+  return page.evaluate(
+    () =>
+      new Promise<boolean>((resolve) => {
+        const src = "postMessage(!!new OffscreenCanvas(1, 1).getContext('webgl2'))";
+        const worker = new Worker(URL.createObjectURL(new Blob([src], { type: "text/javascript" })));
+        worker.onmessage = (e) => resolve(e.data as boolean);
+        worker.onerror = () => resolve(false);
+      }),
+  );
+}
+
 test("finds faces and objects with the real on-device models", async ({ page }) => {
+  // Headless Linux WebKit has no GPU, so the app correctly falls back to the heuristic there.
+  test.skip(!(await workerHasWebGL2(page)), "No WebGL2 in workers, so MediaPipe can't run in this browser");
   const fixture = (name: string) => fileURLToPath(new URL(`fixtures/${name}`, import.meta.url));
   await page
     .getByLabel(/choose photos/i)
