@@ -11,6 +11,7 @@ Product requirements: `docs/product-brief.md`.
 | Data shape / shared contract (layouts and their types) | `packages/shared/src/` (zod) first, then implement |
 | Cropping, assignment, ranking (pure functions) | `packages/layout-engine/src/` |
 | Web app UI | `apps/web/src/` |
+| On-device subject detection (Web Worker, MediaPipe) | `apps/web/src/detect/`; models in `apps/web/public/models/` |
 | End-to-end tests (Playwright) | `apps/web/e2e/` |
 
 A request that needs an app or service not in `project.json` (e.g. "add an iOS app", "send emails", "add a background job") → stop and propose `/add-app` or a plan. Don't bolt it on ad hoc.

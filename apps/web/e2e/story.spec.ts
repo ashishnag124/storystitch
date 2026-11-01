@@ -54,6 +54,11 @@ async function exportImage(page: Page) {
 }
 
 test.beforeEach(async ({ page }) => {
+  // Surface browser warnings and errors (e.g. model load failures) in the test output.
+  page.on("console", (m) => {
+    if (m.type() === "warning" || m.type() === "error") console.log(`[browser ${m.type()}] ${m.text()}`);
+  });
+  page.on("pageerror", (e) => console.log(`[page error] ${e.message}`));
   // Force the download path: headless browsers have no share sheet to open.
   await page.addInitScript(() => {
     Object.defineProperty(Navigator.prototype, "canShare", { value: undefined });
@@ -77,5 +82,30 @@ test("opens a HEIC photo", async ({ page }) => {
   const heic = fileURLToPath(new URL("fixtures/gradient.heic", import.meta.url));
   await page.getByLabel(/choose photos/i).setInputFiles(heic);
   await expect(page.getByRole("radiogroup", { name: "Layouts" })).toBeVisible({ timeout: 30_000 });
+  expect(jpegSize(await exportImage(page))).toEqual({ width: 1080, height: 1920 });
+});
+
+/** Whether a Web Worker here can create a WebGL2 context, which MediaPipe needs even on its CPU delegate. */
+async function workerHasWebGL2(page: Page) {
+  return page.evaluate(
+    () =>
+      new Promise<boolean>((resolve) => {
+        const src = "postMessage(!!new OffscreenCanvas(1, 1).getContext('webgl2'))";
+        const worker = new Worker(URL.createObjectURL(new Blob([src], { type: "text/javascript" })));
+        worker.onmessage = (e) => resolve(e.data as boolean);
+        worker.onerror = () => resolve(false);
+      }),
+  );
+}
+
+test("finds faces and objects with the real on-device models", async ({ page }) => {
+  // Headless Linux WebKit has no GPU, so the app correctly falls back to the heuristic there.
+  test.skip(!(await workerHasWebGL2(page)), "No WebGL2 in workers, so MediaPipe can't run in this browser");
+  const fixture = (name: string) => fileURLToPath(new URL(`fixtures/${name}`, import.meta.url));
+  await page
+    .getByLabel(/choose photos/i)
+    .setInputFiles([fixture("native-garhwali-women-of-garhwal.jpg"), fixture("picography-shiba-inu-dog-forest-walk-sm-1.jpg")]);
+  // CC0 fixtures from Wikimedia Commons: a portrait (one face) and a dog in a forest (no face).
+  await expect(page.getByText("Found 1 face and a dog.")).toBeVisible({ timeout: 45_000 });
   expect(jpegSize(await exportImage(page))).toEqual({ width: 1080, height: 1920 });
 });

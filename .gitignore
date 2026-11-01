@@ -10,3 +10,9 @@ coverage/
 # Playwright
 test-results/
 playwright-report/
+
+# Wrangler local state
+.wrangler/
+
+# Copied from node_modules by apps/web/scripts/copy-mediapipe.mjs
+apps/web/public/mediapipe/

@@ -37,7 +37,7 @@ function Thumb(props: { layout: Layout; order: number[]; photos: Photo[]; checke
 
   useEffect(() => {
     const ctx = ref.current?.getContext("2d");
-    if (ctx) drawScene(ctx, THUMB, { ...newScene(layout), order }, (i) => previewOf(photos[i]!));
+    if (ctx) drawScene(ctx, THUMB, newScene(layout, photos, undefined, order), (i) => previewOf(photos[i]!));
   }, [layout, order, photos]);
 
   return (

@@ -1,12 +1,17 @@
 import { useState, type ChangeEvent } from "react";
+import { createWorkerDetector, describeSubjects, type Detector } from "./detect/detector";
 import { Editor } from "./Editor";
-import { ACCEPT, MAX_PHOTOS, UnsupportedPhotoError, loadPhoto, type Photo } from "./photos";
+import { ACCEPT, ANALYSIS_LONG_SIDE, MAX_PHOTOS, UnsupportedPhotoError, downscale, loadPhoto, type Photo } from "./photos";
 
 const PRIVACY = "Your photos stay on this device. Nothing is uploaded.";
 
+// Created on first use, so the detection models only download after photos are picked.
+let detector: Detector | undefined;
+
 function App() {
   const [photos, setPhotos] = useState<Photo[]>([]);
-  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const [progress, setProgress] = useState<{ step: string; done: number; total: number } | null>(null);
+  const [summary, setSummary] = useState<string | null>(null);
   const [notices, setNotices] = useState<string[]>([]);
 
   async function onPick(e: ChangeEvent<HTMLInputElement>) {
@@ -17,7 +22,7 @@ function App() {
     if (picked.length > MAX_PHOTOS) notes.push(`StoryStitch uses up to ${MAX_PHOTOS} photos, so it took the first ${MAX_PHOTOS}.`);
     const files = picked.slice(0, MAX_PHOTOS);
     const loaded: Photo[] = [];
-    setProgress({ done: 0, total: files.length });
+    setProgress({ step: "Preparing photos", done: 0, total: files.length });
     for (const [i, file] of files.entries()) {
       try {
         loaded.push(await loadPhoto(file));
@@ -25,10 +30,16 @@ function App() {
         if (!(err instanceof UnsupportedPhotoError)) console.error(err);
         notes.push(`Couldn't open ${file.name}. Try a JPEG, PNG, WebP or HEIC photo.`);
       }
-      setProgress({ done: i + 1, total: files.length });
+      setProgress({ step: "Preparing photos", done: i + 1, total: files.length });
+    }
+    detector ??= createWorkerDetector();
+    for (const [i, photo] of loaded.entries()) {
+      setProgress({ step: "Finding subjects", done: i, total: loaded.length });
+      photo.detections = await detector.detect(await downscale(photo.preview, ANALYSIS_LONG_SIDE));
     }
     setProgress(null);
     setNotices(notes);
+    setSummary(describeSubjects(loaded.map((p) => p.detections)));
     setPhotos(loaded);
   }
 
@@ -38,7 +49,9 @@ function App() {
     setNotices([]);
   }
 
-  if (photos.length) return <Editor photos={photos} notices={notices} privacy={PRIVACY} onStartOver={startOver} />;
+  if (photos.length) {
+    return <Editor photos={photos} summary={summary} notices={notices} privacy={PRIVACY} onStartOver={startOver} />;
+  }
 
   return (
     <main className="pick">
@@ -57,7 +70,7 @@ function App() {
       </label>
       {progress && (
         <p role="status">
-          Preparing photos {progress.done} of {progress.total}…
+          {progress.step} {Math.min(progress.done + 1, progress.total)} of {progress.total}…
         </p>
       )}
       {notices.map((n) => (
