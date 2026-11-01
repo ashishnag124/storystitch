@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
-import { exportImage, fixture, makePhotos, openApp, libraryInput } from "./helpers.js";
+import { exportImage, fixture, libraryInput, makePhotos, openApp } from "./helpers.js";
 
 test.beforeEach(({ page }) => openApp(page));
 
@@ -158,5 +158,31 @@ test("AC-MOBILE-01 nothing scrolls sideways at phone width", async ({ page }) =>
     await libraryInput(page).setInputFiles(await makePhotos(page, 8));
     await page.getByText("Style", { exact: true }).click();
     expect(await overflow(), `editor at ${width}px`).toBeLessThanOrEqual(0);
+  }
+});
+
+test("AC-MOBILE-04 the editor fits one phone screen: no page scrolling in any tool", async ({ page }) => {
+  for (const size of [{ width: 375, height: 667 }, page.viewportSize()!]) {
+    await page.setViewportSize(size);
+    await page.goto("/");
+    await libraryInput(page).setInputFiles(await makePhotos(page, 8));
+    const preview = page.getByRole("application");
+    await expect(preview).toBeVisible();
+    const fits = async (where: string) => {
+      const overflow = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight);
+      expect(overflow, `page scrolls by ${overflow}px (${where}, ${size.width}×${size.height})`).toBeLessThanOrEqual(0);
+      for (const el of [preview, page.getByRole("tablist", { name: "Tools" }), page.getByRole("button", { name: /Download|Preparing/ })]) {
+        const box = (await el.boundingBox())!;
+        expect(box.y + box.height, `${where}: on screen`).toBeLessThanOrEqual(size.height + 1);
+      }
+    };
+    for (const tab of ["Layouts", "Style", "Export"]) {
+      await page.getByRole("tab", { name: tab }).click();
+      await fits(`${tab} tool`);
+    }
+    const box = (await preview.boundingBox())!;
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    await expect(page.getByRole("slider", { name: "Zoom" })).toBeVisible();
+    await fits("photo selected");
   }
 });
