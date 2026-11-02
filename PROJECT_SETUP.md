@@ -108,9 +108,14 @@ usually work within minutes, but can take up to a few hours.
 Until this is done, email can only go to the address on your Resend account.
 
 1. Go to resend.com → Domains → Add Domain → enter `storystitch.ashishnag.com`, region `us-east-1`.
-2. Resend shows about three records: an MX and a TXT record on `send.storystitch`, and a TXT record on
-   `resend._domainkey.storystitch`. Add each one in Squarespace. Copy every value exactly; for the MX record, also
-   copy the priority (usually 10).
+2. Resend shows these records. Leave "Enable sending" on and "Enable receiving" off, and ignore its "Go to
+   Cloudflare" button (this domain's DNS is at Squarespace). Add each record in Squarespace, copying the full value
+   with Resend's copy button (the page shortens long values with `[...]`):
+   - TXT · `resend._domainkey.storystitch` · the long `p=MIGf...` value (DKIM)
+   - CNAME · `rsend.storystitch` · the `...mta.net` value Resend shows for it
+   - CNAME · `send.storystitch` · the `...mta.net` value Resend shows for it
+   - TXT · `_dmarc.storystitch` · `v=DMARC1; p=none;` (marked optional, but Gmail expects it. Resend names it
+     `_dmarc`, which would cover all of ashishnag.com; `_dmarc.storystitch` limits it to StoryStitch)
 3. In Resend, click **Verify DNS Records**, and wait until the domain shows **Verified**.
 4. Tell Claude "Resend verified". Claude checks the records, then switches staging's sender to
    `StoryStitch <no-reply@storystitch.ashishnag.com>`. Production uses that sender from the start.
@@ -182,7 +187,7 @@ the verification email arrives.
 | Host | Type | Value | When |
 |---|---|---|---|
 | `storystitch` | CNAME | `storystitch-web.pages.dev` | done |
-| Records Resend shows (MX and TXT on `send.storystitch`, TXT `resend._domainkey.storystitch`) | as shown | as shown | B0 |
+| `resend._domainkey.storystitch`, `rsend.storystitch`, `send.storystitch`, `_dmarc.storystitch` | TXT, CNAME, CNAME, TXT | as Resend shows | accounts in production, part 1 |
 | `staging.storystitch` | CNAME | `storystitch-web-staging.pages.dev` | B1, after adding the domain to the `storystitch-web-staging` Pages project |
 | `api-staging.storystitch` + `_railway-verify.api-staging.storystitch` | CNAME + TXT | see the B1 checklist | B1 |
 | `api.storystitch` + `_railway-verify.api.storystitch` | CNAME + TXT | printed by the production `railway domain` command | B1 |
