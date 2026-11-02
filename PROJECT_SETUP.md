@@ -27,7 +27,7 @@ Web app on Cloudflare Pages, plus an API with Postgres on Railway (from v2). All
 | `DATABASE_URL` (reference `${{Postgres.DATABASE_URL}}`), `CORS_ORIGIN`, `NODE_ENV` | Railway variables on `api`, per environment | the API |
 | `BETTER_AUTH_URL` (the API's own URL), `BETTER_AUTH_SECRET` (random, per environment), `EMAIL_TRANSPORT=resend`, `EMAIL_FROM`, `RESEND_API_KEY`, `TURNSTILE_SECRET_KEY` | Railway variables on `api`, per environment | accounts (B2) |
 | `TURNSTILE_SITE_KEY` (public), plus the Cloudflare and Resend keys | GitHub secrets, synced with `gh secret set -f ~/.config/new-project/secrets.env` | web builds (`VITE_TURNSTILE_SITE_KEY`) |
-| Accounts flag (`VITE_FEATURE_ACCOUNTS`) | `accounts:` input to `_deploy-pages.yml`: `true` in `ci.yml` (staging), off in `release.yml` (production) | web builds |
+| Accounts flag (`VITE_FEATURE_ACCOUNTS`) | `accounts:` input to `_deploy-pages.yml`: `true` in `ci.yml` (staging) and `release.yml` (production) | web builds |
 | Local values (`DATABASE_URL`, `PORT`, `CORS_ORIGIN`, `VITE_API_URL`) | `.env` (copy of `.env.example`) | `pnpm dev`, tests |
 
 ## Open checklist
@@ -46,7 +46,7 @@ What and why: the v2 section of `docs/product-brief.md`. Acceptance criteria: th
 |---|---|---|
 | B0 | Brief v2, planned criteria, legal drafts, accounts and DNS (checklist below) | docs merged; checklist in progress |
 | B1 | API + Postgres on Railway (staging, production), custom domains, CI/release/QA wiring | in progress: staging API live; checklist below |
-| B2 | Optional email and password accounts (Better Auth, Resend, Turnstile), account deletion. On in staging only, behind `VITE_FEATURE_ACCOUNTS` | in progress: checklist below |
+| B2 | Optional email and password accounts (Better Auth, Resend, Turnstile), account deletion, behind `VITE_FEATURE_ACCOUNTS` | on in staging; on in production from the next `/release` |
 | B3 | Save collages to Cloudflare R2, "My stories", storage limits | not started |
 | B4 | Supporter pass (Lemon Squeezy) | deferred: see "Later" in the brief |
 | B5 | Admin analytics (`/admin`, desktop, admin login with authenticator code) | not started |
@@ -67,8 +67,8 @@ Claude never reads that file; it loads values from it into Railway and GitHub wh
   the free tier (10 GB free). Claude creates the buckets in B3.
 - [x] **Production web domain**: Cloudflare dashboard → Workers & Pages → `storystitch-web` → Custom domains → add
   `storystitch.ashishnag.com`, then add the DNS record below in Squarespace. The current v1 site goes live there.
-- [ ] **Legal drafts**: fill in the `[TODO]`s in `docs/legal/privacy-policy.md` and `docs/legal/terms.md` and have them
-  reviewed.
+- [ ] **Legal drafts** (postponed: the app has no privacy or terms pages for now): fill in the `[TODO]`s in
+  `docs/legal/privacy-policy.md` and `docs/legal/terms.md` and have them reviewed, then add the pages back.
 
 ### B1 checklist (yours)
 
@@ -90,7 +90,7 @@ Claude never reads that file; it loads values from it into Railway and GitHub wh
     printf %s "$RESEND_API_KEY" | railway variable set RESEND_API_KEY --stdin -s api -e staging --skip-deploys
     printf %s "$TURNSTILE_SECRET_KEY" | railway variable set TURNSTILE_SECRET_KEY --stdin -s api -e staging --skip-deploys )
   ```
-- [ ] **Resend domain, Turnstile hostnames, legal drafts**: see "Accounts in production: step by step" below.
+- [ ] **Resend domain, Turnstile hostnames**: see "Accounts in production: step by step" below.
 
 ### Accounts in production: step by step (yours)
 
@@ -144,9 +144,12 @@ Until this is done, email can only go to the address on your Resend account.
    ```
    It prints two records: a CNAME (host `api.storystitch`) and a TXT (host `_railway-verify.api.storystitch`). Add
    both in Squarespace.
-4. Connect production to the `production` branch. This starts the first production deploy:
+4. Connect production to the `production` branch, then deploy it. The settings from steps 1 and 2 only reach a deploy
+   started after they're saved (`--skip-deploys` holds them back), so the deploy that `connect` starts crashes with
+   every setting "undefined"; the redeploy fixes that:
    ```bash
    railway service source connect --repo ashishnag124/storystitch --branch production --service api -e production
+   railway redeploy --from-source -s api -e production -y
    ```
 5. In the Railway dashboard → `storystitch` → `api` → Settings → Source, turn on **Wait for CI**, once with the
    environment switcher on `production` and once on `staging`.
@@ -161,24 +164,9 @@ Until this is done, email can only go to the address on your Resend account.
    Add any that are missing, and save. (The `pages.dev` addresses don't need adding: sign-up there fails the bot check,
    which is fine.)
 
-#### 4. Fill in the legal pages
+#### 4. Turn accounts on (Claude)
 
-`/privacy` and `/terms` show `docs/legal/privacy-policy.md` and `docs/legal/terms.md`. The easiest way: send Claude
-these answers, and it fills in every `[TODO]` in a PR.
-
-- Your legal name or business name, as the one running StoryStitch.
-- A contact email for privacy questions (for example `privacy@storystitch.ashishnag.com`; it needs to be a real inbox).
-- How many days server logs are kept (the draft suggests 30), and how many days until deleted data leaves backups
-  (the draft suggests 30).
-- The minimum age: 13, or 16 if you want to serve people in the EU.
-- The US state whose laws apply.
-- The effective date (the day accounts go live in production).
-
-These are drafts, not legal advice: have someone qualified review them before accounts go live.
-
-#### 5. Turn accounts on (Claude)
-
-When parts 1 to 4 are done, tell Claude. Claude opens a PR that builds production with accounts on and, once you
+When parts 1 to 3 are done, tell Claude. Claude opens a PR that builds production with accounts on and, once you
 approve, merges it. Then run `/release`, and sign up on https://storystitch.ashishnag.com from a real phone to check
 the verification email arrives.
 
