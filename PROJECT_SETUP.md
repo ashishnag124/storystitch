@@ -27,7 +27,7 @@ Web app on Cloudflare Pages, plus an API with Postgres on Railway (from v2). All
 | `DATABASE_URL` (reference `${{Postgres.DATABASE_URL}}`), `CORS_ORIGIN`, `NODE_ENV` | Railway variables on `api`, per environment | the API |
 | `BETTER_AUTH_URL` (the API's own URL), `BETTER_AUTH_SECRET` (random, per environment), `EMAIL_TRANSPORT=resend`, `EMAIL_FROM`, `RESEND_API_KEY`, `TURNSTILE_SECRET_KEY` | Railway variables on `api`, per environment | accounts (B2) |
 | `TURNSTILE_SITE_KEY` (public), plus the Cloudflare and Resend keys | GitHub secrets, synced with `gh secret set -f ~/.config/new-project/secrets.env` | web builds (`VITE_TURNSTILE_SITE_KEY`) |
-| Accounts flag (`VITE_FEATURE_ACCOUNTS`) | `accounts:` input to `_deploy-pages.yml`: `true` in `ci.yml` (staging), off in `release.yml` (production) | web builds |
+| Accounts flag (`VITE_FEATURE_ACCOUNTS`) | `accounts:` input to `_deploy-pages.yml`: `true` in `ci.yml` (staging) and `release.yml` (production) | web builds |
 | Local values (`DATABASE_URL`, `PORT`, `CORS_ORIGIN`, `VITE_API_URL`) | `.env` (copy of `.env.example`) | `pnpm dev`, tests |
 
 ## Open checklist
@@ -46,7 +46,7 @@ What and why: the v2 section of `docs/product-brief.md`. Acceptance criteria: th
 |---|---|---|
 | B0 | Brief v2, planned criteria, legal drafts, accounts and DNS (checklist below) | docs merged; checklist in progress |
 | B1 | API + Postgres on Railway (staging, production), custom domains, CI/release/QA wiring | in progress: staging API live; checklist below |
-| B2 | Optional email and password accounts (Better Auth, Resend, Turnstile), account deletion. On in staging only, behind `VITE_FEATURE_ACCOUNTS` | in progress: checklist below |
+| B2 | Optional email and password accounts (Better Auth, Resend, Turnstile), account deletion, behind `VITE_FEATURE_ACCOUNTS` | on in staging; on in production from the next `/release` |
 | B3 | Save collages to Cloudflare R2, "My stories", storage limits | not started |
 | B4 | Supporter pass (Lemon Squeezy) | deferred: see "Later" in the brief |
 | B5 | Admin analytics (`/admin`, desktop, admin login with authenticator code) | not started |
@@ -67,8 +67,8 @@ Claude never reads that file; it loads values from it into Railway and GitHub wh
   the free tier (10 GB free). Claude creates the buckets in B3.
 - [x] **Production web domain**: Cloudflare dashboard → Workers & Pages → `storystitch-web` → Custom domains → add
   `storystitch.ashishnag.com`, then add the DNS record below in Squarespace. The current v1 site goes live there.
-- [ ] **Legal drafts**: fill in the `[TODO]`s in `docs/legal/privacy-policy.md` and `docs/legal/terms.md` and have them
-  reviewed.
+- [ ] **Legal drafts** (postponed: the app has no privacy or terms pages for now): fill in the `[TODO]`s in
+  `docs/legal/privacy-policy.md` and `docs/legal/terms.md` and have them reviewed, then add the pages back.
 
 ### B1 checklist (yours)
 
@@ -79,22 +79,7 @@ Claude never reads that file; it loads values from it into Railway and GitHub wh
   - `api-staging.storystitch` · CNAME · `y17fnxjl.up.railway.app`
   - `_railway-verify.api-staging.storystitch` · TXT ·
     `railway-verify=4d8d6b576613c4f6735b1188f2f6a7e761b045b8c1b9d68ab5ec268aa1da0e8d`
-- [ ] **Production API** (Claude can't touch Railway's production environment). From the repo folder, run these and
-  share the output of the last one:
-  ```bash
-  railway variable set 'DATABASE_URL=${{Postgres.DATABASE_URL}}' -s api -e production --skip-deploys
-  railway variable set NODE_ENV=production -s api -e production --skip-deploys
-  railway variable set 'CORS_ORIGIN=https://storystitch.ashishnag.com,https://storystitch-web.pages.dev' -s api -e production --skip-deploys
-  railway domain api.storystitch.ashishnag.com -s api -e production --json
-  ```
-  Then add the CNAME and TXT records it prints (like the staging ones) in Squarespace.
-- [ ] **Before the next `/release`** (when the `production` branch will contain the API): connect production to its
-  branch. Doing it earlier starts a deploy of v0.1.0, which has no API, and fails.
-  ```bash
-  railway service source connect --repo ashishnag124/storystitch --branch production --service api -e production
-  ```
-- [ ] **Railway dashboard → `api` → Settings**, in each environment: turn on "Wait for CI", so Railway deploys only
-  commits whose GitHub checks passed.
+- [ ] **Production API**, and "Wait for CI": see "Accounts in production: step by step" below.
 
 ### B2 checklist (yours)
 
@@ -105,20 +90,92 @@ Claude never reads that file; it loads values from it into Railway and GitHub wh
     printf %s "$RESEND_API_KEY" | railway variable set RESEND_API_KEY --stdin -s api -e staging --skip-deploys
     printf %s "$TURNSTILE_SECRET_KEY" | railway variable set TURNSTILE_SECRET_KEY --stdin -s api -e staging --skip-deploys )
   ```
-- [ ] **Resend sending domain**: in Resend, add `storystitch.ashishnag.com`, add the DNS records it shows in
-  Squarespace and wait for "Verified". Until then staging sends from Resend's test address (`onboarding@resend.dev`),
-  which only delivers to the email on your Resend account. Once verified, tell Claude to switch `EMAIL_FROM` to
-  `StoryStitch <no-reply@storystitch.ashishnag.com>`.
-- [ ] **Turnstile widget hostnames**: make sure the widget lists `staging.storystitch.ashishnag.com` and
-  `storystitch.ashishnag.com`.
-- [ ] **Legal drafts**: fill in the `[TODO]`s; the drafts are what `/privacy` and `/terms` show on staging.
+- [ ] **Resend domain, Turnstile hostnames**: see "Accounts in production: step by step" below.
+
+### Accounts in production: step by step (yours)
+
+This replaces the production items in the B1 and B2 checklists above. Do the parts in order; part 1 can wait on DNS while
+you do part 2. Run every command in a terminal from the repo folder (`cd ~/storystitch`). Claude can't do these itself:
+it can't read your secrets file or change Railway's production environment.
+
+**Adding a DNS record in Squarespace** (used in parts 1 and 2): Squarespace → Domains → `ashishnag.com` → DNS → DNS
+Settings → Custom records → Add record. In **Host**, type only the part before `.ashishnag.com` (for
+`send.storystitch.ashishnag.com`, type `send.storystitch`), because Squarespace adds `.ashishnag.com` itself. Records
+usually work within minutes, but can take up to a few hours.
+
+#### 1. Verify the sending domain in Resend
+
+Until this is done, email can only go to the address on your Resend account.
+
+1. Go to resend.com → Domains → Add Domain → enter `storystitch.ashishnag.com`, region `us-east-1`.
+2. Resend shows these records. Leave "Enable sending" on and "Enable receiving" off, and ignore its "Go to
+   Cloudflare" button (this domain's DNS is at Squarespace). Add each record in Squarespace, copying the full value
+   with Resend's copy button (the page shortens long values with `[...]`):
+   - TXT · `resend._domainkey.storystitch` · the long `p=MIGf...` value (DKIM)
+   - CNAME · `rsend.storystitch` · the `...mta.net` value Resend shows for it
+   - CNAME · `send.storystitch` · the `...mta.net` value Resend shows for it
+   - TXT · `_dmarc.storystitch` · `v=DMARC1; p=none;` (marked optional, but Gmail expects it. Resend names it
+     `_dmarc`, which would cover all of ashishnag.com; `_dmarc.storystitch` limits it to StoryStitch)
+3. In Resend, click **Verify DNS Records**, and wait until the domain shows **Verified**.
+4. Tell Claude "Resend verified". Claude checks the records, then switches staging's sender to
+   `StoryStitch <no-reply@storystitch.ashishnag.com>`. Production uses that sender from the start.
+
+#### 2. Set up the production API on Railway
+
+1. Set the production API's settings. These don't start a deploy (`--skip-deploys`):
+   ```bash
+   railway variable set 'DATABASE_URL=${{Postgres.DATABASE_URL}}' -s api -e production --skip-deploys
+   railway variable set NODE_ENV=production EMAIL_TRANSPORT=resend -s api -e production --skip-deploys
+   railway variable set 'CORS_ORIGIN=https://storystitch.ashishnag.com,https://storystitch-web.pages.dev' -s api -e production --skip-deploys
+   railway variable set BETTER_AUTH_URL=https://api.storystitch.ashishnag.com -s api -e production --skip-deploys
+   railway variable set 'EMAIL_FROM=StoryStitch <no-reply@storystitch.ashishnag.com>' -s api -e production --skip-deploys
+   ```
+2. Add the secret keys. This copies them from your secrets file, and makes a new random sign-in secret, without
+   printing any of them:
+   ```bash
+   ( set -a; . ~/.config/new-project/secrets.env; set +a
+     printf %s "$RESEND_API_KEY" | railway variable set RESEND_API_KEY --stdin -s api -e production --skip-deploys
+     printf %s "$TURNSTILE_SECRET_KEY" | railway variable set TURNSTILE_SECRET_KEY --stdin -s api -e production --skip-deploys
+     openssl rand -base64 32 | tr -d '\n' | railway variable set BETTER_AUTH_SECRET --stdin -s api -e production --skip-deploys )
+   ```
+3. Give the API its address:
+   ```bash
+   railway domain api.storystitch.ashishnag.com -s api -e production --json
+   ```
+   It prints two records: a CNAME (host `api.storystitch`) and a TXT (host `_railway-verify.api.storystitch`). Add
+   both in Squarespace.
+4. Connect production to the `production` branch, then deploy it. The settings from steps 1 and 2 only reach a deploy
+   started after they're saved (`--skip-deploys` holds them back), so the deploy that `connect` starts crashes with
+   every setting "undefined"; the redeploy fixes that:
+   ```bash
+   railway service source connect --repo ashishnag124/storystitch --branch production --service api -e production
+   railway redeploy --from-source -s api -e production -y
+   ```
+5. In the Railway dashboard → `storystitch` → `api` → Settings → Source, turn on **Wait for CI**, once with the
+   environment switcher on `production` and once on `staging`.
+6. Tell Claude "production API done". Claude checks the DNS records, the certificate, and that
+   https://api.storystitch.ashishnag.com/health answers with the released version. If the deploy failed, Claude will
+   ask you to run `railway logs -s api -e production` and paste the output.
+
+#### 3. Check the Turnstile hostnames
+
+1. Cloudflare dashboard → Turnstile → open the StoryStitch widget → Settings (or Edit).
+2. Under **Hostnames**, make sure both `storystitch.ashishnag.com` and `staging.storystitch.ashishnag.com` are listed.
+   Add any that are missing, and save. (The `pages.dev` addresses don't need adding: sign-up there fails the bot check,
+   which is fine.)
+
+#### 4. Turn accounts on (Claude)
+
+When parts 1 to 3 are done, tell Claude. Claude opens a PR that builds production with accounts on and, once you
+approve, merges it. Then run `/release`, and sign up on https://storystitch.ashishnag.com from a real phone to check
+the verification email arrives.
 
 ### DNS records (Squarespace → Domains → ashishnag.com → DNS)
 
 | Host | Type | Value | When |
 |---|---|---|---|
 | `storystitch` | CNAME | `storystitch-web.pages.dev` | done |
-| Records Resend shows (MX and TXT on `send.storystitch`, TXT `resend._domainkey.storystitch`) | as shown | as shown | B0 |
+| `resend._domainkey.storystitch`, `rsend.storystitch`, `send.storystitch`, `_dmarc.storystitch` | TXT, CNAME, CNAME, TXT | as Resend shows | accounts in production, part 1 |
 | `staging.storystitch` | CNAME | `storystitch-web-staging.pages.dev` | B1, after adding the domain to the `storystitch-web-staging` Pages project |
 | `api-staging.storystitch` + `_railway-verify.api-staging.storystitch` | CNAME + TXT | see the B1 checklist | B1 |
 | `api.storystitch` + `_railway-verify.api.storystitch` | CNAME + TXT | printed by the production `railway domain` command | B1 |

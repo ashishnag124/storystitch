@@ -703,9 +703,7 @@ a.button {
   font-size: 0.875rem;
 }
 
-.account-links a,
-.account-form .hint a,
-.legal a {
+.account-links a {
   color: var(--accent);
 }
 
@@ -737,24 +735,6 @@ a.button {
   border-color: var(--danger);
   background: var(--danger);
   color: #fff;
-}
-
-.legal {
-  line-height: 1.55;
-}
-
-.legal table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.875rem;
-}
-
-.legal th,
-.legal td {
-  padding: 6px;
-  border-bottom: 1px solid var(--border);
-  text-align: left;
-  vertical-align: top;
 }
 
 /* Photo sources: per-platform buttons, desktop drop zone */

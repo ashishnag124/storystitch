@@ -134,16 +134,7 @@ test("AC-AUTH-01 making and exporting a collage never asks you to sign in", asyn
   expect(authCalls).toEqual([]);
 });
 
-test("AC-AUTH-11 sign-up links to the privacy policy and terms", async ({ page }) => {
-  await page.goto("/sign-up");
-  await page.getByRole("link", { name: "privacy policy" }).click();
-  await expect(page.getByRole("heading", { name: "StoryStitch privacy policy" })).toBeVisible();
-  await page.goto("/sign-up");
-  await page.getByRole("link", { name: "terms" }).click();
-  await expect(page.getByRole("heading", { name: "StoryStitch terms of use" })).toBeVisible();
-});
-
-test.describe("accounts switched off (production today)", () => {
+test.describe("accounts switched off", () => {
   test.use({ baseURL: `http://localhost:${PORT}` });
 
   test("AC-API-03 shows no account features and never calls the API", async ({ page }) => {

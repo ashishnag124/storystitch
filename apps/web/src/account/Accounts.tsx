@@ -1,9 +1,6 @@
 // Account screens (loaded only when accounts are switched on). They cover the editor rather than replacing it, so
 // opening "Account" mid-edit doesn't lose the collage.
-import { marked } from "marked";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import privacyMarkdown from "../../../../docs/legal/privacy-policy.md?raw";
-import termsMarkdown from "../../../../docs/legal/terms.md?raw";
 import { authClient, errorMessage } from "./client";
 import { ACCOUNT_PATHS, navigate, useLocation } from "./route";
 import { Turnstile } from "./Turnstile";
@@ -184,9 +181,6 @@ function SignUp() {
       <Field label="Password (at least 8 characters)" type="password" value={password} onChange={setPassword} autoComplete="new-password" />
       {bot.widget}
       {error && <Message error>{error}</Message>}
-      <p className="hint">
-        By creating an account you agree to the <Link to="/terms">terms</Link> and <Link to="/privacy">privacy policy</Link>.
-      </p>
       <button type="submit" className="button primary" disabled={busy || !bot.token}>
         {busy ? "Creating…" : "Create account"}
       </button>
@@ -306,9 +300,6 @@ function Profile({ email, welcome }: { email: string; welcome: boolean }) {
           </button>
         </form>
       </details>
-      <p className="account-links">
-        <Link to="/privacy">Privacy policy</Link> · <Link to="/terms">Terms</Link>
-      </p>
     </div>
   );
 }
@@ -325,18 +316,10 @@ function AccountHome({ params }: { params: URLSearchParams }) {
   );
 }
 
-/** Our own legal drafts (docs/legal), rendered from Markdown with their editing notes stripped. */
-function Legal({ markdown }: { markdown: string }) {
-  const html = marked.parse(markdown.replace(/<!--[\s\S]*?-->/g, ""), { async: false });
-  return <article className="legal" dangerouslySetInnerHTML={{ __html: html }} />;
-}
-
 const TITLES: Record<(typeof ACCOUNT_PATHS)[number], string> = {
   "/account": "Account",
   "/sign-up": "Create an account",
   "/reset-password": "Reset password",
-  "/privacy": "Privacy policy",
-  "/terms": "Terms of use",
 };
 
 export default function Accounts() {
@@ -348,8 +331,6 @@ export default function Accounts() {
       {path === "/account" && <AccountHome params={searchParams} />}
       {path === "/sign-up" && <SignUp />}
       {path === "/reset-password" && <ResetPassword token={searchParams.get("token")} error={searchParams.get("error")} />}
-      {path === "/privacy" && <Legal markdown={privacyMarkdown} />}
-      {path === "/terms" && <Legal markdown={termsMarkdown} />}
     </Screen>
   );
 }

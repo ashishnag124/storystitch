@@ -19,7 +19,6 @@
     "@storystitch/shared": "workspace:*",
     "better-auth": "^1.7.14",
     "heic-to": "^1.6.7",
-    "marked": "^18.1.2",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },

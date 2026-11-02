@@ -154,7 +154,7 @@ describe the app exactly. When saving ships, AC-SAVE-02 and AC-SAVE-07 replace A
 |---|---|---|
 | AC-API-01 | Browsers may call the API only from StoryStitch's own web origins (CORS), with credentials; every other origin gets no access. | auto |
 | AC-API-02 | Database migrations are backward compatible: the previous API version still works against the new schema. | planned |
-| AC-API-03 | With the accounts flag off (production today), the app behaves exactly as v1: no account features and no requests to the API. | auto |
+| AC-API-03 | With the accounts flag off, the app behaves exactly as v1: no account features and no requests to the API. | auto |
 | AC-API-04 | `GET /health` reports the deployed version and whether the database is up, with status 503 when it isn't. | auto |
 | AC-API-05 | Account requests that change data are refused unless they come from StoryStitch's own web origins (cross-site request forgery). | auto |
 
@@ -168,7 +168,6 @@ describe the app exactly. When saving ships, AC-SAVE-02 and AC-SAVE-07 replace A
 | AC-AUTH-06 | Signed-in sessions persist across reloads in iPhone Safari (WebKit) and Android Chrome. | auto |
 | AC-AUTH-07 | Users can sign out, and sign out of every device. | auto |
 | AC-AUTH-08 | Deleting an account needs the account's password and removes the user and their sessions (and, once saving ships, their saved collages and files). | auto |
-| AC-AUTH-11 | Sign-up links to the privacy policy and terms, and both are readable in the app. | auto |
 | AC-AUTH-10 | On staging, a real verification email and password-reset email arrive, and sign-up and sign-in work on iPhone Safari and Android Chrome. | manual |
 
 ## Saved collages

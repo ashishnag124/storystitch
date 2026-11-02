@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 /** Account screens live at these paths; everything else is the collage editor. */
-export const ACCOUNT_PATHS = ["/account", "/sign-up", "/reset-password", "/privacy", "/terms"] as const;
+export const ACCOUNT_PATHS = ["/account", "/sign-up", "/reset-password"] as const;
 
 const listeners = new Set<() => void>();
 
