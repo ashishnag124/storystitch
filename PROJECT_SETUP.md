@@ -14,7 +14,7 @@ Web app on Cloudflare Pages, plus an API with Postgres on Railway (from v2). All
 - GitHub: https://github.com/ashishnag124/storystitch (private)
 - Cloudflare Pages projects (classic Pages, Direct Upload):
   - `storystitch-web`: production, deploys the `production` branch (via `/release`).
-  - `storystitch-web-staging`: staging, deploys `main` as its own production. It's a separate project because Pages routes a custom domain to a branch only through Cloudflare-proxied DNS, and ashishnag.com's DNS is at Squarespace. The old staging alias `main.storystitch-web.pages.dev` no longer updates.
+  - `storystitch-web-staging`: staging, deploys `main` as its own production. It's a separate project because Pages routes a custom domain to a branch only through Cloudflare-proxied DNS, and ashishnag.com's DNS was at Squarespace when staging was set up (it moved to Cloudflare on 2026-11-02). The old staging alias `main.storystitch-web.pages.dev` no longer updates.
 - Railway project: `storystitch`, services `api` and `Postgres`, environments `staging` (deploys `main`) and `production` (deploys the `production` branch, so only `/release` moves it). The API applies pending migrations itself at startup, before it serves requests (`apps/api/src/db/migrate.ts`; Railway never ran the `railway.json` pre-deploy command for this service), and Railway only switches traffic once `/health` answers.
 
 ## Where config lives
@@ -66,16 +66,16 @@ Claude never reads that file; it loads values from it into Railway and GitHub wh
 - [x] **Cloudflare R2** (saved collages): Cloudflare dashboard → R2 → enable it. It asks for a payment method even on
   the free tier (10 GB free). Claude creates the buckets in B3.
 - [x] **Production web domain**: Cloudflare dashboard → Workers & Pages → `storystitch-web` → Custom domains → add
-  `storystitch.ashishnag.com`, then add the DNS record below in Squarespace. The current v1 site goes live there.
+  `storystitch.ashishnag.com`, then add the DNS record below in Cloudflare. The current v1 site goes live there.
 - [ ] **Legal drafts** (postponed: the app has no privacy or terms pages for now): fill in the `[TODO]`s in
   `docs/legal/privacy-policy.md` and `docs/legal/terms.md` and have them reviewed, then add the pages back.
 
 ### B1 checklist (yours)
 
 - [ ] **Staging web domain**: Cloudflare dashboard → Workers & Pages → `storystitch-web-staging` → Custom domains →
-  add `staging.storystitch.ashishnag.com`, then in Squarespace add `staging.storystitch` · CNAME ·
+  add `staging.storystitch.ashishnag.com`, then in Cloudflare DNS add `staging.storystitch` · CNAME ·
   `storystitch-web-staging.pages.dev`. (The project fills in after this PR merges and CI deploys `main` to it.)
-- [ ] **DNS for the staging API** (Squarespace), then tell Claude so it can check the certificate:
+- [ ] **DNS for the staging API** (Cloudflare), then tell Claude so it can check the certificate:
   - `api-staging.storystitch` · CNAME · `y17fnxjl.up.railway.app`
   - `_railway-verify.api-staging.storystitch` · TXT ·
     `railway-verify=4d8d6b576613c4f6735b1188f2f6a7e761b045b8c1b9d68ab5ec268aa1da0e8d`
@@ -98,18 +98,20 @@ This replaces the production items in the B1 and B2 checklists above. Do the par
 you do part 2. Run every command in a terminal from the repo folder (`cd ~/storystitch`). Claude can't do these itself:
 it can't read your secrets file or change Railway's production environment.
 
-**Adding a DNS record in Squarespace** (used in parts 1 and 2): Squarespace → Domains → `ashishnag.com` → DNS → DNS
-Settings → Custom records → Add record. In **Host**, type only the part before `.ashishnag.com` (for
-`send.storystitch.ashishnag.com`, type `send.storystitch`), because Squarespace adds `.ashishnag.com` itself. Records
-usually work within minutes, but can take up to a few hours.
+**Adding a DNS record in Cloudflare** (used in parts 1 and 2): ashishnag.com's nameservers point to Cloudflare, so
+records in Squarespace no longer do anything. Cloudflare dashboard → `ashishnag.com` → DNS → Records → Add record. In
+**Name**, type only the part before `.ashishnag.com` (for `send.storystitch.ashishnag.com`, type `send.storystitch`),
+because Cloudflare adds `.ashishnag.com` itself. For CNAME records, set **Proxy status** to **DNS only** (grey cloud):
+Railway can't issue its certificate, and Resend can't verify, through Cloudflare's proxy. Records usually work within
+a minute.
 
 #### 1. Verify the sending domain in Resend
 
 Until this is done, email can only go to the address on your Resend account.
 
 1. Go to resend.com → Domains → Add Domain → enter `storystitch.ashishnag.com`, region `us-east-1`.
-2. Resend shows these records. Leave "Enable sending" on and "Enable receiving" off, and ignore its "Go to
-   Cloudflare" button (this domain's DNS is at Squarespace). Add each record in Squarespace, copying the full value
+2. Resend shows these records. Leave "Enable sending" on and "Enable receiving" off, and add each record in
+   Cloudflare by hand rather than with its "Go to Cloudflare" button, copying the full value
    with Resend's copy button (the page shortens long values with `[...]`):
    - TXT · `resend._domainkey.storystitch` · the long `p=MIGf...` value (DKIM)
    - CNAME · `rsend.storystitch` · the `...mta.net` value Resend shows for it
@@ -143,7 +145,7 @@ Until this is done, email can only go to the address on your Resend account.
    railway domain api.storystitch.ashishnag.com -s api -e production --json
    ```
    It prints two records: a CNAME (host `api.storystitch`) and a TXT (host `_railway-verify.api.storystitch`). Add
-   both in Squarespace.
+   both in Cloudflare, with the CNAME set to DNS only.
 4. Connect production to the `production` branch, then deploy it. The settings from steps 1 and 2 only reach a deploy
    started after they're saved (`--skip-deploys` holds them back), so the deploy that `connect` starts crashes with
    every setting "undefined"; the redeploy fixes that:
@@ -170,15 +172,15 @@ When parts 1 to 3 are done, tell Claude. Claude opens a PR that builds productio
 approve, merges it. Then run `/release`, and sign up on https://storystitch.ashishnag.com from a real phone to check
 the verification email arrives.
 
-### DNS records (Squarespace → Domains → ashishnag.com → DNS)
+### DNS records (Cloudflare → ashishnag.com → DNS → Records)
 
 | Host | Type | Value | When |
 |---|---|---|---|
 | `storystitch` | CNAME | `storystitch-web.pages.dev` | done |
-| `resend._domainkey.storystitch`, `rsend.storystitch`, `send.storystitch`, `_dmarc.storystitch` | TXT, CNAME, CNAME, TXT | as Resend shows | accounts in production, part 1 |
-| `staging.storystitch` | CNAME | `storystitch-web-staging.pages.dev` | B1, after adding the domain to the `storystitch-web-staging` Pages project |
-| `api-staging.storystitch` + `_railway-verify.api-staging.storystitch` | CNAME + TXT | see the B1 checklist | B1 |
-| `api.storystitch` + `_railway-verify.api.storystitch` | CNAME + TXT | printed by the production `railway domain` command | B1 |
+| `resend._domainkey.storystitch`, `rsend.storystitch`, `send.storystitch`, `_dmarc.storystitch` | TXT, CNAME, CNAME, TXT | as Resend shows | done |
+| `staging.storystitch` | CNAME | `storystitch-web-staging.pages.dev` | done |
+| `api-staging.storystitch` + `_railway-verify.api-staging.storystitch` | CNAME + TXT | see the B1 checklist | done |
+| `api.storystitch` + `_railway-verify.api.storystitch` | CNAME + TXT | printed by the production `railway domain` command | done |
 
 ## Release
 
