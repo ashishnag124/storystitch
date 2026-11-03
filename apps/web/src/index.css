@@ -1,17 +1,22 @@
 :root {
-  --bg: #faf8f5;
-  --text: #1c1917;
-  --muted: #57534e;
-  --accent: #2563eb;
-  --accent-text: #ffffff;
-  --surface: #ffffff;
-  --border: #d6d3d1;
+  /* Golden hour: plum, with marigold for what to tap and coral and pink from the logo. */
+  --bg: #2b1340;
+  --text: #fff4e8;
+  --muted: #cbb7d9;
+  --accent: #ffc24b;
+  --accent-text: #2b1340;
+  --surface: #3d1f57;
+  --border: #5a3577;
+  --coral: #ff7a59;
+  --pink: #ff4f8b;
   --warn-bg: #fef3c7;
   --warn-text: #78350f;
   --ok-bg: #dcfce7;
   --ok-text: #14532d;
-  --danger: #b91c1c;
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --danger: #ff8f8f;
+  font-family: "Bricolage Grotesque Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+  accent-color: var(--accent);
   color: var(--text);
   background: var(--bg);
   -webkit-text-size-adjust: 100%;
@@ -52,10 +57,10 @@ p {
   padding: 0 18px;
   border: 1px solid var(--border);
   border-radius: 999px;
-  background: var(--surface);
+  background: none;
   color: var(--text);
   font: inherit;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   touch-action: manipulation;
 }
@@ -76,6 +81,7 @@ p {
   min-height: 56px;
   padding: 0 32px;
   font-size: 1.125rem;
+  font-weight: 800;
 }
 
 .button:focus-visible,
@@ -117,12 +123,156 @@ input[type="range"]:focus-visible {
   text-align: center;
 }
 
+.brand {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .pick h1 {
-  font-size: 2rem;
+  font-size: 1.375rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.logo {
+  width: 18px;
+  height: 30px;
+}
+
+.headline {
+  font-size: 2.25rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.headline span {
+  color: var(--accent);
 }
 
 .lede {
+  max-width: 30ch;
   color: var(--muted);
+}
+
+.hero {
+  position: relative;
+  width: 112px;
+  height: 199px;
+  margin-bottom: 8px;
+  padding: 3px;
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.hero-cell {
+  position: absolute;
+  border-radius: 9px;
+  animation: 6s cubic-bezier(0.3, 1.3, 0.5, 1) infinite;
+}
+
+.hero-cell-1 {
+  background: var(--coral);
+}
+
+.hero-cell-2 {
+  background: var(--accent);
+}
+
+.hero-cell-3 {
+  background: var(--pink);
+}
+
+.hero-cell-4 {
+  background: var(--text);
+}
+
+.hero-cell-1 {
+  left: 3px; top: 3px; width: calc(100% - 6px); height: calc(50% - 6px);
+  animation-name: hero-1;
+}
+
+.hero-cell-2 {
+  left: 3px; top: calc(50% + 3px); width: calc(50% - 6px); height: calc(50% - 6px);
+  animation-name: hero-2;
+}
+
+.hero-cell-3 {
+  left: calc(50% + 3px); top: calc(50% + 3px); width: calc(50% - 6px); height: calc(25% - 6px);
+  animation-name: hero-3;
+}
+
+.hero-cell-4 {
+  left: calc(50% + 3px); top: calc(75% + 3px); width: calc(50% - 6px); height: calc(25% - 6px);
+  animation-name: hero-4;
+}
+
+@keyframes hero-1 {
+  0%,
+  28%,
+  100% {
+    left: 3px; top: 3px; width: calc(100% - 6px); height: calc(50% - 6px);
+  }
+  33%,
+  61% {
+    left: 3px; top: 3px; width: calc(50% - 6px); height: calc(62% - 6px);
+  }
+  66%,
+  94% {
+    left: 3px; top: 3px; width: calc(100% - 6px); height: calc(34% - 6px);
+  }
+}
+
+@keyframes hero-2 {
+  0%,
+  28%,
+  100% {
+    left: 3px; top: calc(50% + 3px); width: calc(50% - 6px); height: calc(50% - 6px);
+  }
+  33%,
+  61% {
+    left: calc(50% + 3px); top: 3px; width: calc(50% - 6px); height: calc(38% - 6px);
+  }
+  66%,
+  94% {
+    left: 3px; top: calc(34% + 3px); width: calc(100% - 6px); height: calc(33% - 6px);
+  }
+}
+
+@keyframes hero-3 {
+  0%,
+  28%,
+  100% {
+    left: calc(50% + 3px); top: calc(50% + 3px); width: calc(50% - 6px); height: calc(25% - 6px);
+  }
+  33%,
+  61% {
+    left: calc(50% + 3px); top: calc(38% + 3px); width: calc(50% - 6px); height: calc(62% - 6px);
+  }
+  66%,
+  94% {
+    left: 3px; top: calc(67% + 3px); width: calc(50% - 6px); height: calc(33% - 6px);
+  }
+}
+
+@keyframes hero-4 {
+  0%,
+  28%,
+  100% {
+    left: calc(50% + 3px); top: calc(75% + 3px); width: calc(50% - 6px); height: calc(25% - 6px);
+  }
+  33%,
+  61% {
+    left: 3px; top: calc(62% + 3px); width: calc(50% - 6px); height: calc(38% - 6px);
+  }
+  66%,
+  94% {
+    left: calc(50% + 3px); top: calc(67% + 3px); width: calc(50% - 6px); height: calc(33% - 6px);
+  }
 }
 
 /* Editor: one screen on phones, with no page scroll. Top bar, the preview filling the middle, then the
@@ -170,7 +320,7 @@ input[type="range"]:focus-visible {
   width: 100%;
   height: 100%;
   border-radius: 12px;
-  box-shadow: 0 2px 12px rgb(0 0 0 / 0.18);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.4);
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
@@ -207,7 +357,7 @@ input[type="range"]:focus-visible {
 }
 
 .photo-tip button:focus-visible {
-  outline: 3px solid #93c5fd;
+  outline: 3px solid var(--accent);
   outline-offset: -4px;
   border-radius: 999px;
 }
@@ -300,7 +450,7 @@ input[type="range"]:focus-visible {
   flex: none;
   align-items: center;
   padding: 0 12px;
-  border-top: 1px solid var(--border);
+  border-radius: 20px 20px 0 0;
   background: var(--surface);
 }
 
@@ -343,7 +493,6 @@ input[type="range"]:focus-visible {
 .tabbar {
   display: flex;
   flex: none;
-  border-top: 1px solid var(--border);
   background: var(--surface);
 }
 
@@ -362,7 +511,19 @@ input[type="range"]:focus-visible {
 
 .tab[aria-selected="true"] {
   color: var(--accent);
-  box-shadow: inset 0 3px 0 var(--accent);
+  font-weight: 800;
+}
+
+.tab[aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  bottom: 5px;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  margin-left: -2.5px;
+  border-radius: 50%;
+  background: var(--accent);
 }
 
 .tab:focus-visible {
@@ -420,20 +581,20 @@ input[type="range"]:focus-visible {
 }
 
 .diagram-frame {
-  fill: var(--surface);
+  fill: var(--bg);
   stroke: var(--border);
   stroke-width: 2;
 }
 
 .diagram-cell {
   fill: var(--border);
-  stroke: var(--surface);
+  stroke: var(--bg);
   stroke-width: 2;
   stroke-linejoin: round;
 }
 
 .thumb[aria-checked="true"] .diagram-cell {
-  fill: color-mix(in srgb, var(--accent) 40%, var(--surface));
+  fill: var(--coral);
 }
 
 .export-tool {
@@ -472,7 +633,7 @@ input[type="range"]:focus-visible {
   background:
     linear-gradient(45deg, transparent 50%, var(--muted) 50%) right 16px center / 6px 6px no-repeat,
     linear-gradient(135deg, var(--muted) 50%, transparent 50%) right 10px center / 6px 6px no-repeat,
-    var(--surface);
+    var(--bg);
   color: var(--text);
   font: inherit;
 }
@@ -497,7 +658,7 @@ input[type="range"]:focus-visible {
   padding: 0 14px;
   border: 1px solid var(--border);
   border-radius: 999px;
-  background: var(--surface);
+  background: none;
   color: var(--text);
   font: inherit;
   font-size: 0.875rem;
@@ -509,6 +670,7 @@ input[type="range"]:focus-visible {
   border-color: var(--accent);
   background: var(--accent);
   color: var(--accent-text);
+  font-weight: 800;
 }
 
 .chip:focus-visible {
@@ -547,7 +709,7 @@ input[type="range"]:focus-visible {
   padding: 2px;
   border: 1px solid var(--border);
   border-radius: 10px;
-  background: var(--surface);
+  background: var(--bg);
 }
 
 .swatch {
@@ -734,7 +896,7 @@ a.button {
 .button.danger {
   border-color: var(--danger);
   background: var(--danger);
-  color: #fff;
+  color: var(--bg);
 }
 
 /* Photo sources: per-platform buttons, desktop drop zone */
@@ -758,7 +920,7 @@ a.button {
   padding: 36px 24px;
   border: 2px dashed var(--border);
   border-radius: 16px;
-  background: var(--surface);
+  background: none;
   transition:
     border-color 0.15s,
     background 0.15s;
@@ -766,10 +928,10 @@ a.button {
 
 .dropzone.dragging {
   border-color: var(--accent);
-  background: #eff6ff;
+  background: var(--surface);
 }
 
 .dropzone-title {
-  font-weight: 600;
+  font-weight: 700;
   font-size: 1.125rem;
 }
