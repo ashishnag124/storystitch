@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   resolve:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       actions: read
@@ -52,7 +52,7 @@ jobs:
   # Re-run the full acceptance suite on the exact commit being released; production only moves if it passes.
   qa:
     needs: resolve
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     # Real Postgres for the API's tests and migrations.
@@ -90,7 +90,7 @@ jobs:
 
   promote:
     needs: [resolve, qa]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     env:
