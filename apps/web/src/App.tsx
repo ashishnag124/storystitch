@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { createWorkerDetector, describeSubjects, type Detector } from "./detect/detector";
 import { AccountLink } from "./account/AccountLink";
+import { LayoutHero, Logo } from "./Brand";
 import { Editor } from "./Editor";
 import { PhotoSources } from "./PhotoSources";
 import { ANALYSIS_LONG_SIDE, MAX_PHOTOS, UnsupportedPhotoError, downscale, loadPhoto, type Photo } from "./photos";
@@ -57,8 +58,17 @@ function App() {
 
   return (
     <main className="pick">
-      <h1>StoryStitch</h1>
+      <header className="brand">
+        <Logo />
+        <h1>StoryStitch</h1>
+      </header>
       <AccountLink />
+      <LayoutHero />
+      <p className="headline">
+        Up to 8 photos.
+        <br />
+        <span>One story.</span>
+      </p>
       <p className="lede">Turn 1–8 photos into an Instagram Story collage.</p>
       <PhotoSources platform={platform} disabled={!!progress} onFiles={(files) => void openPhotos(files)} />
       {progress && (

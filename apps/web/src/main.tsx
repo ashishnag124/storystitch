@@ -1,5 +1,6 @@
 import { StrictMode, Suspense, lazy } from 'react'
 import { createRoot } from 'react-dom/client'
+import '@fontsource-variable/bricolage-grotesque'
 import './index.css'
 import App from './App.tsx'
 // Checked inline (not via config.ts) so the bundler can drop the account screens and auth client entirely
