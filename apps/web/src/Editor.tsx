@@ -145,6 +145,7 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
   const gesture = useRef<Gesture | null>(null);
   const lastTap = useRef<{ cell: number; time: number } | null>(null);
   const stopMotion = useRef<() => void>(() => {});
+  const stopCrossfade = useRef<() => void>(() => {});
   const overlay = useRef<{ ghost?: Ghost; flights?: Flight[]; hidden?: number[]; fade?: { snap: HTMLCanvasElement; t: number } }>({});
   const shareable = useMemo(() => canShareFiles(), []);
   const warnings = useMemo(() => upscaleWarnings(scene, photos), [scene, photos]);
@@ -353,7 +354,9 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
       snap.getContext("2d")!.drawImage(canvas, 0, 0);
       const fade = { snap, t: 0 };
       overlay.current.fade = fade;
-      tween(
+      // A tap during a crossfade replaces it: left running, the old one redraws every frame and ends the new one early.
+      stopCrossfade.current();
+      stopCrossfade.current = tween(
         MOTION.crossfade,
         (t) => {
           fade.t = t;
