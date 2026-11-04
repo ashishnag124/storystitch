@@ -1,11 +1,25 @@
+import {
+  assignedScene,
+  autoCrop,
+  cellShapes,
+  lerp,
+  lerpBox,
+  newScene,
+  rankedScenes,
+  swapCells,
+  withCrop,
+  withStyle,
+  type Box,
+  type Scene,
+  type Start,
+} from "@storystitch/client";
 import { MAX_ZOOM, MIN_ZOOM, clampCrop, panCrop, sourceRect, type Crop } from "@storystitch/layout-engine";
 import { STORY_CANVAS, hitTest, type Frame, type Point } from "@storystitch/shared";
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import type { SavedLayout } from "@storystitch/shared";
 import { AccountLink } from "./account/AccountLink";
 import { ACCOUNT_PATHS, navigate, useLocation } from "./account/route";
-import { deleteSaved, listSaved } from "./builder/savedLayouts";
-import type { Start } from "./builder/draft";
+import { deleteSaved, listSaved, recordExport } from "./api";
 import { LAYOUT_EDITOR_ENABLED } from "./config";
 import {
   canShareFiles,
@@ -15,11 +29,9 @@ import {
   type ExportFormat,
 } from "./exportImage";
 import { LayoutStrip } from "./LayoutStrip";
-import { haptic, lerp, lerpBox, prefersReducedMotion, tween } from "./motion";
+import { haptic, prefersReducedMotion, tween } from "./motion";
 import type { Photo } from "./photos";
-import { recordExport } from "./popularity";
-import { drawScene, outlineBounds, previewOf, snapshotCell, type Box, type Marks } from "./render";
-import { assignedScene, autoCrop, cellShapes, newScene, rankedScenes, swapCells, withCrop, withStyle, type Scene } from "./scene";
+import { drawScene, outlineBounds, previewOf, snapshotCell, type Marks } from "./render";
 import { StylePanel } from "./StylePanel";
 
 /** How long the preview must be still before the export is rendered in the background. */

@@ -1,7 +1,7 @@
+import { DEFAULT_BACKGROUND, backgroundOf, cellShapes, styleScale, type Box, type CellShape, type Outline, type Scene } from "@storystitch/client";
 import { CENTER_CROP, sourceRect, type Crop } from "@storystitch/layout-engine";
 import { drawOrder, type Size } from "@storystitch/shared";
 import type { Photo } from "./photos";
-import { DEFAULT_BACKGROUND, backgroundOf, cellShapes, styleScale, type CellShape, type Outline, type Scene } from "./scene";
 
 /** Anything drawable with its pixel size: a preview copy or a decoded original. */
 export interface Drawable {
@@ -127,14 +127,6 @@ export interface Marks {
   hidden?: number[];
   /** A cell shown as an empty slot while its photo is lifted. */
   dim?: number;
-}
-
-/** Axis-aligned bounds of a cell's outline, in canvas pixels. */
-export interface Box {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
 }
 
 export function outlineBounds(outline: Outline): Box {

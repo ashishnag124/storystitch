@@ -1,5 +1,5 @@
+import { cellShapes, type Outline as OutlineShape, type Scene } from "@storystitch/client";
 import { drawOrder } from "@storystitch/shared";
-import { cellShapes, type Outline as OutlineShape, type Scene } from "./scene";
 
 const THUMB = { width: 135, height: 240 };
 

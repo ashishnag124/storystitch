@@ -40,9 +40,8 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent, type PointerEvent } from "react";
 import type { Photo } from "../photos";
 import { drawBlurredBackground, drawCell, fillBackground, hasBlurredBackground, outlinePath, previewOf } from "../render";
-import { autoCrop, cellShapes, styleScale, type Scene, type Style } from "../scene";
-import { SaveError, saveLayout } from "./savedLayouts";
-import { explain, withOrigin, type Draft, type Start } from "./draft";
+import { SaveError, autoCrop, cellShapes, explain, styleScale, withOrigin, type Draft, type Scene, type Start, type Style } from "@storystitch/client";
+import { saveLayout } from "../api";
 
 const { width: W, height: H } = STORY_CANVAS;
 /** Touch targets for lines and handles (CSS px): at least the 44px a thumb needs, a bit more for comfort. */

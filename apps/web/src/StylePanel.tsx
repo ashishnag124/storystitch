@@ -1,6 +1,6 @@
 import type { Layout } from "@storystitch/shared";
 import { useState } from "react";
-import { DEFAULT_BACKGROUND, DEFAULT_STYLE, backgroundOf, borderOf, type Style } from "./scene";
+import { DEFAULT_BACKGROUND, DEFAULT_STYLE, backgroundOf, borderOf, type Style } from "@storystitch/client";
 
 const SWATCHES = [
   { name: "Cream", color: "#f4efe6" },

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Detection } from "@storystitch/layout-engine";
-import { describeSubjects } from "./detector";
+import { describeSubjects } from "./subjects";
 
 const d = (kind: Detection["kind"], label?: string): Detection => ({ kind, label, score: 0.9, box: { x: 0, y: 0, w: 0.1, h: 0.1 } });
 
