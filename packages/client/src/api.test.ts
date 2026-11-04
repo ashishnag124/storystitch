@@ -55,3 +55,32 @@ describe("AC-CUSTOM-09 saved layouts from a newer app version", () => {
     await expect(api.listSaved()).rejects.toThrow("500");
   });
 });
+
+describe("AC-UPDATE-01 asking the API for the minimum app version", () => {
+  it("gives the version the API reports", async () => {
+    respondWith({ ios: "1.2.3" });
+    expect(await api.fetchMinimumVersion()).toEqual({ ios: "1.2.3" });
+  });
+
+  it("carries on when the API can't be reached", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => Promise.reject(new TypeError("Network request failed"))));
+    expect(await api.fetchMinimumVersion()).toBeNull();
+  });
+
+  it("carries on when the API answers with an error or something unreadable", async () => {
+    respondWith({}, 500);
+    expect(await api.fetchMinimumVersion()).toBeNull();
+    respondWith({ ios: "latest" });
+    expect(await api.fetchMinimumVersion()).toBeNull();
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("<html>")));
+    expect(await api.fetchMinimumVersion()).toBeNull();
+  });
+
+  it("gives up on a slow API", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_url: string, { signal }: RequestInit) => new Promise((_, reject) => signal?.addEventListener("abort", () => reject(signal.reason)))),
+    );
+    expect(await api.fetchMinimumVersion()).toBeNull();
+  });
+});

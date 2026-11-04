@@ -161,6 +161,9 @@ describe the app exactly. When saving ships, AC-SAVE-02 and AC-SAVE-07 replace A
 | AC-API-04 | `GET /health` reports the deployed version and whether the database is up, with status 503 when it isn't. | auto |
 | AC-API-05 | Account requests that change data are refused unless they come from StoryStitch's own web origins or its native app, which names its URL scheme (cross-site request forgery). Emailed links return only to those two, and a browser on another site can't pass as the app. | auto |
 | AC-API-06 | `GET /app/minimum-version` is public and reports the oldest iOS app version still supported. | auto |
+| AC-UPDATE-01 | The iOS app compares its version with the API's minimum number by number (1.10.0 is newer than 1.9.0), and only an older version needs updating. A check that fails, is slow or can't be read never gets in the way: the app carries on. | auto |
+| AC-UPDATE-02 | Web never asks for the minimum version and never shows the "please update" screen. | auto |
+| AC-UPDATE-03 | An iOS app older than the minimum shows a "please update" screen with no way past it, on a real build of the app. | planned |
 
 ## Accounts
 
