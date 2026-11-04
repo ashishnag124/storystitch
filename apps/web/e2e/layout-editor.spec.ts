@@ -171,8 +171,9 @@ test("AC-CUSTOM-05 fills the screen and keeps every handle thumb-sized", async (
   await page.getByRole("button", { name: "Edit this layout" }).click();
   const e = editor(page);
   const viewport = page.viewportSize()!;
-  const canvas = (await e.locator("canvas").boundingBox())!;
-  expect(canvas.height).toBeGreaterThan(viewport.height * 0.6);
+  const canvas = e.locator("canvas");
+  // The editor sizes itself just after it opens, so wait for that instead of reading it once.
+  await expect.poll(async () => (await canvas.boundingBox())?.height ?? 0).toBeGreaterThan(viewport.height * 0.6);
   const handles = e.getByTestId("builder-handle");
   expect(await handles.count()).toBeGreaterThan(3);
   for (const handle of await handles.all()) {
