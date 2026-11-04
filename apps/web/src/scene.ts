@@ -141,6 +141,12 @@ export function rankedScenes(photos: CropSource[], style: Style = DEFAULT_STYLE,
   return rankLayouts(options, photos, popularity).map(({ layout, assignment: { order, crops } }) => ({ layout, style, order, crops }));
 }
 
+/** A scene for one layout (a saved one, say), with the photos assigned to its cells the best way. */
+export function assignedScene(layout: Layout, photos: CropSource[], style: Style = DEFAULT_STYLE): Scene {
+  const { assignment } = rankLayouts([{ layout, cells: cellTargets(layout, style) }], photos)[0]!;
+  return { layout, style, order: assignment.order, crops: assignment.crops };
+}
+
 /** Swaps the photos in two cells; both get fresh automatic crops for their new cells. */
 export function swapCells(scene: Scene, a: number, b: number, photos: CropSource[]): Scene {
   const order = [...scene.order];

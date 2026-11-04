@@ -164,13 +164,28 @@ describe the app exactly. When saving ships, AC-SAVE-02 and AC-SAVE-07 replace A
 
 | ID | Criterion | Check |
 |---|---|---|
-| AC-AUTH-01 | Picking, editing, exporting and sharing work without an account; sign-in is asked for only when saving. | auto |
+| AC-AUTH-01 | Picking, editing, exporting and sharing work without an account; sign-in is asked for only when saving (collages, or layouts made in the layout editor). | auto |
 | AC-AUTH-04 | Sign-up, sign-in and password reset require the bot check to pass, and attempts are limited per IP address. | auto |
 | AC-AUTH-05 | Users register and sign in with email and password, must verify their email first, and reset a forgotten password by email (which signs out their other sessions). | auto |
 | AC-AUTH-06 | Signed-in sessions persist across reloads in iPhone Safari (WebKit) and Android Chrome. | auto |
 | AC-AUTH-07 | Users can sign out, and sign out of every device. | auto |
-| AC-AUTH-08 | Deleting an account needs the account's password and removes the user and their sessions (and, once saving ships, their saved collages and files). | auto |
+| AC-AUTH-08 | Deleting an account needs the account's password and removes the user and their sessions, saved layouts (and, once saving ships, their saved collages and files). | auto |
 | AC-AUTH-10 | On staging, a real verification email and password-reset email arrive, and sign-up and sign-in work on iPhone Safari and Android Chrome. | manual |
+
+## Layout editor
+
+Behind `VITE_FEATURE_LAYOUT_EDITOR` (needs accounts): on in staging, off in production until it's switched on.
+
+| ID | Criterion | Check |
+|---|---|---|
+| AC-CUSTOM-01 | The Layouts tool offers "Make your own" and "Edit this layout". A signed-out user is asked to create an account or sign in, and the editor opens by itself once they're signed in, with their collage still there. Grids are edited by their lines, slanted layouts by their corners and lines, and everything else by moving whole cells. | auto |
+| AC-CUSTOM-02 | Grids: dragging a line resizes the cells on both sides and snaps to halves, thirds and other lines; a cell can be split across or down, reshaped (rectangle, arch, capsule) or removed; no cell gets smaller than the minimum; each photo stays with its cell. | auto |
+| AC-CUSTOM-03 | Slanted layouts: dragging a shared corner or a line moves it for every cell that shares it; canvas corners stay put, corners on an edge slide along it, and no cell folds, leaves the frame or stops being convex. | auto |
+| AC-CUSTOM-04 | Circles, hearts, stars, prints and Polaroids: cells move by dragging, resize by pinching, a handle or Bigger/Smaller, and prints turn; cells that mustn't overlap can't be pushed into each other; a cell can be copied or removed. | auto |
+| AC-CUSTOM-05 | The editor fills the screen; every line and handle has a touch target of at least 44 px (48 px drawn), buttons are at least 44 px tall, and Undo reverses the last change. | auto |
+| AC-CUSTOM-06 | Done only proceeds once there's one cell per photo, and says what's missing; cells under Instagram's buttons, overlapping or past the edge are outlined and explained, and such a layout isn't saved. | auto |
+| AC-CUSTOM-07 | Layouts save to the account with a name (up to 20, with a clear message when full), come first in the Layouts tool marked "Yours" for their photo count, and can be edited (replacing the saved one) and deleted. The API accepts only valid layouts, only from StoryStitch's own origins, and only touches the signed-in user's own layouts. | auto |
+| AC-CUSTOM-08 | The layout editor feels right one-handed on a real iPhone and Android phone: lines, corners and photos are easy to grab and drag without precise aim. | manual |
 
 ## Saved collages
 

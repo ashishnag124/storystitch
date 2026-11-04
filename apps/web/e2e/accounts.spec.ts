@@ -1,35 +1,12 @@
 import { expect, test, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-import { ACCOUNTS_PORT, API_PORT, PORT } from "../playwright.config.js";
-import { exportImage, libraryInput, makePhotos, openApp } from "./helpers.js";
+import { ACCOUNTS_PORT, PORT } from "../playwright.config.js";
+import { API, PASSWORD, emailedLink, exportImage, libraryInput, makePhotos, openApp, submit } from "./helpers.js";
 
-const API = `http://localhost:${API_PORT}`;
-const PASSWORD = "correct horse battery";
 
 // The build with accounts switched on (as on staging), talking to a real API and local Postgres.
 test.use({ baseURL: `http://localhost:${ACCOUNTS_PORT}` });
 test.beforeEach(({ page }) => openApp(page));
-
-/** The link in the latest email the API "sent" to `to` (kept in memory by its test transport). */
-async function emailedLink(page: Page, to: string) {
-  let link = "";
-  await expect
-    .poll(async () => {
-      const res = await page.request.get(`${API}/test/emails/latest?to=${encodeURIComponent(to)}`);
-      if (!res.ok()) return "";
-      link = ((await res.json()) as { text: string }).text.match(/https?:\/\/\S+/)?.[0] ?? "";
-      return link;
-    })
-    .not.toBe("");
-  return link;
-}
-
-/** Submits a bot-checked form once Turnstile (Cloudflare's always-pass test key) has issued a token. */
-async function submit(page: Page, name: string) {
-  const button = page.getByRole("button", { name, exact: true });
-  await expect(button).toBeEnabled({ timeout: 20_000 });
-  await button.click();
-}
 
 async function signUp(page: Page) {
   const email = `e2e-${randomUUID()}@example.com`;
@@ -159,6 +136,7 @@ test.describe("accounts switched off", () => {
     page.on("request", (r) => r.url().startsWith(API) && apiCalls.push(r.url()));
     await expect(page.getByRole("link", { name: "Account" })).toHaveCount(0);
     await libraryInput(page).setInputFiles(await makePhotos(page, 3));
+    await expect(page.getByRole("button", { name: "Make your own" })).toHaveCount(0); // the layout editor needs accounts
     await exportImage(page);
     await expect(page.getByRole("link", { name: "Account" })).toHaveCount(0);
 

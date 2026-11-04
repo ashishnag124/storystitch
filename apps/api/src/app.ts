@@ -5,6 +5,7 @@ import { secureHeaders } from "hono/secure-headers";
 import type pg from "pg";
 import type { Auth } from "./auth";
 import type { Email } from "./email";
+import { savedLayoutRoutes } from "./savedLayouts";
 
 interface AppOptions {
   pool: pg.Pool;
@@ -52,6 +53,8 @@ export function createApp({ pool, auth, corsOrigins, version, testEmails }: AppO
     c.header("Cache-Control", "public, max-age=300");
     return c.json(body);
   });
+
+  savedLayoutRoutes(app, { pool, auth, corsOrigins });
 
   // Accounts: sign-up, email verification, sign-in, password reset, sessions, deletion.
   app.on(["GET", "POST"], "/api/auth/*", (c) => auth.handler(c.req.raw));

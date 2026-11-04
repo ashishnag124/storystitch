@@ -28,6 +28,11 @@ on:
         type: boolean
         required: false
         default: false
+      layout_editor:
+        description: "Build with the layout editor switched on (VITE_FEATURE_LAYOUT_EDITOR; needs accounts)"
+        type: boolean
+        required: false
+        default: false
 
 jobs:
   deploy:
@@ -49,6 +54,7 @@ jobs:
         env:
           VITE_API_URL: ${{ inputs.api_url }}
           VITE_FEATURE_ACCOUNTS: ${{ inputs.accounts }}
+          VITE_FEATURE_LAYOUT_EDITOR: ${{ inputs.layout_editor }}
           VITE_TURNSTILE_SITE_KEY: ${{ secrets.TURNSTILE_SITE_KEY }}
       - uses: cloudflare/wrangler-action@v3
         with:

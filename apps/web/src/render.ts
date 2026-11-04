@@ -15,7 +15,8 @@ const HIGHLIGHT_COLOR = "#2563eb";
 /** A photo's downscaled working copy, for previews. */
 export const previewOf = (p: Photo): Drawable => ({ image: p.preview, width: p.preview.width, height: p.preview.height });
 
-function outlinePath(outline: Outline, radius: number): Path2D {
+/** A cell outline as a path, with its corners rounded by `radius`. */
+export function outlinePath(outline: Outline, radius: number): Path2D {
   const path = new Path2D();
   if (outline.kind === "circle") {
     path.arc(outline.cx, outline.cy, outline.r, 0, 2 * Math.PI);
