@@ -7,6 +7,7 @@
     "dev": "node scripts/prepare-assets.mjs && expo start --web --port 5174",
     "build": "node scripts/prepare-assets.mjs && expo export -p web",
     "build:ios": "expo export -p ios --output-dir dist-ios",
+    "prebuild:ios": "LANG=en_US.UTF-8 expo prebuild -p ios",
     "build:e2e": "node scripts/prepare-assets.mjs && EXPO_PUBLIC_FEATURE_ACCOUNTS=false expo export -p web --output-dir dist-e2e && EXPO_PUBLIC_FEATURE_ACCOUNTS=true EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR=true EXPO_PUBLIC_API_URL=http://localhost:3010 EXPO_PUBLIC_TURNSTILE_SITE_KEY=1x00000000000000000000AA expo export -p web --output-dir dist-e2e-accounts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
