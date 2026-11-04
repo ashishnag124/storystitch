@@ -1,0 +1,93 @@
+# Staging delivery for the iOS app, after CI passes on main. Native code changed: build and send to TestFlight.
+# Otherwise: publish an update to the `preview` channel. Both use the staging API; nothing here can reach production.
+#
+# Off until EXPO_TOKEN is set and the MOBILE_DELIVERY_ENABLED variable is `true`: the run is green and does nothing.
+# Setup: "iOS delivery checklist" in PROJECT_SETUP.md.
+#
+# It follows CI rather than sitting inside it, so a failed iOS build can't block /release or Railway's "Wait for CI".
+name: Mobile
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    # Only pushes count: a pull request from a fork whose branch is called main also triggers this.
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-24.04
+    outputs:
+      enabled: ${{ steps.gate.outputs.enabled }}
+    steps:
+      - id: gate
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          ENABLED: ${{ vars.MOBILE_DELIVERY_ENABLED }}
+        run: |
+          if [ -n "$EXPO_TOKEN" ] && [ "$ENABLED" = "true" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "Mobile delivery is off: it needs the EXPO_TOKEN secret and MOBILE_DELIVERY_ENABLED=true." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  staging:
+    needs: gate
+    if: needs.gate.outputs.enabled == 'true'
+    runs-on: ubuntu-24.04
+    # One at a time: a merge during a build then finds that build instead of starting a second one.
+    concurrency:
+      group: mobile-staging
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: apps/app
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: npm install --global eas-cli@27.2.0
+
+      # `eas update` ignores the env in eas.json. It has to bundle with the same values, and APP_VARIANT has to match,
+      # or the update gets a different runtime version from the builds it's meant for.
+      - name: Load the staging values from eas.json
+        run: jq -r '.build.base.env | to_entries[] | "\(.key)=\(.value)"' eas.json >> "$GITHUB_ENV"
+
+      # The runtime version is a fingerprint of the native code, and an update only reaches builds that share it.
+      # So "native code changed" means no TestFlight build has it yet, which also retries after a failed build.
+      - id: native
+        name: Check whether native code changed
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          set -euo pipefail
+          runtime=$(pnpm exec expo-updates runtimeversion:resolve --platform ios | jq -r .runtimeVersion)
+          builds=$(eas build:list --platform ios --build-profile testflight --runtime-version "$runtime" --status finished --limit 1 --json --non-interactive)
+          if [ "$(echo "$builds" | jq length)" -eq 0 ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build and send to TestFlight
+        if: steps.native.outputs.changed == 'true'
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: eas build --platform ios --profile testflight --auto-submit --non-interactive
+
+      - name: Publish an update to the preview channel
+        if: steps.native.outputs.changed == 'false'
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: eas update --channel preview --environment preview --platform ios --message "$(git log -1 --format=%s)" --non-interactive
