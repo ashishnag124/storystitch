@@ -23,6 +23,7 @@ export function layoutProblems(layout: Layout, step = 10): string[] {
     const t = EDGE_TOLERANCE_PX;
     if (b.x < -t || b.y < -t || b.x + b.w > W + t || b.y + b.h > H + t) problems.push(`${name(i)} leaves the canvas`);
     if (cell.shape === "polygon" && !isConvex(cellPolygon(cell))) problems.push(`${name(i)} is not convex`);
+    if (cell.shape === "arch" && cell.h * H < (cell.w * W) / 2) problems.push(`${name(i)} is shorter than its curved top`);
   });
 
   const total = layout.cells.map(() => 0);

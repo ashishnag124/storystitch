@@ -1,4 +1,4 @@
-import { STORY_CANVAS, type Cell } from "./layout";
+import { STAR_INNER, STORY_CANVAS, WAVE, type Cell } from "./layout";
 
 export interface Point {
   x: number;
@@ -39,18 +39,109 @@ function rotateAround(p: Point, c: Point, deg: number): Point {
   return { x: c.x + dx * Math.cos(a) - dy * Math.sin(a), y: c.y + dx * Math.sin(a) + dy * Math.cos(a) };
 }
 
-/** Corners (rects) or vertices (polygons) in pixels of a canvas of `size`. Not defined for circles. */
+/** Corners of a frame (a rotated rectangle). */
+export function frameCorners(f: Frame): Point[] {
+  const c = { x: f.cx, y: f.cy };
+  const [x0, y0, x1, y1] = [f.cx - f.width / 2, f.cy - f.height / 2, f.cx + f.width / 2, f.cy + f.height / 2];
+  const corners = [
+    { x: x0, y: y0 },
+    { x: x1, y: y0 },
+    { x: x1, y: y1 },
+    { x: x0, y: y1 },
+  ];
+  return f.rotate ? corners.map((p) => rotateAround(p, c, f.rotate)) : corners;
+}
+
+/** Points per curve when arches, capsules, hearts and waves are drawn as polygons. */
+const CURVE_STEPS = 24;
+
+/** Points along a circular arc from angle `from` to `to` (radians; y points down, so positive turns clockwise). */
+function arc(c: Point, r: number, from: number, to: number, steps = CURVE_STEPS): Point[] {
+  return Array.from({ length: steps + 1 }, (_, i) => {
+    const a = from + ((to - from) * i) / steps;
+    return { x: c.x + r * Math.cos(a), y: c.y + r * Math.sin(a) };
+  });
+}
+
+/** Drops points that repeat the one before (where two arcs meet), so every edge has a length. */
+function distinct(points: Point[]): Point[] {
+  return points.filter((p, i) => {
+    const prev = points[(i + points.length - 1) % points.length]!;
+    return Math.hypot(p.x - prev.x, p.y - prev.y) > 1e-6;
+  });
+}
+
+/**
+ * A heart two units wide with its bounding box centered on the origin: a square standing on a corner with
+ * a half circle on each upper side.
+ */
+const UNIT_HEART: Point[] = (() => {
+  const h = 1;
+  const r = h / Math.SQRT2;
+  const raw = distinct([
+    { x: 0, y: h },
+    ...arc({ x: h / 2, y: -h / 2 }, r, Math.PI / 4, -(3 * Math.PI) / 4),
+    ...arc({ x: -h / 2, y: -h / 2 }, r, -Math.PI / 4, -(5 * Math.PI) / 4),
+  ]);
+  const ys = raw.map((p) => p.y);
+  const [halfW, midY] = [h / 2 + r, (Math.min(...ys) + Math.max(...ys)) / 2];
+  return raw.map((p) => ({ x: p.x / halfW, y: (p.y - midY) / halfW }));
+})();
+
+/**
+ * Outline of a non-circle cell in pixels of a canvas of `size`: corners (rects), vertices (polygons), or
+ * points along the curves of arches, capsules, hearts, stars and waves.
+ */
 export function cellPolygon(cell: Exclude<Cell, { shape: "circle" }>, size: Size = STORY_CANVAS): Point[] {
   const { width: W, height: H } = size;
-  if (cell.shape === "polygon") return cell.points.map(([x, y]) => ({ x: x * W, y: y * H }));
-  const c = { x: (cell.x + cell.w / 2) * W, y: (cell.y + cell.h / 2) * H };
-  const corners = [
-    { x: cell.x * W, y: cell.y * H },
-    { x: (cell.x + cell.w) * W, y: cell.y * H },
-    { x: (cell.x + cell.w) * W, y: (cell.y + cell.h) * H },
-    { x: cell.x * W, y: (cell.y + cell.h) * H },
-  ];
-  return cell.rotate ? corners.map((p) => rotateAround(p, c, cell.rotate)) : corners;
+  switch (cell.shape) {
+    case "polygon":
+      return cell.points.map(([x, y]) => ({ x: x * W, y: y * H }));
+    case "rect":
+      return frameCorners(cellFrame(cell, size));
+    case "arch": {
+      const [x0, y0, x1, y1] = [cell.x * W, cell.y * H, (cell.x + cell.w) * W, (cell.y + cell.h) * H];
+      const r = (x1 - x0) / 2;
+      return distinct([{ x: x0, y: y1 }, { x: x1, y: y1 }, ...arc({ x: x0 + r, y: y0 + r }, r, 0, -Math.PI)]);
+    }
+    case "pill": {
+      const [x0, y0, x1, y1] = [cell.x * W, cell.y * H, (cell.x + cell.w) * W, (cell.y + cell.h) * H];
+      const r = Math.min(x1 - x0, y1 - y0) / 2;
+      const half = Math.PI / 2;
+      return x1 - x0 >= y1 - y0
+        ? distinct([...arc({ x: x1 - r, y: y0 + r }, r, -half, half), ...arc({ x: x0 + r, y: y0 + r }, r, half, 3 * half)])
+        : distinct([...arc({ x: x0 + r, y: y1 - r }, r, 0, Math.PI), ...arc({ x: x0 + r, y: y0 + r }, r, Math.PI, 2 * Math.PI)]);
+    }
+    case "heart": {
+      const k = cell.r * W;
+      return UNIT_HEART.map((p) => ({ x: cell.cx * W + p.x * k, y: cell.cy * H + p.y * k }));
+    }
+    case "star": {
+      const R = cell.r * W;
+      const raw = Array.from({ length: 10 }, (_, i) => {
+        const a = -Math.PI / 2 + (i * Math.PI) / 5;
+        const r = i % 2 ? R * STAR_INNER : R;
+        return { x: r * Math.cos(a), y: r * Math.sin(a) };
+      });
+      const ys = raw.map((p) => p.y);
+      const midY = (Math.min(...ys) + Math.max(...ys)) / 2;
+      return raw.map((p) => ({ x: cell.cx * W + p.x, y: cell.cy * H + p.y - midY }));
+    }
+    case "wave": {
+      const [x0, x1] = [cell.x * W, (cell.x + cell.w) * W];
+      const curve = (edge: number, wavy: boolean, from: number, to: number) =>
+        wavy
+          ? Array.from({ length: CURVE_STEPS + 1 }, (_, i) => {
+              const x = from + ((to - from) * i) / CURVE_STEPS;
+              return { x, y: edge * H + WAVE.amplitude * H * Math.sin((2 * Math.PI * WAVE.cycles * x) / W) };
+            })
+          : [
+              { x: from, y: edge * H },
+              { x: to, y: edge * H },
+            ];
+      return [...curve(cell.y, cell.waves.includes("top"), x0, x1), ...curve(cell.y + cell.h, cell.waves.includes("bottom"), x1, x0)];
+    }
+  }
 }
 
 function pointsBox(points: Point[]): Box {
@@ -113,27 +204,33 @@ export function drawOrder(cells: Cell[]): number[] {
   return cells.map((_, i) => i).sort((a, b) => cells[a]!.z - cells[b]!.z || a - b);
 }
 
-/** Moves every edge of a convex polygon inward by `d` pixels. */
+/** Twice the signed area of a polygon (shoelace); the sign gives its winding. */
+function signedArea2(points: Point[]): number {
+  return points.reduce((s, a, i) => {
+    const b = points[(i + 1) % points.length]!;
+    return s + a.x * b.y - b.x * a.y;
+  }, 0);
+}
+
+/** Moves every edge of a polygon (convex or not, without holes) inward by `d` pixels. */
 export function insetPolygon(points: Point[], d: number): Point[] {
   if (d === 0) return points;
   const n = points.length;
-  const centroid = { x: points.reduce((s, p) => s + p.x, 0) / n, y: points.reduce((s, p) => s + p.y, 0) / n };
+  // The interior is to the left of each edge for one winding and to the right for the other.
+  const side = Math.sign(signedArea2(points));
   // Each edge shifted inward, as a point and a direction.
   const lines = points.map((a, i) => {
     const b = points[(i + 1) % n]!;
     const len = Math.hypot(b.x - a.x, b.y - a.y);
-    let nx = -(b.y - a.y) / len;
-    let ny = (b.x - a.x) / len;
-    if (nx * (centroid.x - a.x) + ny * (centroid.y - a.y) < 0) {
-      nx = -nx;
-      ny = -ny;
-    }
+    const nx = (-(b.y - a.y) / len) * side;
+    const ny = ((b.x - a.x) / len) * side;
     return { p: { x: a.x + nx * d, y: a.y + ny * d }, dir: { x: b.x - a.x, y: b.y - a.y } };
   });
-  // New vertex i is where shifted edges i-1 and i meet.
+  // New vertex i is where shifted edges i-1 and i meet (or the shifted vertex, where they run straight on).
   return lines.map((l2, i) => {
     const l1 = lines[(i + n - 1) % n]!;
     const cross = l1.dir.x * l2.dir.y - l1.dir.y * l2.dir.x;
+    if (Math.abs(cross) < 1e-9 * Math.hypot(l1.dir.x, l1.dir.y) * Math.hypot(l2.dir.x, l2.dir.y)) return l2.p;
     const t = ((l2.p.x - l1.p.x) * l2.dir.y - (l2.p.y - l1.p.y) * l2.dir.x) / cross;
     return { x: l1.p.x + l1.dir.x * t, y: l1.p.y + l1.dir.y * t };
   });

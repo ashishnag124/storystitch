@@ -67,6 +67,11 @@ describe("AC-LAYOUT-01 layoutProblems", () => {
     expect(layoutProblems(layout)).toContain("strip cell 0 has only 0% of its area outside the safe-zone bands");
   });
 
+  it("reports an arch too short for its curved top", () => {
+    const layout = parse({ id: "low", name: "Low", family: "shapes", cells: [{ shape: "arch", x: 0, y: 0.4, w: 1, h: 0.2 }] });
+    expect(layoutProblems(layout)).toContain("low cell 0 is shorter than its curved top");
+  });
+
   it("reports a concave polygon", () => {
     const layout = parse({
       id: "dart",

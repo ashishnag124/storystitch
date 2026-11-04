@@ -25,10 +25,12 @@ export interface CellTarget {
  *   overlays (the safe-zone bands). Still visible in the saved image, so it weighs less.
  * - `empty`: share of the cell left showing background because the photo had to zoom out.
  * - `upscale`: how far the photo is enlarged past its own resolution (0 at 1×, 1 at 2× or more).
- * - `cropped`: share of the photo that doesn't show: cut away to fit the cell's shape (aspect
- *   mismatch), or hidden by a circle's edge, a slanted edge or an overlapping cell.
+ * - `cropped`: share of the photo cut away to fit the cell's proportions (aspect mismatch).
+ * - `hidden`: share of the photo inside the crop but hidden by the cell's outline (a circle's or heart's edge,
+ *   a slanted edge) or by an overlapping cell. It cuts into the picture rather than trimming its edges, so it
+ *   weighs a little more: a plain frame beats a fancy shape that shows about as much.
  */
-export const PLACEMENT_WEIGHTS = { subjectLoss: 4, underOverlay: 1, empty: 1.5, upscale: 1, cropped: 1 } as const;
+export const PLACEMENT_WEIGHTS = { subjectLoss: 4, underOverlay: 1, empty: 1.5, upscale: 1, cropped: 1, hidden: 1.5 } as const;
 
 export interface Placement {
   crop: Crop;
@@ -80,7 +82,8 @@ export function placement(photo: PhotoSubjects, cell: CellTarget): Placement {
     w.underOverlay * (inCrop - inSafe) +
     w.empty * (1 - inView / area(shown)) +
     w.upscale * Math.min(1, Math.max(0, upscaleFactor(photo, cell.frame, crop) - 1)) +
-    w.cropped * (1 - (inView * cell.fill) / area(image));
+    w.cropped * (1 - inView / area(image)) +
+    w.hidden * ((inView * (1 - cell.fill)) / area(image));
   return { crop, cost };
 }
 

@@ -593,6 +593,13 @@ input[type="range"]:focus-visible {
   stroke-linejoin: round;
 }
 
+.diagram-card {
+  fill: var(--muted);
+  stroke: var(--bg);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
 .thumb[aria-checked="true"] .diagram-cell {
   fill: var(--coral);
 }

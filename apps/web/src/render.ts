@@ -47,8 +47,14 @@ export function drawCell(ctx: CanvasRenderingContext2D, shape: CellShape, img: D
   const kx = frame.width / src.width;
   const ky = frame.height / src.height;
   const outline = outlinePath(shape.outline, radius);
+  // A Polaroid's card is filled with the border color and its photo clipped to the window, with square corners.
+  const clip = shape.photo ? outlinePath(shape.photo, 0) : outline;
   ctx.save();
-  ctx.clip(outline);
+  if (shape.photo) {
+    ctx.fillStyle = borderColor;
+    ctx.fill(outline);
+  }
+  ctx.clip(clip);
   ctx.save();
   ctx.translate(frame.cx, frame.cy);
   ctx.rotate((frame.rotate * Math.PI) / 180);
@@ -68,7 +74,7 @@ export function drawCell(ctx: CanvasRenderingContext2D, shape: CellShape, img: D
     // Stroke twice the width centered on the outline; the clip keeps the inner half, so the border sits inside the cell.
     ctx.lineWidth = 2 * border;
     ctx.strokeStyle = borderColor;
-    ctx.stroke(outline);
+    ctx.stroke(clip);
   }
   ctx.restore();
 }
