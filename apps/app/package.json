@@ -1,0 +1,30 @@
+{
+  "name": "@storystitch/app",
+  "private": true,
+  "version": "0.0.0",
+  "main": "index.js",
+  "scripts": {
+    "dev": "expo start --web --port 5174",
+    "build": "expo export -p web",
+    "build:ios": "expo export -p ios --output-dir dist-ios",
+    "build:e2e": "EXPO_PUBLIC_FEATURE_ACCOUNTS=false expo export -p web --output-dir dist-e2e && EXPO_PUBLIC_FEATURE_ACCOUNTS=true EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR=true EXPO_PUBLIC_API_URL=http://localhost:3010 EXPO_PUBLIC_TURNSTILE_SITE_KEY=1x00000000000000000000AA expo export -p web --output-dir dist-e2e-accounts",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@expo/metro-runtime": "~58.0.15",
+    "@storystitch/client": "workspace:*",
+    "@storystitch/layout-engine": "workspace:*",
+    "@storystitch/shared": "workspace:*",
+    "expo": "58.0.22",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-native": "0.88.1",
+    "react-native-web": "~0.21.4"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "typescript": "~7.0.2",
+    "wrangler": "^4.156.0"
+  }
+}

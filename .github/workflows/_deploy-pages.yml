@@ -1,4 +1,4 @@
-# Reusable: build one Pages app (apps/web or apps/site) and deploy it to Cloudflare Pages.
+# Reusable: build one Pages app (apps/web or apps/app) and deploy it to Cloudflare Pages.
 # branch=main -> preview alias (staging); branch=production -> production.
 name: Deploy to Pages
 
@@ -6,7 +6,7 @@ on:
   workflow_call:
     inputs:
       app:
-        description: "web or site"
+        description: "web or app"
         type: string
         required: true
       project:
@@ -24,12 +24,12 @@ on:
         required: false
         default: ""
       accounts:
-        description: "Build with accounts switched on (VITE_FEATURE_ACCOUNTS)"
+        description: "Build with accounts switched on (VITE_FEATURE_ACCOUNTS, EXPO_PUBLIC_FEATURE_ACCOUNTS)"
         type: boolean
         required: false
         default: false
       layout_editor:
-        description: "Build with the layout editor switched on (VITE_FEATURE_LAYOUT_EDITOR; needs accounts)"
+        description: "Build with the layout editor switched on (VITE_FEATURE_LAYOUT_EDITOR, EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR; needs accounts)"
         type: boolean
         required: false
         default: false
@@ -56,6 +56,10 @@ jobs:
           VITE_FEATURE_ACCOUNTS: ${{ inputs.accounts }}
           VITE_FEATURE_LAYOUT_EDITOR: ${{ inputs.layout_editor }}
           VITE_TURNSTILE_SITE_KEY: ${{ secrets.TURNSTILE_SITE_KEY }}
+          EXPO_PUBLIC_API_URL: ${{ inputs.api_url }}
+          EXPO_PUBLIC_FEATURE_ACCOUNTS: ${{ inputs.accounts }}
+          EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR: ${{ inputs.layout_editor }}
+          EXPO_PUBLIC_TURNSTILE_SITE_KEY: ${{ secrets.TURNSTILE_SITE_KEY }}
       - uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
