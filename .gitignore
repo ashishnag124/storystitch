@@ -4,6 +4,16 @@ dist/
 .env
 .env.*
 !.env.example
+
+# Signing keys and credentials: never commit these
+*.p8
+*.p12
+*.pem
+*.key
+*.mobileprovision
+*.xcconfig
+credentials.json
+GoogleService-Info.plist
 *.log
 .DS_Store
 coverage/
