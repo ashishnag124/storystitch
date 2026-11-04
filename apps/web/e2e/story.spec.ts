@@ -149,7 +149,7 @@ test.describe("editing", () => {
     const options = page.getByRole("radiogroup", { name: "Layouts" }).getByRole("radio");
     await expect(options.first()).toBeVisible();
     for (const option of await options.all()) {
-      await expect(option.locator(".diagram-cell")).toHaveCount(4);
+      await expect(option.getByTestId("diagram-cell")).toHaveCount(4);
       await expect(option.locator("canvas, img, image")).toHaveCount(0);
     }
   });

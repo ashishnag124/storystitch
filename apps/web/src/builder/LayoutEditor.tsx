@@ -424,6 +424,7 @@ export default function LayoutEditor({ photos, style, start, onCancel, onSaved }
               <div
                 key={d.path}
                 className={`builder-divider ${d.dir}`}
+                data-testid="builder-handle"
                 style={style}
                 role="separator"
                 tabIndex={0}
@@ -457,6 +458,7 @@ export default function LayoutEditor({ photos, style, start, onCancel, onSaved }
                   key={`line-${li}`}
                   type="button"
                   className="builder-handle line"
+                  data-testid="builder-handle"
                   style={{ left: mid.x - HANDLE_PX / 2, top: mid.y - HANDLE_PX / 2, width: HANDLE_PX, height: HANDLE_PX }}
                   aria-label={`Slanted line ${li + 1}`}
                   onPointerDown={(e) => startHandle(e, { kind: "line", line: li, corners, x: e.clientX, y: e.clientY, base: draft })}
@@ -483,6 +485,7 @@ export default function LayoutEditor({ photos, style, start, onCancel, onSaved }
                   key={`corner-${i}`}
                   type="button"
                   className="builder-handle corner"
+                  data-testid="builder-handle"
                   style={{ left: at.x - HANDLE_PX / 2, top: at.y - HANDLE_PX / 2, width: HANDLE_PX, height: HANDLE_PX }}
                   aria-label={`Corner ${i + 1}`}
                   onPointerDown={(e) => startHandle(e, { kind: "corner", index: i, corners, last: corners, x: e.clientX, y: e.clientY, base: draft })}
@@ -506,6 +509,7 @@ export default function LayoutEditor({ photos, style, start, onCancel, onSaved }
               <button
                 type="button"
                 className="builder-handle resize"
+                data-testid="builder-handle"
                 style={{
                   left: css({ x: selBox.x + selBox.w, y: 0 }).x - HANDLE_PX / 2,
                   top: css({ x: 0, y: selBox.y + selBox.h }).y - HANDLE_PX / 2,
@@ -528,6 +532,7 @@ export default function LayoutEditor({ photos, style, start, onCancel, onSaved }
                 <button
                   type="button"
                   className="builder-handle rotate"
+                  data-testid="builder-handle"
                   style={{
                     left: css({ x: selBox.x + selBox.w / 2, y: 0 }).x - HANDLE_PX / 2,
                     top: Math.max(0, css({ x: 0, y: selBox.y }).y - HANDLE_PX * 1.25),

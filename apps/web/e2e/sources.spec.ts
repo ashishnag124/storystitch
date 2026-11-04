@@ -41,7 +41,7 @@ test.describe("desktop", () => {
     }, photos.map((p) => ({ name: p.name, b64: p.buffer.toString("base64") })));
     const zone = page.getByText("Drag and drop photos here");
     await zone.dispatchEvent("dragover", { dataTransfer: transfer });
-    await expect(page.locator(".dropzone.dragging")).toBeVisible(); // highlights while dragging
+    await expect(page.getByTestId("dropzone")).toHaveAttribute("data-dragging", "true"); // highlights while dragging
     await zone.dispatchEvent("drop", { dataTransfer: transfer });
     await expect(page.getByRole("application", { name: /3 photos/ })).toBeVisible();
   });

@@ -5,6 +5,8 @@
 // Then each "auto" criterion passes only if at least one test names its ID, none of them failed and at least
 // one actually ran. Writes qa-results/report.md (also to the GitHub Actions job summary) and exits non-zero on
 // any failure, missing test, unknown ID or failed step.
+//
+// `pnpm qa --target=app` runs the end-to-end tests against apps/app, the Expo app that's replacing apps/web.
 import { spawnSync } from "node:child_process";
 import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
@@ -13,6 +15,7 @@ const root = join(import.meta.dirname, "..");
 const out = join(root, "qa-results");
 const CRITERIA_FILE = join(root, "docs/acceptance-criteria.md");
 const ID = /\bAC-[A-Z0-9]+-\d{2}\b/g;
+const target = process.argv.find((a) => a.startsWith("--target="))?.slice("--target=".length) ?? "web";
 const ROW = /^\|\s*(AC-[A-Z0-9]+-\d{2})\s*\|\s*(.+?)\s*\|\s*(auto|manual|planned)\s*\|\s*$/;
 
 rmSync(out, { recursive: true, force: true });
@@ -69,11 +72,13 @@ const built = run("Build", "pnpm", ["turbo", "run", "build"]);
 for (const ws of workspaces.filter((w) => w.scripts.e2e)) {
   if (!built) break;
   // The builds the end-to-end tests serve (e.g. with a feature flag on and off), when the app defines them.
-  if (ws.scripts["build:e2e"] && !run(`End-to-end builds: ${ws.name}`, "pnpm", ["run", "build:e2e"], { cwd: ws.path })) continue;
+  const app = workspaces.find((w) => w.name === target);
+  if (!app) throw new Error(`No app named ${target}`);
+  if (app.scripts["build:e2e"] && !run(`End-to-end builds: ${app.name}`, "pnpm", ["run", "build:e2e"], { cwd: app.path })) continue;
   const reporter = process.env.CI ? "github,json" : "list,json";
-  run(`End-to-end tests: ${ws.name}`, "pnpm", ["exec", "playwright", "test", `--reporter=${reporter}`], {
+  run(`End-to-end tests: ${app.name}`, "pnpm", ["exec", "playwright", "test", `--reporter=${reporter}`], {
     cwd: ws.path,
-    env: { PLAYWRIGHT_JSON_OUTPUT_FILE: join(out, `e2e-${ws.name}.json`) },
+    env: { E2E_TARGET: app.name, PLAYWRIGHT_JSON_OUTPUT_FILE: join(out, `e2e-${app.name}.json`) },
   });
 }
 
