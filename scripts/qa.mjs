@@ -53,7 +53,8 @@ if (workspaces.some((w) => w.scripts["db:migrate"])) {
   if (!process.env.CI) run("Start local Postgres", "docker", ["compose", "up", "-d", "--wait"]);
   run("Database migrations", "pnpm", ["db:migrate"]);
 }
-for (const ws of workspaces.filter((w) => w.scripts.test)) {
+// A criterion must be proved by the app being graded, so apps/web's own unit tests don't count for --target=app.
+for (const ws of workspaces.filter((w) => w.scripts.test && (target === "web" ? w.name !== "app" : w.name !== "web"))) {
   run(
     `Unit tests: ${ws.name}`,
     "pnpm",

@@ -1,0 +1,134 @@
+/* The pick screen's picture. Web-only until Stage 3. */
+:root {
+  --bg: #2b1340;
+  --text: #fff4e8;
+  --muted: #cbb7d9;
+  --accent: #ffc24b;
+  --accent-text: #2b1340;
+  --surface: #3d1f57;
+  --border: #5a3577;
+  --coral: #ff7a59;
+  --pink: #ff4f8b;
+}
+
+.hero {
+  position: relative;
+  width: 112px;
+  height: 199px;
+  margin-bottom: 8px;
+  padding: 3px;
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.hero-cell {
+  position: absolute;
+  border-radius: 9px;
+  animation: 6s cubic-bezier(0.3, 1.3, 0.5, 1) infinite;
+}
+
+.hero-cell-1 {
+  background: var(--coral);
+}
+
+.hero-cell-2 {
+  background: var(--accent);
+}
+
+.hero-cell-3 {
+  background: var(--pink);
+}
+
+.hero-cell-4 {
+  background: var(--text);
+}
+
+.hero-cell-1 {
+  left: 3px; top: 3px; width: calc(100% - 6px); height: calc(50% - 6px);
+  animation-name: hero-1;
+}
+
+.hero-cell-2 {
+  left: 3px; top: calc(50% + 3px); width: calc(50% - 6px); height: calc(50% - 6px);
+  animation-name: hero-2;
+}
+
+.hero-cell-3 {
+  left: calc(50% + 3px); top: calc(50% + 3px); width: calc(50% - 6px); height: calc(25% - 6px);
+  animation-name: hero-3;
+}
+
+.hero-cell-4 {
+  left: calc(50% + 3px); top: calc(75% + 3px); width: calc(50% - 6px); height: calc(25% - 6px);
+  animation-name: hero-4;
+}
+
+@keyframes hero-1 {
+  0%,
+  28%,
+  100% {
+    left: 3px; top: 3px; width: calc(100% - 6px); height: calc(50% - 6px);
+  }
+  33%,
+  61% {
+    left: 3px; top: 3px; width: calc(50% - 6px); height: calc(62% - 6px);
+  }
+  66%,
+  94% {
+    left: 3px; top: 3px; width: calc(100% - 6px); height: calc(34% - 6px);
+  }
+}
+
+@keyframes hero-2 {
+  0%,
+  28%,
+  100% {
+    left: 3px; top: calc(50% + 3px); width: calc(50% - 6px); height: calc(50% - 6px);
+  }
+  33%,
+  61% {
+    left: calc(50% + 3px); top: 3px; width: calc(50% - 6px); height: calc(38% - 6px);
+  }
+  66%,
+  94% {
+    left: 3px; top: calc(34% + 3px); width: calc(100% - 6px); height: calc(33% - 6px);
+  }
+}
+
+@keyframes hero-3 {
+  0%,
+  28%,
+  100% {
+    left: calc(50% + 3px); top: calc(50% + 3px); width: calc(50% - 6px); height: calc(25% - 6px);
+  }
+  33%,
+  61% {
+    left: calc(50% + 3px); top: calc(38% + 3px); width: calc(50% - 6px); height: calc(62% - 6px);
+  }
+  66%,
+  94% {
+    left: 3px; top: calc(67% + 3px); width: calc(50% - 6px); height: calc(33% - 6px);
+  }
+}
+
+@keyframes hero-4 {
+  0%,
+  28%,
+  100% {
+    left: calc(50% + 3px); top: calc(75% + 3px); width: calc(50% - 6px); height: calc(25% - 6px);
+  }
+  33%,
+  61% {
+    left: 3px; top: calc(62% + 3px); width: calc(50% - 6px); height: calc(38% - 6px);
+  }
+  66%,
+  94% {
+    left: calc(50% + 3px); top: calc(67% + 3px); width: calc(50% - 6px); height: calc(33% - 6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-cell {
+    animation: none;
+  }
+}
