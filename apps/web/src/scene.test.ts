@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_BACKGROUND,
   DEFAULT_STYLE,
+  POLAROID,
   PRINT_BORDER,
   backgroundOf,
   borderOf,
@@ -33,6 +34,21 @@ describe("AC-STYLE-06 cellShapes", () => {
   it("ignores margin and gap for bleed layouts", () => {
     const [only] = cellShapes(byId("single-bleed"), style, STORY_CANVAS);
     expect(only!.frame).toMatchObject({ cx: 540, cy: 960, width: 1080, height: 1920 });
+  });
+
+  it("AC-LAYOUT-05 puts a Polaroid's photo in a window with a deeper margin below", () => {
+    const [shape] = cellShapes(byId("two-polaroids"), style, STORY_CANVAS);
+    const card = shape!.outline.kind === "polygon" ? shape!.outline.points : [];
+    const cardWidth = Math.hypot(card[1]!.x - card[0]!.x, card[1]!.y - card[0]!.y);
+    const cardHeight = Math.hypot(card[3]!.x - card[0]!.x, card[3]!.y - card[0]!.y);
+    expect(shape!.photo).toBeDefined();
+    expect(shape!.frame.width).toBeCloseTo(cardWidth * (1 - 2 * POLAROID.side));
+    expect(shape!.frame.height).toBeCloseTo(cardHeight - cardWidth * (POLAROID.side + POLAROID.bottom));
+    // The window sits above the card's center (the card is tilted, so measure along its own up direction).
+    const center = { x: card.reduce((s, p) => s + p.x, 0) / 4, y: card.reduce((s, p) => s + p.y, 0) / 4 };
+    const a = (shape!.frame.rotate * Math.PI) / 180;
+    const up = (center.x - shape!.frame.cx) * -Math.sin(a) + (center.y - shape!.frame.cy) * Math.cos(a);
+    expect(up).toBeCloseTo((cardWidth * (POLAROID.bottom - POLAROID.side)) / 2);
   });
 
   it("scales style with the canvas", () => {
@@ -97,6 +113,9 @@ describe("style", () => {
     expect(backgroundOf(byId("two-stack"), DEFAULT_STYLE)).toEqual(DEFAULT_BACKGROUND);
     expect(borderOf(byId("three-scattered"), DEFAULT_STYLE)).toBe(PRINT_BORDER);
     expect(borderOf(byId("three-stack"), DEFAULT_STYLE)).toBe(0);
+    expect(borderOf(byId("three-inset"), DEFAULT_STYLE)).toBe(PRINT_BORDER);
+    expect(borderOf(byId("four-polaroids"), DEFAULT_STYLE)).toBe(0);
+    expect(backgroundOf(byId("four-polaroids"), DEFAULT_STYLE)).toEqual({ kind: "blur" });
   });
 
   it("AC-STYLE-02 uses the user's picks over the layout's defaults", () => {

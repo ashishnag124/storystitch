@@ -23,6 +23,8 @@ export const LAYOUT_FAMILIES = [
   "filmstrip",
   "circles",
   "negative-space",
+  "shapes",
+  "polaroid",
 ] as const;
 
 const unit = z.number().min(0).max(1);
@@ -55,7 +57,60 @@ const CircleCellSchema = z.object({
   z: z_order,
 });
 
-export const CellSchema = z.discriminatedUnion("shape", [RectCellSchema, PolygonCellSchema, CircleCellSchema]);
+/** Rectangle whose top is a semicircle as wide as the cell (lower if the cell is too short). */
+const ArchCellSchema = z.object({
+  shape: z.literal("arch"),
+  x: unit,
+  y: unit,
+  w: unit,
+  h: unit,
+  z: z_order,
+});
+
+/** Rectangle with fully rounded ends (a capsule). */
+const PillCellSchema = z.object({
+  shape: z.literal("pill"),
+  x: unit,
+  y: unit,
+  w: unit,
+  h: unit,
+  z: z_order,
+});
+
+/** Heart or five-pointed star whose bounding box is centered at (cx, cy). `r` is half its width, a fraction of the canvas width. */
+const HeartCellSchema = z.object({ shape: z.literal("heart"), cx: unit, cy: unit, r: unit, z: z_order });
+const StarCellSchema = z.object({ shape: z.literal("star"), cx: unit, cy: unit, r: unit, z: z_order });
+
+/**
+ * Rectangle with a wavy top and/or bottom edge. Every wave follows the same curve across the canvas (WAVE),
+ * so a wavy bottom and the wavy top of the cell below it stay parallel.
+ */
+const WaveCellSchema = z.object({
+  shape: z.literal("wave"),
+  x: unit,
+  y: unit,
+  w: unit,
+  h: unit,
+  waves: z.array(z.enum(["top", "bottom"])).min(1),
+  z: z_order,
+});
+
+/** The curve wavy edges follow: amplitude as a fraction of the canvas height, full waves across the canvas width. */
+export const WAVE = { amplitude: 0.015, cycles: 1.5 } as const;
+
+/** A star's inner corners, as a fraction of its outer radius. */
+export const STAR_INNER = 0.5;
+
+export const CellSchema = z.discriminatedUnion("shape", [
+  RectCellSchema,
+  PolygonCellSchema,
+  CircleCellSchema,
+  ArchCellSchema,
+  PillCellSchema,
+  HeartCellSchema,
+  StarCellSchema,
+  WaveCellSchema,
+]);
 
 /** A layout holds one photo per cell, so its photo count is `cells.length`. */
 export const LayoutSchema = z.object({

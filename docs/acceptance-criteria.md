@@ -67,11 +67,11 @@ reuse IDs.
 
 | ID | Criterion | Check |
 |---|---|---|
-| AC-LAYOUT-01 | Every layout's cells stay inside the canvas, overlap only where declared, are convex, and keep enough area outside the overlay bands. | auto |
+| AC-LAYOUT-01 | Every layout's cells stay inside the canvas, overlap only where declared, keep enough area outside the overlay bands, and are well formed: polygons convex, arches tall enough for their curved top. | auto |
 | AC-LAYOUT-02 | There are at least 2 layouts for 1 photo and at least 4 for each count from 2 to 8. | auto |
-| AC-LAYOUT-03 | The library covers every family: grids, feature, mosaic, diagonal, scattered prints, filmstrip, circles and negative space. | auto |
+| AC-LAYOUT-03 | The library covers every family: grids, feature, mosaic, diagonal, scattered prints, filmstrip, circles, negative space, shapes (arches, capsules, hearts, stars, hexagons, waves) and Polaroids. | auto |
 | AC-LAYOUT-04 | Layouts are data with unique ids, validated against the schema. | auto |
-| AC-LAYOUT-05 | Cell geometry is right: gaps inset every edge evenly, rotated cells and circles hit-test correctly, and taps go to the topmost cell. | auto |
+| AC-LAYOUT-05 | Cell geometry is right: gaps inset every edge evenly (concave outlines too, and stacked waves stay a full gap apart), rotated cells, circles, arches, capsules, hearts and stars hit-test correctly, taps go to the topmost cell, and a Polaroid's photo sits in its card's window with the deeper margin below. | auto |
 
 ## Editing
 
@@ -96,7 +96,7 @@ reuse IDs.
 | ID | Criterion | Check |
 |---|---|---|
 | AC-STYLE-01 | The Style tool offers labeled controls for color (presets, custom color, blurred photo), spacing, margin, corners, border width and color, and a reset; chips pick which one shows. | auto |
-| AC-STYLE-02 | Defaults come from the layout until changed: white borders on scattered prints, blur for "Framed on blur", white elsewhere. | auto |
+| AC-STYLE-02 | Defaults come from the layout until changed: white borders where photos overlap (scattered prints, insets), white Polaroid cards on a blurred photo, blur for "Framed on blur", white elsewhere. | auto |
 | AC-STYLE-03 | Style changes appear in the exported image. | auto |
 | AC-STYLE-04 | Changing the style keeps manual crops. | auto |
 | AC-STYLE-05 | Full-bleed layouts have no spacing, corners or border. | auto |

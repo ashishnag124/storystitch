@@ -13,7 +13,7 @@ Difference from Fotor's photo stitch (which only stitches photos in a horizontal
 5. Export. Where `navigator.canShare({ files })` is supported, open the native share sheet (the user picks Instagram → Story); otherwise download. Web apps can't open Instagram's Story composer directly (that deep link only works from native apps), so the share sheet is the intended path.
 
 ## Layouts
-- Layouts are data, not code. Each is a JSON object of cells in normalized 0–1 coordinates on a 9:16 canvas. Cells can be rectangles, rotated rectangles, polygons (for diagonal splits) or circles, with a z-order for overlaps. Adding a layout means adding a JSON entry plus a test.
+- Layouts are data, not code. Each is a JSON object of cells in normalized 0–1 coordinates on a 9:16 canvas. Cells can be rectangles, rotated rectangles, polygons (for diagonal splits and hexagons), circles, arches, capsules, hearts, stars or rectangles with wavy edges, with a z-order for overlaps. Adding a layout means adding a JSON entry plus a test.
 - At least 4 distinct layouts for each count from 2 to 8, and 2 for a single photo (full bleed; framed on a blurred copy of the photo).
 - Families to cover:
   - grids and stacks
@@ -24,6 +24,8 @@ Difference from Fotor's photo stitch (which only stitches photos in a horizontal
   - a filmstrip
   - circles and rounded shapes
   - layouts with deliberate empty space for Instagram text and stickers
+  - shapes: arches, capsules, hearts, stars, hexagons and wave splits
+  - Polaroid prints: each photo in a white card with a deeper bottom margin
 - Story safe zones: no subject or face sits under Instagram's interface overlays. Defaults are top 14%, bottom 18% and sides 6%. Make them named constants so they're easy to adjust.
 
 ## Smart placement (the core feature)

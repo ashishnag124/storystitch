@@ -5,6 +5,7 @@ import {
   cellContains,
   cellFrame,
   cellPolygon,
+  frameCorners,
   hitTest,
   insetPolygon,
   layoutsFor,
@@ -30,8 +31,11 @@ export interface Style {
 }
 
 export const DEFAULT_BACKGROUND = { kind: "color", color: "#ffffff" } as const satisfies Background;
-/** Border scattered prints get by default, so overlapping photos read as separate prints. */
+/** Border overlapping photos (scattered prints, insets) get by default, so they read as separate prints. */
 export const PRINT_BORDER = 14;
+
+/** A Polaroid card's margins around its photo, as fractions of the card's width. */
+export const POLAROID = { side: 0.06, bottom: 0.24 } as const;
 
 export const DEFAULT_STYLE: Style = { background: null, gap: 14, margin: 28, radius: 20, border: null, borderColor: "#ffffff" };
 
@@ -40,9 +44,12 @@ export function backgroundOf(layout: Layout, style: Style): Background {
   return style.background ?? (layout.blurBackground ? { kind: "blur" } : DEFAULT_BACKGROUND);
 }
 
-/** The border width a scene shows (export pixels): the user's pick, else PRINT_BORDER on scattered prints. */
+/**
+ * The border width a scene shows (export pixels): the user's pick, else PRINT_BORDER where photos overlap
+ * (Polaroids have their card instead).
+ */
 export function borderOf(layout: Layout, style: Style): number {
-  return style.border ?? (layout.family === "scattered" ? PRINT_BORDER : 0);
+  return style.border ?? (layout.allowOverlap && layout.family !== "polaroid" ? PRINT_BORDER : 0);
 }
 
 /** What the user sees: a layout, which photo is in each cell (`order[cell]`) and each cell's crop. */
@@ -118,10 +125,10 @@ function uncovered(layout: Layout): number[] {
 
 function cellTargets(layout: Layout, style: Style): CellTarget[] {
   const visible = uncovered(layout);
-  return cellShapes(layout, style, STORY_CANVAS).map(({ frame, outline }, i) => ({
+  return cellShapes(layout, style, STORY_CANVAS).map(({ frame, outline, photo }, i) => ({
     frame,
     insets: safeInsets(frame),
-    fill: (outlineArea(outline) / (frame.width * frame.height)) * visible[i]!,
+    fill: (outlineArea(photo ?? outline) / (frame.width * frame.height)) * visible[i]!,
   }));
 }
 
@@ -155,10 +162,12 @@ export function withCrop(scene: Scene, cell: number, crop: Crop): Scene {
 
 export type Outline = { kind: "polygon"; points: Point[] } | { kind: "circle"; cx: number; cy: number; r: number };
 
-/** A styled cell on a canvas of a given size: the area its photo fills and the outline it's clipped to. */
+/** A styled cell on a canvas of a given size: the area its photo fills and the cell's outline. */
 export interface CellShape {
   frame: Frame;
   outline: Outline;
+  /** Where the photo is clipped when it's smaller than the cell: the window of a Polaroid card. */
+  photo?: Outline;
 }
 
 /** Gaps are split evenly between neighbours; the outer margin is the same on every side. */
@@ -190,10 +199,9 @@ export function cellShapes(layout: Layout, style: Style, size: Size): CellShape[
     const points = insetPolygon(cellPolygon(cell, area), gap / 2).map(shift);
     if (cell.shape === "rect") {
       const f = cellFrame(cell, area);
-      return {
-        frame: { ...f, cx: f.cx + offset, cy: f.cy + offset, width: f.width - gap, height: f.height - gap },
-        outline: { kind: "polygon", points },
-      };
+      const frame = { ...f, cx: f.cx + offset, cy: f.cy + offset, width: f.width - gap, height: f.height - gap };
+      const outline = { kind: "polygon", points } as const;
+      return layout.family === "polaroid" ? polaroid(frame, outline) : { frame, outline };
     }
     const xs = points.map((p) => p.x);
     const ys = points.map((p) => p.y);
@@ -203,4 +211,21 @@ export function cellShapes(layout: Layout, style: Style, size: Size): CellShape[
       outline: { kind: "polygon", points },
     };
   });
+}
+
+/** A Polaroid card filling `card`: the photo sits in a window with a deeper margin below. */
+function polaroid(card: Frame, outline: Outline): CellShape {
+  const side = POLAROID.side * card.width;
+  const bottom = POLAROID.bottom * card.width;
+  // Shift the window up (in the card's own rotated frame) by half the difference between the margins.
+  const up = (bottom - side) / 2;
+  const a = (card.rotate * Math.PI) / 180;
+  const frame = {
+    cx: card.cx + up * Math.sin(a),
+    cy: card.cy - up * Math.cos(a),
+    width: card.width - 2 * side,
+    height: card.height - side - bottom,
+    rotate: card.rotate,
+  };
+  return { frame, outline, photo: { kind: "polygon", points: frameCorners(frame) } };
 }

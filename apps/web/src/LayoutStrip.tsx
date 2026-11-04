@@ -1,5 +1,5 @@
 import { drawOrder } from "@storystitch/shared";
-import { cellShapes, type Scene } from "./scene";
+import { cellShapes, type Outline as OutlineShape, type Scene } from "./scene";
 
 const THUMB = { width: 135, height: 240 };
 
@@ -36,13 +36,22 @@ function Diagram({ option }: { option: Scene }) {
     <svg viewBox={`0 0 ${THUMB.width} ${THUMB.height}`} aria-hidden="true">
       <rect className="diagram-frame" width={THUMB.width} height={THUMB.height} />
       {drawOrder(option.layout.cells).map((i) => {
-        const { outline } = shapes[i]!;
-        return outline.kind === "circle" ? (
-          <circle key={i} className="diagram-cell" cx={outline.cx} cy={outline.cy} r={outline.r} />
-        ) : (
-          <polygon key={i} className="diagram-cell" points={outline.points.map((p) => `${p.x},${p.y}`).join(" ")} />
+        const { outline, photo } = shapes[i]!;
+        return (
+          <g key={i}>
+            <Outline outline={outline} className={photo ? "diagram-card" : "diagram-cell"} />
+            {photo && <Outline outline={photo} className="diagram-cell" />}
+          </g>
         );
       })}
     </svg>
+  );
+}
+
+function Outline({ outline, className }: { outline: OutlineShape; className: string }) {
+  return outline.kind === "circle" ? (
+    <circle className={className} cx={outline.cx} cy={outline.cy} r={outline.r} />
+  ) : (
+    <polygon className={className} points={outline.points.map((p) => `${p.x},${p.y}`).join(" ")} />
   );
 }
