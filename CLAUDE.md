@@ -33,6 +33,17 @@ A request that needs an app or service not in `project.json` (e.g. "add an iOS a
 
 - `pnpm dev` (local Postgres in Docker, web :5173, Expo app :5174, API :3001; this Mac has an SSH tunnel on :3000) · `pnpm db:generate` / `pnpm db:migrate` · `pnpm check` (lint + typecheck + test, run before saying done) · `pnpm build` · `pnpm e2e` (Playwright, Android Chrome + iPhone WebKit emulation) · `pnpm qa` (everything above, graded against the acceptance criteria; CI and every release run it; `--target=app` grades the Expo app instead of `apps/web`)
 
+## iOS simulator
+
+No Apple or Expo account is needed. `apps/app/ios` is generated and gitignored, so native changes go through `app.config.ts` and config plugins, never that folder.
+
+1. From `apps/app`: `APP_VARIANT=staging pnpm run prebuild:ios`.
+2. Boot a simulator, then open the live panel with the iOS Simulator tool's `attach` action.
+3. Build `apps/app/ios/StoryStitchStaging.xcworkspace`, scheme `StoryStitchStaging`, with the tool's `build` action, then follow it with `build_status`. A Debug build needs Metro: `EXPO_PUBLIC_API_URL=http://localhost:3001 APP_VARIANT=staging ./node_modules/.bin/expo start --port 8081`.
+4. Open it with `launch`, then check with `screenshot`, `tap`, `touch_path`, `touch2_path` and `open_url`. The simulator reaches this Mac at `localhost`. Add test photos with `xcrun simctl addmedia`.
+
+Every PR that changes shared screens gets this check. The simulator can't prove real memory limits, speed, the Instagram share or Universal Links.
+
 ## Rules
 
 - Work on a branch, open a PR with `gh pr create`; CI must pass.
