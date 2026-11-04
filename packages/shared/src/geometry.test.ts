@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { cellContains, cellFrame, cellPolygon, drawOrder, hitTest, insetPolygon } from "./geometry";
-import { CellSchema, STORY_CANVAS } from "./layout";
+import { CellSchema, STORY_CANVAS, type Cell } from "./layout";
 
 const size = { width: 100, height: 100 };
 const cell = (raw: unknown) => CellSchema.parse(raw);
@@ -87,8 +87,9 @@ describe("AC-LAYOUT-05 geometry", () => {
   });
 
   it("keeps a wavy edge and the wavy edge below it parallel, so the gap between them is even", () => {
-    const top = cell({ shape: "wave", x: 0, y: 0, w: 1, h: 0.5, waves: ["bottom"] });
-    const bottom = cell({ shape: "wave", x: 0, y: 0.5, w: 1, h: 0.5, waves: ["top"] });
+    const wave = (raw: unknown) => cell(raw) as Extract<Cell, { shape: "wave" }>;
+    const top = wave({ shape: "wave", x: 0, y: 0, w: 1, h: 0.5, waves: ["bottom"] });
+    const bottom = wave({ shape: "wave", x: 0, y: 0.5, w: 1, h: 0.5, waves: ["top"] });
     const gap = 20;
     const a = insetPolygon(cellPolygon(top, STORY_CANVAS), gap / 2);
     const b = insetPolygon(cellPolygon(bottom, STORY_CANVAS), gap / 2);
