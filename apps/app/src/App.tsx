@@ -55,7 +55,7 @@ export default function App() {
     <SafeAreaProvider>
       <Screen>
         {photos.length ? (
-          <Editor photos={photos} summary={summary} notices={notices} popularity={popularity} onStartOver={startOver} />
+          <Editor photos={photos} summary={summary} notices={notices} privacy={PRIVACY} popularity={popularity} onStartOver={startOver} />
         ) : (
           <PickScreen privacy={PRIVACY} progress={progress} notices={notices} onPicked={(p) => void openPhotos(p)} />
         )}

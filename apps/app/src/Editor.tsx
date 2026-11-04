@@ -1,16 +1,23 @@
-import { newScene, rankedScenes, withCrop, type Scene } from "@storystitch/client";
+import { cellShapes, newScene, rankedScenes, withCrop, withStyle, type Scene } from "@storystitch/client";
 import { MAX_ZOOM, MIN_ZOOM, clampCrop } from "@storystitch/layout-engine";
 import { STORY_CANVAS } from "@storystitch/shared";
-import { cellShapes } from "@storystitch/client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { recordExport } from "./api";
 import { LayoutStrip } from "./LayoutStrip";
+import { canShareFiles, renderExport, shareOrDownload, type ExportFormat } from "./platform/exportImage";
+import { FormatSelect } from "./platform/FormatSelect";
 import type { Photo } from "./platform/photos";
 import { Slider } from "./platform/Slider";
 import { Stage, type StageHandle } from "./platform/Stage";
+import { StylePanel } from "./StylePanel";
 import { MIN_TARGET, colors, fontFamily, shadows, type as typography } from "./theme";
 import { Button } from "./ui/Button";
 import { Choice } from "./ui/Choice";
+import { upscaleWarnings } from "./upscale";
+
+/** How long the preview must be still before the export is rendered in the background. */
+const EXPORT_DEBOUNCE_MS = 400;
 
 type Tool = "layouts" | "style" | "export";
 const TOOLS: { id: Tool; label: string }[] = [
@@ -24,12 +31,13 @@ interface Props {
   /** What subject detection found, e.g. "Found 2 faces and a dog." */
   summary: string | null;
   notices: string[];
+  privacy: string;
   /** Exports per layout id, for ordering near-equal fits. */
   popularity: Record<string, number>;
   onStartOver: () => void;
 }
 
-export function Editor({ photos, summary, notices, popularity, onStartOver }: Props) {
+export function Editor({ photos, summary, notices, privacy, popularity, onStartOver }: Props) {
   // Every layout with its own best photo assignment, best fit first. Picking one starts from that.
   const options = useMemo(() => rankedScenes(photos, undefined, popularity), [photos, popularity]);
   const [scene, setScene] = useState<Scene>(() => options[0]!);
@@ -41,9 +49,33 @@ export function Editor({ photos, summary, notices, popularity, onStartOver }: Pr
     ...notices.map((text) => ({ text, alert: true })),
     ...(summary ? [{ text: summary, alert: false }] : []),
   ]);
+  const [format, setFormat] = useState<ExportFormat>("image/jpeg");
+  const [exported, setExported] = useState<{ scene: Scene; format: ExportFormat; blob: Blob } | null>(null);
+  const [exportError, setExportError] = useState(false);
   const stage = useRef<StageHandle>(null);
+  const shareable = useMemo(() => canShareFiles(), []);
+  const warnings = useMemo(() => upscaleWarnings(scene, photos), [scene, photos]);
   const onScene = useCallback((next: (s: Scene) => Scene) => setScene(next), []);
   const styledOptions = useMemo(() => options.map((o) => ({ ...o, style: scene.style })), [options, scene.style]);
+
+  // Render the export ahead of time so Share can open the share sheet within the tap.
+  useEffect(() => {
+    let current = true;
+    const timer = setTimeout(() => {
+      renderExport(scene, photos, format)
+        .then((blob) => current && (setExported({ scene, format, blob }), setExportError(false)))
+        .catch((err) => {
+          console.error(err);
+          if (current) setExportError(true);
+        });
+    }, EXPORT_DEBOUNCE_MS);
+    return () => {
+      current = false;
+      clearTimeout(timer);
+    };
+  }, [scene, photos, format]);
+  const ready = exported && exported.scene === scene && exported.format === format ? exported.blob : null;
+  const extension = format === "image/png" ? "png" : "jpg";
 
   function chooseLayout(option: Scene) {
     stage.current?.crossfade();
@@ -67,6 +99,14 @@ export function Editor({ photos, summary, notices, popularity, onStartOver }: Pr
           StoryStitch editor
         </Text>
         <Button label="Start over" onPress={onStartOver} />
+        <Button
+          label={ready ? (shareable ? "Share" : "Download") : "Preparing…"}
+          primary
+          disabled={!ready}
+          onPress={async () => {
+            if (ready && (await shareOrDownload(ready, `storystitch.${extension}`))) recordExport(scene.layout.id);
+          }}
+        />
       </View>
 
       <View style={styles.stage}>
@@ -75,6 +115,11 @@ export function Editor({ photos, summary, notices, popularity, onStartOver }: Pr
           {toasts.map((t) => (
             <Toast key={t.text} {...t} onClose={() => setToasts((all) => all.filter((x) => x.text !== t.text))} />
           ))}
+          {exportError && (
+            <Text role="alert" style={styles.exportError}>
+              Couldn't prepare the image. Try another layout or start over.
+            </Text>
+          )}
         </View>
         <Text role="status" style={styles.hidden}>
           {status}
@@ -97,9 +142,22 @@ export function Editor({ photos, summary, notices, popularity, onStartOver }: Pr
           </View>
         ) : tool === "layouts" ? (
           <LayoutStrip options={styledOptions} current={scene} onSelect={chooseLayout} />
+        ) : tool === "style" ? (
+          <StylePanel layout={scene.layout} style={scene.style} onChange={(style) => setScene((s) => withStyle(s, style, photos))} />
         ) : (
-          // The style and export tools arrive in the next step.
-          <Text style={typography.hint}>Coming next.</Text>
+          <ScrollView contentContainerStyle={styles.exportTool}>
+            <FormatSelect value={format} onChange={setFormat} />
+            {warnings.length > 0 && (
+              <View role="list" style={styles.warnings}>
+                {warnings.map((w) => (
+                  <Text key={w.photo} role="listitem" style={styles.warning}>
+                    {w.name} is enlarged {w.factor.toFixed(1)}× and may look soft.
+                  </Text>
+                ))}
+              </View>
+            )}
+            <Text style={typography.hint}>{privacy}</Text>
+          </ScrollView>
         )}
       </View>
 
@@ -118,6 +176,7 @@ export function Editor({ photos, summary, notices, popularity, onStartOver }: Pr
               style={styles.tab}
             >
               <Text style={[styles.tabLabel, current && styles.tabCurrent]}>{t.label}</Text>
+              {t.id === "export" && warnings.length > 0 && <View role="img" aria-label="(has warnings)" style={styles.badge} />}
             </Choice>
           );
         })}
@@ -179,4 +238,9 @@ const styles = StyleSheet.create({
   tab: { flex: 1, minHeight: 48, alignItems: "center", justifyContent: "center" },
   tabLabel: { fontFamily, fontSize: 16, fontWeight: "600", color: colors.muted },
   tabCurrent: { fontWeight: "800", color: colors.accent },
+  badge: { position: "absolute", top: 10, right: "30%", width: 8, height: 8, borderRadius: 4, backgroundColor: "#d97706" },
+  exportTool: { gap: 8 },
+  exportError: { fontFamily, padding: 12, borderRadius: 14, fontSize: 14, backgroundColor: colors.warnBg, color: colors.warnText },
+  warnings: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, backgroundColor: colors.warnBg },
+  warning: { fontFamily, fontSize: 13, color: colors.warnText },
 });
