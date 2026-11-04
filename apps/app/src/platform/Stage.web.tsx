@@ -1,4 +1,17 @@
-import { cellShapes, lerp, lerpBox, swapCells, autoCrop, type Box, type Scene } from "@storystitch/client";
+import {
+  DOUBLE_TAP_MS,
+  DOUBLE_TAP_ZOOM,
+  LONG_PRESS_MS,
+  MOTION,
+  TAP_SLOP_PX,
+  autoCrop,
+  cellShapes,
+  lerp,
+  lerpBox,
+  swapCells,
+  type Box,
+  type Scene,
+} from "@storystitch/client";
 import { MAX_ZOOM, MIN_ZOOM, clampCrop, panCrop, sourceRect, type Crop } from "@storystitch/layout-engine";
 import { STORY_CANVAS, hitTest, type Frame, type Point } from "@storystitch/shared";
 import { useCallback, useEffect, useImperativeHandle, useRef, useState, type KeyboardEvent, type PointerEvent, type Ref } from "react";
@@ -7,30 +20,10 @@ import type { Photo } from "./photos";
 import { drawScene, outlineBounds, previewOf, snapshotCell, type Marks } from "./render";
 import "./stage.css";
 
-/** Pointer movement (CSS px) below which a press counts as a tap rather than a drag. */
-const TAP_SLOP_PX = 6;
-/** Holding a photo still this long lifts it, to be dropped on another cell. */
-const LONG_PRESS_MS = 400;
-/** A second tap on the same photo within this time is a double-tap (zoom in, or back to fit). */
-const DOUBLE_TAP_MS = 300;
-/** Zoom a double-tap goes to, and the zoom above which a double-tap goes back to fit. */
-const DOUBLE_TAP_ZOOM = 2;
 /** Zoom change per pixel of Ctrl+scroll / trackpad pinch. */
 const WHEEL_ZOOM_RATE = 0.01;
 /** Zoom change per + or − key press. */
 const KEY_ZOOM_STEP = 1.1;
-/** Motion timings (ms) and feel. */
-const MOTION = {
-  lift: 140, // photo rises to LIFT_SCALE under the finger
-  liftScale: 1.06,
-  flight: 260, // swapped photos glide to their new cells
-  settle: 180, // a dropped photo returns to its own cell
-  crossfade: 220, // switching layouts
-  crop: 220, // Fit and double-tap zoom
-  /** Momentum after a flicked drag: velocity kept per 16 ms frame, and the speed (canvas px/ms) where it stops. */
-  friction: 0.92,
-  minSpeed: 0.02,
-};
 /** How long the gesture hint shows if nobody touches the preview first. */
 const COACH_MS = 8000;
 const ARROWS = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] } as const;

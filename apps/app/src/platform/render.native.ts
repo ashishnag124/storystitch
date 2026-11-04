@@ -1,5 +1,5 @@
 // The same drawing as render.web.ts, on Skia. Keep the two in step: both draw the same layouts and styles.
-import { DEFAULT_BACKGROUND, backgroundOf, cellShapes, styleScale, type CellShape, type Outline, type Scene } from "@storystitch/client";
+import { DEFAULT_BACKGROUND, backgroundOf, cellShapes, styleScale, type Box, type CellShape, type Outline, type Scene } from "@storystitch/client";
 import { CENTER_CROP, sourceRect, type Crop } from "@storystitch/layout-engine";
 import { drawOrder, type Size } from "@storystitch/shared";
 import { ClipOp, FilterMode, MipmapMode, PaintStyle, Skia, StrokeJoin, type SkCanvas, type SkImage, type SkPaint, type SkPath } from "@shopify/react-native-skia";
@@ -119,8 +119,22 @@ export const hasBlurredBackground = (scene: Scene) => backgroundOf(scene.layout,
 
 /** Editing feedback drawn over the preview. */
 export interface Marks {
-  /** The tapped cell. */
+  /** The tapped (or lifted) cell. */
   selected?: number;
+  /** Where a lifted photo would be dropped. */
+  target?: number;
+  /** Cells left empty because their photo is being animated on top (lift, swap). */
+  hidden?: number[];
+  /** A cell shown as an empty slot while its photo is lifted. */
+  dim?: number;
+}
+
+export function outlineBounds(outline: Outline): Box {
+  if (outline.kind === "circle") return { x: outline.cx - outline.r, y: outline.cy - outline.r, w: 2 * outline.r, h: 2 * outline.r };
+  const xs = outline.points.map((p) => p.x);
+  const ys = outline.points.map((p) => p.y);
+  const [x, y] = [Math.min(...xs), Math.min(...ys)];
+  return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y };
 }
 
 /** Draws a whole scene from already-decoded images (the preview copies). */
@@ -130,8 +144,50 @@ export function drawScene(canvas: SkCanvas, size: Size, scene: Scene, imageFor: 
   fillBackground(canvas, size, scene);
   if (blurred) drawBlurredBackground(canvas, size, blurred);
   for (const i of drawOrder(scene.layout.cells)) {
+    if (marks.hidden?.includes(i)) continue;
     drawCell(canvas, shapes[i]!, imageFor(scene.order[i]!), scene.crops[i]!, radius, border, scene.style.borderColor);
   }
-  const selected = marks.selected === undefined ? undefined : shapes[marks.selected];
-  if (selected) canvas.drawPath(outlinePath(selected.outline, radius), paintOf(HIGHLIGHT_COLOR, PaintStyle.Stroke, Math.max(3, size.width / 180)));
+  const dimmed = marks.dim === undefined ? undefined : shapes[marks.dim];
+  if (dimmed) canvas.drawPath(outlinePath(dimmed.outline, radius), paintOf("rgba(28, 25, 23, 0.45)"));
+
+  const line = Math.max(3, size.width / 180);
+  const stroke = (cell: number | undefined, dash: number[]) => {
+    if (cell === undefined || !shapes[cell]) return;
+    const paint = paintOf(HIGHLIGHT_COLOR, PaintStyle.Stroke, line);
+    if (dash.length) paint.setPathEffect(Skia.PathEffect.MakeDash(dash, 0));
+    canvas.drawPath(outlinePath(shapes[cell].outline, radius), paint);
+  };
+  stroke(marks.selected, []);
+  if (marks.target !== marks.selected) stroke(marks.target, [line * 4, line * 3]);
+}
+
+/** Draws one cell of `scene` moved from its own place into `to`, for animating it over the scene. */
+export function drawCellAt(canvas: SkCanvas, size: Size, scene: Scene, cell: number, imageFor: (photo: number) => Drawable, to: Box, opts: { turn?: number; shadow?: number } = {}) {
+  const shape = cellShapes(scene.layout, scene.style, size)[cell]!;
+  const { radius, border } = styleScale(scene.layout, scene.style, size);
+  const box = outlineBounds(shape.outline);
+  canvas.save();
+  if (opts.shadow) {
+    const paint = Skia.Paint();
+    paint.setImageFilter(Skia.ImageFilter.MakeDropShadow(0, opts.shadow / 3, opts.shadow / 2, opts.shadow / 2, Skia.Color("rgba(0, 0, 0, 0.4)"), null));
+    canvas.saveLayer(paint);
+  }
+  canvas.translate(to.x + to.w / 2, to.y + to.h / 2);
+  if (opts.turn) canvas.rotate(opts.turn, 0, 0);
+  canvas.scale(to.w / box.w, to.h / box.h);
+  canvas.translate(-box.x - box.w / 2, -box.y - box.h / 2);
+  drawCell(canvas, shape, imageFor(scene.order[cell]!), scene.crops[cell]!, radius, border, scene.style.borderColor);
+  if (opts.shadow) canvas.restore();
+  canvas.restore();
+}
+
+/** Draws a scene faded over what's already on the canvas, for crossfading between layouts. */
+export function drawFaded(canvas: SkCanvas, size: Size, scene: Scene, imageFor: (photo: number) => Drawable, blurred: SkImage | null, alpha: number, scale: number) {
+  const paint = Skia.Paint();
+  paint.setAlphaf(alpha);
+  canvas.saveLayer(paint);
+  canvas.translate((size.width * (1 - scale)) / 2, (size.height * (1 - scale)) / 2);
+  canvas.scale(scale, scale);
+  drawScene(canvas, size, scene, imageFor, blurred);
+  canvas.restore();
 }
