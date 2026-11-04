@@ -23,3 +23,10 @@ qa-results/
 # End-to-end test builds
 apps/web/dist-e2e/
 apps/web/dist-e2e-accounts/
+apps/app/dist-e2e/
+apps/app/dist-e2e-accounts/
+
+# Expo
+.expo/
+expo-env.d.ts
+apps/app/dist-ios/
