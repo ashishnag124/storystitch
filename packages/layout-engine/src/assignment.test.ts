@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { assignPhotos, hungarian, placement, rankLayouts, type CellTarget, type PhotoSubjects } from "./assignment";
+import {
+  POPULARITY_BONUS,
+  POPULARITY_FULL_AT,
+  assignPhotos,
+  hungarian,
+  placement,
+  rankLayouts,
+  type CellTarget,
+  type PhotoSubjects,
+} from "./assignment";
 import { NO_INSETS } from "./smartCrop";
 import type { Detection } from "./subject";
 
@@ -123,5 +132,37 @@ describe("rankLayouts", () => {
     expect(rankLayouts(options, photos).map((r) => r.layout.id)).toEqual(ids);
     expect(rankLayouts([...options].reverse(), photos).map((r) => r.layout.id)).toEqual(ids);
     expect(ids.indexOf("columns")).toBeLessThan(ids.indexOf("columns-copy")); // a tie goes to the lower id
+  });
+
+  describe("AC-RANK-04 popularity", () => {
+    // Two layouts that fit two landscape photos almost equally well, and one that fits them clearly worse.
+    const close = [
+      { layout: { id: "a-wide" }, cells: [cell(1000, 500), cell(1000, 500)] },
+      { layout: { id: "b-almost" }, cells: [cell(1000, 560), cell(1000, 560)] },
+      { layout: { id: "c-tall" }, cells: [tallCell, tallCell] },
+    ];
+    const photos = [landscape, landscape];
+    const order = (popularity: Record<string, number>) => rankLayouts(close, photos, popularity).map((r) => r.layout.id);
+    const fit = order({});
+    const costOf = (id: string) => rankLayouts(close, photos).find((r) => r.layout.id === id)!.assignment.cost;
+
+    it("orders layouts that fit about equally well by how often they're exported", () => {
+      const [best, runnerUp] = fit;
+      expect(costOf(runnerUp!) - costOf(best!)).toBeLessThan(POPULARITY_BONUS * 2);
+      expect(order({ [runnerUp!]: 100, [best!]: 2 })).toEqual([runnerUp, best, "c-tall"]);
+    });
+
+    it("never lifts a clearly worse fit over a better one", () => {
+      expect(costOf("c-tall") - costOf(fit[0]!)).toBeGreaterThan(POPULARITY_BONUS * 2);
+      expect(order({ "c-tall": 10_000 }).at(-1)).toBe("c-tall");
+    });
+
+    it("barely moves the order on a handful of exports", () => {
+      const [best, runnerUp] = fit;
+      const gap = costOf(runnerUp!) - costOf(best!);
+      // One export is worth 1/POPULARITY_FULL_AT of the full bonus: not enough to cover this gap.
+      expect(POPULARITY_BONUS * 2 * (1 / POPULARITY_FULL_AT)).toBeLessThan(gap);
+      expect(order({ [runnerUp!]: 1 })).toEqual(fit);
+    });
   });
 });

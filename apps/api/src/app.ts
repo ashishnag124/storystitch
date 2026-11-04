@@ -1,4 +1,4 @@
-import type { Health } from "@storystitch/shared";
+import { layouts, type Health, type LayoutPopularity } from "@storystitch/shared";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { secureHeaders } from "hono/secure-headers";
@@ -31,6 +31,26 @@ export function createApp({ pool, auth, corsOrigins, version, testEmails }: AppO
     }
     const body: Health = { ok: database === "up", version, database };
     return c.json(body, database === "up" ? 200 : 503);
+  });
+
+  // Popular layouts: the web app reports each export's layout (nothing else) and reads the totals to break ranking ties.
+  const layoutIds = new Set(layouts.map((l) => l.id));
+  app.post("/layouts/:id/exports", async (c) => {
+    const id = c.req.param("id");
+    if (!layoutIds.has(id)) return c.notFound();
+    await pool.query(
+      `insert into layout_exports (layout_id, count) values ($1, 1)
+       on conflict (layout_id) do update set count = layout_exports.count + 1, updated_at = now()`,
+      [id],
+    );
+    return c.body(null, 204);
+  });
+  app.get("/layouts/popularity", async (c) => {
+    const { rows } = await pool.query<{ layout_id: string; count: number }>("select layout_id, count from layout_exports");
+    const body: LayoutPopularity = { exports: Object.fromEntries(rows.map((r) => [r.layout_id, r.count])) };
+    // The ranking only needs rough totals, so browsers and CDNs may reuse them for a few minutes.
+    c.header("Cache-Control", "public, max-age=300");
+    return c.json(body);
   });
 
   // Accounts: sign-up, email verification, sign-in, password reset, sessions, deletion.

@@ -33,7 +33,7 @@ Difference from Fotor's photo stitch (which only stitches photos in a horizontal
 - **Subject box:** for each photo, compute a weighted box covering what matters. Faces weigh most and must never be cut through.
 - **Crop:** for a given photo and cell, find the crop matching the cell's aspect ratio that keeps the whole subject box inside with a margin, centered, zooming only as much as needed. If the subject can't fit, keep faces whole and cut the least important area. If a cell overlaps a safe-zone band, shift the crop so the subject sits outside the band where possible.
 - **Assignment:** decide which photo goes in which cell by minimizing total subject loss. Use an optimal assignment, e.g. the Hungarian algorithm over a photo × cell cost matrix. Cost combines subject coverage, how much upscaling is needed and aspect mismatch.
-- **Ranking:** score each layout for this specific photo set by its best assignment cost and show the best first. Keep the weights named and explainable in code.
+- **Ranking:** score each layout for this specific photo set by its best assignment cost and show the best first. Keep the weights named and explainable in code. Among layouts that fit about equally well, the ones exported more often go first: each export sends only its layout's id to the API, which keeps a running count per layout (builds with accounts on only).
 - **Structure:** implement all of this as pure functions in its own package (e.g. `packages/layout-engine`) with unit tests. The UI only calls them.
 
 ## Style controls

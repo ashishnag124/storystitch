@@ -78,3 +78,13 @@ export const rateLimit = pgTable("rate_limit", {
   count: integer("count").notNull(),
   lastRequest: bigint("last_request", { mode: "number" }).notNull(),
 });
+
+/**
+ * How many times each layout has been exported, so popular layouts can go first among equally good fits.
+ * Only a running count: nothing about who exported, when, or from where.
+ */
+export const layoutExports = pgTable("layout_exports", {
+  layoutId: text("layout_id").primaryKey(),
+  count: integer("count").notNull().default(0),
+  updatedAt: updatedAt(),
+});

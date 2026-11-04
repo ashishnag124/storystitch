@@ -62,6 +62,8 @@ reuse IDs.
 | AC-RANK-01 | Layouts are ranked best fit first for the picked photos. | auto |
 | AC-RANK-02 | Ranking is deterministic and doesn't depend on the order layouts are listed in. | auto |
 | AC-RANK-03 | The strip offers every layout for the photo count, each with every photo placed exactly once. | auto |
+| AC-RANK-04 | Among layouts that fit about equally well, the more often exported ones come first; popularity never lifts a clearly worse fit over a better one, and a handful of exports barely moves the order. | auto |
+| AC-RANK-05 | In builds with accounts on, each Share or Download sends only the exported layout's id (no photo, account, cookie or body) and the API keeps just a running count per layout, which the app reads to rank. Builds with accounts off send nothing. | auto |
 
 ## Layout library
 

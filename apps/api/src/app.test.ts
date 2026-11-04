@@ -1,4 +1,4 @@
-import { HealthSchema } from "@storystitch/shared";
+import { HealthSchema, LayoutPopularitySchema } from "@storystitch/shared";
 import { afterAll, describe, expect, it } from "vitest";
 import { createApp } from "./app";
 import { createDb } from "./db/client";
@@ -67,5 +67,32 @@ describe("env", () => {
     expect(() => loadEnv({ ...base, BETTER_AUTH_SECRET: "short" })).toThrow();
     expect(() => loadEnv({ ...base, EMAIL_TRANSPORT: "resend" })).toThrow(/RESEND_API_KEY/);
     expect(() => loadEnv({ ...base, DISABLE_RATE_LIMIT: "true" })).toThrow(/tests only/);
+  });
+});
+
+describe("AC-RANK-05 layout exports", () => {
+  const exportsOf = async (id: string) => {
+    const res = await app.request("/layouts/popularity");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Cache-Control")).toBe("public, max-age=300");
+    return LayoutPopularitySchema.parse(await res.json()).exports[id] ?? 0;
+  };
+
+  it("counts each export of a layout and serves the totals", async () => {
+    const before = await exportsOf("two-wave");
+    for (let i = 0; i < 2; i++) expect((await app.request("/layouts/two-wave/exports", { method: "POST" })).status).toBe(204);
+    expect(await exportsOf("two-wave")).toBe(before + 2);
+  });
+
+  it("ignores layouts that don't exist", async () => {
+    expect((await app.request("/layouts/not-a-layout/exports", { method: "POST" })).status).toBe(404);
+    expect(await exportsOf("not-a-layout")).toBe(0);
+  });
+
+  it("stores only a count per layout: nothing about who exported or from where", async () => {
+    const { rows } = await api.pool.query<{ column_name: string }>(
+      "select column_name from information_schema.columns where table_name = 'layout_exports' order by ordinal_position",
+    );
+    expect(rows.map((r) => r.column_name)).toEqual(["layout_id", "count", "updated_at"]);
   });
 });

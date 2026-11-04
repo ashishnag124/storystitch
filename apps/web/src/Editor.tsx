@@ -12,6 +12,7 @@ import {
 import { LayoutStrip } from "./LayoutStrip";
 import { haptic, lerp, lerpBox, prefersReducedMotion, tween } from "./motion";
 import type { Photo } from "./photos";
+import { recordExport } from "./popularity";
 import { drawScene, outlineBounds, previewOf, snapshotCell, type Box, type Marks } from "./render";
 import { autoCrop, cellShapes, newScene, rankedScenes, swapCells, withCrop, withStyle, type Scene } from "./scene";
 import { StylePanel } from "./StylePanel";
@@ -85,12 +86,14 @@ interface Props {
   summary: string | null;
   notices: string[];
   privacy: string;
+  /** Exports per layout id (see popularity.ts), for ordering near-equal fits. */
+  popularity: Record<string, number>;
   onStartOver: () => void;
 }
 
-export function Editor({ photos, summary, notices, privacy, onStartOver }: Props) {
+export function Editor({ photos, summary, notices, privacy, popularity, onStartOver }: Props) {
   // Every layout with its own best photo assignment, best fit first. Picking one starts from that.
-  const options = useMemo(() => rankedScenes(photos), [photos]);
+  const options = useMemo(() => rankedScenes(photos, undefined, popularity), [photos, popularity]);
   const [scene, setScene] = useState<Scene>(() => options[0]!);
   const [selected, setSelected] = useState<number | null>(null);
   const [lifted, setLifted] = useState<{ from: number; over: number } | null>(null);
@@ -548,7 +551,9 @@ export function Editor({ photos, summary, notices, privacy, onStartOver }: Props
             className="button primary"
             disabled={!ready}
             aria-busy={!ready}
-            onClick={() => ready && void shareOrDownload(ready, `storystitch.${extension}`)}
+            onClick={async () => {
+              if (ready && (await shareOrDownload(ready, `storystitch.${extension}`))) recordExport(scene.layout.id);
+            }}
           >
             {ready ? (shareable ? "Share" : "Download") : "Preparing…"}
           </button>

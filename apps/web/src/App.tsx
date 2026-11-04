@@ -6,6 +6,7 @@ import { Editor } from "./Editor";
 import { PhotoSources } from "./PhotoSources";
 import { ANALYSIS_LONG_SIDE, MAX_PHOTOS, UnsupportedPhotoError, downscale, loadPhoto, type Photo } from "./photos";
 import { detectPlatform } from "./platform";
+import { fetchPopularity } from "./popularity";
 
 const PRIVACY = "Your photos stay on this device. Nothing is uploaded.";
 
@@ -17,11 +18,14 @@ function App() {
   const [progress, setProgress] = useState<{ step: string; done: number; total: number } | null>(null);
   const [summary, setSummary] = useState<string | null>(null);
   const [notices, setNotices] = useState<string[]>([]);
+  const [popularity, setPopularity] = useState<Record<string, number>>({});
   const platform = useMemo(() => detectPlatform(navigator), []);
   const tooMany = `StoryStitch uses up to ${MAX_PHOTOS} photos, so it took the first ${MAX_PHOTOS}.`;
 
   async function openPhotos(picked: File[]) {
     const notes: string[] = [];
+    // Fetched alongside preparing the photos; ranking waits for it only as long as that takes, or its short timeout.
+    const popular = fetchPopularity();
     if (picked.length > MAX_PHOTOS) notes.push(tooMany);
     const files = picked.slice(0, MAX_PHOTOS);
     const loaded: Photo[] = [];
@@ -40,6 +44,7 @@ function App() {
       setProgress({ step: "Finding subjects", done: i, total: loaded.length });
       photo.detections = await detector.detect(await downscale(photo.preview, ANALYSIS_LONG_SIDE));
     }
+    setPopularity(await popular);
     setProgress(null);
     setNotices(notes);
     setSummary(describeSubjects(loaded.map((p) => p.detections)));
@@ -53,7 +58,7 @@ function App() {
   }
 
   if (photos.length) {
-    return <Editor photos={photos} summary={summary} notices={notices} privacy={PRIVACY} onStartOver={startOver} />;
+    return <Editor photos={photos} summary={summary} notices={notices} privacy={PRIVACY} popularity={popularity} onStartOver={startOver} />;
   }
 
   return (

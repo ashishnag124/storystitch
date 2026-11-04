@@ -153,18 +153,40 @@ export function assignPhotos(photos: PhotoSubjects[], cells: CellTarget[]): Assi
 const TIE = 1e-9;
 
 /**
- * Every layout with its best assignment for these photos, cheapest first. Ties go to the lower id,
- * so the order never depends on how the options were listed.
+ * How far popularity can lift a layout, in placement cost per cell. Fit comes first: a layout is lifted
+ * only past layouts that fit at most this much better, and only when it's exported much more often.
+ */
+export const POPULARITY_BONUS = 0.1;
+
+/**
+ * Exports the most popular option needs before popularity counts in full. With fewer, every bonus shrinks
+ * in proportion, so a handful of early exports barely moves the order.
+ */
+export const POPULARITY_FULL_AT = 20;
+
+/**
+ * Every layout with its best assignment for these photos, best fit first. `popularity` (exports per layout
+ * id) breaks near-ties: see POPULARITY_BONUS. Exact ties go to the lower id, so the order never depends on
+ * how the options were listed.
  */
 export function rankLayouts<T extends { id: string }>(
   options: { layout: T; cells: CellTarget[] }[],
   photos: PhotoSubjects[],
+  popularity: Record<string, number> = {},
 ): { layout: T; assignment: Assignment }[] {
+  const exports = (id: string) => popularity[id] ?? 0;
+  const top = Math.max(POPULARITY_FULL_AT, ...options.map((o) => exports(o.layout.id)));
+  const score = (o: { layout: T; cells: CellTarget[] }, cost: number) =>
+    cost - POPULARITY_BONUS * o.cells.length * (exports(o.layout.id) / top);
   return options
-    .map(({ layout, cells }) => ({ layout, assignment: assignPhotos(photos, cells) }))
+    .map((o) => {
+      const assignment = assignPhotos(photos, o.cells);
+      return { layout: o.layout, assignment, score: score(o, assignment.cost) };
+    })
     .sort((a, b) => {
-      const d = a.assignment.cost - b.assignment.cost;
+      const d = a.score - b.score;
       if (Math.abs(d) > TIE) return d;
       return a.layout.id < b.layout.id ? -1 : a.layout.id > b.layout.id ? 1 : 0;
-    });
+    })
+    .map(({ layout, assignment }) => ({ layout, assignment }));
 }
