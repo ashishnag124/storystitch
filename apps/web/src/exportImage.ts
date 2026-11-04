@@ -1,8 +1,8 @@
+import { cellShapes, styleScale, type Scene } from "@storystitch/client";
 import { UPSCALE_WARNING_FACTOR, upscaleFactor } from "@storystitch/layout-engine";
 import { STORY_CANVAS, drawOrder } from "@storystitch/shared";
 import { decodeFull, type Photo } from "./photos";
 import { drawBlurredBackground, drawCell, fillBackground, hasBlurredBackground, type Drawable } from "./render";
-import { cellShapes, styleScale, type Scene } from "./scene";
 
 export type ExportFormat = "image/jpeg" | "image/png";
 export const JPEG_QUALITY = 0.9;

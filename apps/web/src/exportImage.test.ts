@@ -1,8 +1,8 @@
+import { newScene } from "@storystitch/client";
 import { layouts } from "@storystitch/shared";
 import { describe, expect, it } from "vitest";
 import { upscaleWarnings } from "./exportImage";
 import type { Photo } from "./photos";
-import { newScene } from "./scene";
 
 const photo = (name: string, width: number, height: number) => ({ name, width, height, detections: [] }) as unknown as Photo;
 

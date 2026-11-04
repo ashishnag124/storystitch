@@ -1,18 +1,9 @@
-// Small animation helpers for the editor: easing, frame-by-frame tweens, and respect for reduced motion.
-import type { Box } from "./render";
+// Small animation helpers for the editor: frame-by-frame tweens, and respect for reduced motion.
+import { easeOutCubic } from "@storystitch/client";
 
 /** People who ask their device to reduce motion get instant changes instead of animations. */
 export const prefersReducedMotion = () =>
   typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-export const easeOutCubic = (t: number) => 1 - (1 - t) ** 3;
-export const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-export const lerpBox = (a: Box, b: Box, t: number): Box => ({
-  x: lerp(a.x, b.x, t),
-  y: lerp(a.y, b.y, t),
-  w: lerp(a.w, b.w, t),
-  h: lerp(a.h, b.h, t),
-});
 
 /**
  * Calls `onFrame` with eased progress (0 → 1) on every animation frame for `duration` ms, then `onDone`.

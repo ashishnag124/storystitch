@@ -16,6 +16,7 @@
   "dependencies": {
     "@fontsource-variable/bricolage-grotesque": "^5.3.0",
     "@mediapipe/tasks-vision": "^1.2.0",
+    "@storystitch/client": "workspace:*",
     "@storystitch/layout-engine": "workspace:*",
     "@storystitch/shared": "workspace:*",
     "better-auth": "^1.7.14",

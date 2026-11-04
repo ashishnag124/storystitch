@@ -1,12 +1,13 @@
+import { describeSubjects } from "@storystitch/client";
 import { useMemo, useState } from "react";
-import { createWorkerDetector, describeSubjects, type Detector } from "./detect/detector";
+import { fetchPopularity } from "./api";
+import { createWorkerDetector, type Detector } from "./detect/detector";
 import { AccountLink } from "./account/AccountLink";
 import { LayoutHero, Logo } from "./Brand";
 import { Editor } from "./Editor";
 import { PhotoSources } from "./PhotoSources";
 import { ANALYSIS_LONG_SIDE, MAX_PHOTOS, UnsupportedPhotoError, downscale, loadPhoto, type Photo } from "./photos";
 import { detectPlatform } from "./platform";
-import { fetchPopularity } from "./popularity";
 
 const PRIVACY = "Your photos stay on this device. Nothing is uploaded.";
 

@@ -10,6 +10,7 @@ Product requirements: `docs/product-brief.md`. Acceptance criteria (what QA chec
 |---|---|
 | Data shape / shared contract (layouts and their types) | `packages/shared/src/` (zod) first, then implement |
 | Cropping, assignment, ranking (pure functions) | `packages/layout-engine/src/` |
+| App logic with no UI or browser APIs (scene, layout editor drafts, API calls) | `packages/client/src/` |
 | Web app UI | `apps/web/src/` |
 | On-device subject detection (Web Worker, MediaPipe) | `apps/web/src/detect/`; models in `apps/web/public/models/` |
 | End-to-end tests (Playwright) | `apps/web/e2e/` |
