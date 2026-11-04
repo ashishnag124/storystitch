@@ -66,7 +66,7 @@ const savedLayouts = async (page: Page) =>
 test("AC-CUSTOM-01 asks a signed-out user to make an account, then opens the editor once they're in", async ({ page, context }) => {
   await pickPhotos(page, 3);
   const edit = page.getByRole("button", { name: "Edit this layout" });
-  await expect(edit).toHaveClass(/primary/); // gold, to stand out
+  await expect(edit).toHaveCSS("background-color", "rgb(255, 194, 75)"); // gold, to stand out
   await edit.click();
   const ask = page.getByRole("dialog", { name: "Save your own layouts" });
   await expect(ask).toBeVisible();

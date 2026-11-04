@@ -1,0 +1,267 @@
+:root {
+  --bg: #2b1340;
+  --text: #fff4e8;
+  --muted: #cbb7d9;
+  --accent: #ffc24b;
+  --accent-text: #2b1340;
+  --surface: #3d1f57;
+  --border: #5a3577;
+  --coral: #ff7a59;
+  --pink: #ff4f8b;
+  --warn-bg: #fef3c7;
+  --warn-text: #78350f;
+  --danger: #ff8f8f;
+}
+
+.button.ghost {
+  border-color: transparent;
+  background: none;
+  padding: 0 10px;
+}
+
+.button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.notice {
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--warn-bg);
+  color: var(--warn-text);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.field input {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 1rem; /* 16px keeps iOS Safari from zooming in on focus */
+}
+
+.field input:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* Layout editor: full screen, so there's room to drag with a thumb */
+
+.builder {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.builder-bar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+}
+
+.builder-count {
+  flex: 1;
+  margin: 0;
+  font-size: 1rem;
+  text-align: center;
+}
+
+.builder-stage {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
+}
+
+.builder-frame {
+  position: relative;
+  /* The frame owns every gesture: no page scroll or browser zoom while dragging. */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.builder-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.4);
+}
+
+.builder-band {
+  position: absolute;
+  right: 0;
+  left: 0;
+  background: repeating-linear-gradient(135deg, rgb(43 19 64 / 0.28) 0 8px, rgb(43 19 64 / 0.12) 8px 16px);
+  pointer-events: none;
+}
+
+.builder-band.top {
+  top: 0;
+  border-radius: 10px 10px 0 0;
+}
+
+.builder-band.bottom {
+  bottom: 0;
+  border-radius: 0 0 10px 10px;
+}
+
+.builder-band span {
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgb(43 19 64 / 0.7);
+  color: var(--text);
+  font-size: 0.6875rem;
+}
+
+/* Lines and handles: a 48px touch target around a small visible grip. */
+.builder-divider,
+.builder-handle {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: grab;
+  touch-action: none;
+}
+
+.builder-divider.across {
+  cursor: row-resize;
+}
+
+.builder-divider.down {
+  cursor: col-resize;
+}
+
+.builder-grip {
+  display: block;
+  width: 44px;
+  height: 14px;
+  border: 3px solid var(--bg);
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 1px 6px rgb(0 0 0 / 0.35);
+}
+
+.builder-divider.down .builder-grip {
+  width: 14px;
+  height: 44px;
+}
+
+.builder-handle.line .builder-grip {
+  width: 30px;
+  height: 30px;
+}
+
+.builder-dot {
+  display: block;
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--bg);
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 1px 6px rgb(0 0 0 / 0.35);
+}
+
+.builder-dot.turn {
+  background: var(--coral);
+}
+
+.builder-divider:focus-visible .builder-grip,
+.builder-handle:focus-visible .builder-grip,
+.builder-handle:focus-visible .builder-dot {
+  outline: 3px solid var(--text);
+  outline-offset: 2px;
+}
+
+.builder-divider:active .builder-grip,
+.builder-handle:active .builder-dot,
+.builder-handle:active .builder-grip {
+  transform: scale(1.2);
+}
+
+.builder-tools {
+  display: flex;
+  min-height: 128px;
+  flex: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 12px 14px;
+  border-radius: 20px 20px 0 0;
+  background: var(--surface);
+}
+
+.builder-status {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9375rem;
+  text-align: center;
+}
+
+.builder-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.builder-actions .button {
+  min-height: 48px;
+  min-width: 48px;
+}
+
+.builder-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgb(0 0 0 / 0.5);
+}
+
+.builder-sheet {
+  display: flex;
+  width: min(100%, 480px);
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
+  border-radius: 20px 20px 0 0;
+  background: var(--surface);
+}
+
+.builder-sheet h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.builder-sheet p {
+  margin: 0;
+}
