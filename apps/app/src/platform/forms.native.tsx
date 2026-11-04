@@ -1,10 +1,14 @@
 import { createContext, use, useState, type ReactNode } from "react";
 import { Text, TextInput, View } from "react-native";
+import { WEB_URL } from "../config";
 import { colors, type } from "../theme";
 import { Button } from "../ui/Button";
 
-// Stage 3 connects these to native sign-in. ORIGIN becomes the app's Universal Link domain then.
-export const ORIGIN = "https://staging.storystitch.ashishnag.com";
+/** Where emailed links come back to: the website, until Universal Links open them in the app. */
+export const ORIGIN = WEB_URL;
+
+// The bot check page only runs on web.
+export const sendToApp = () => {};
 
 const Submit = createContext<() => void>(() => {});
 

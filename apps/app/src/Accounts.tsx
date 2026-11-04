@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ScrollView, StyleSheet, Text, View, type HostInstance } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { authClient, errorMessage } from "./authClient";
-import { Disclosure, Field, Form, ORIGIN, SubmitButton } from "./platform/forms";
+import { Disclosure, Field, Form, ORIGIN, SubmitButton, sendToApp } from "./platform/forms";
 import { ACCOUNT_PATHS, navigate, useLocation } from "./platform/route";
 import { Turnstile } from "./platform/Turnstile";
 import { colors, fontFamily, type } from "./theme";
@@ -267,8 +267,16 @@ const TITLES: Record<(typeof ACCOUNT_PATHS)[number], string> = {
   "/reset-password": "Reset password",
 };
 
+/** The page the iOS app shows in a WebView, because Turnstile only runs on a web page. */
+const BotCheck = () => (
+  <View style={styles.botCheck}>
+    <Turnstile onToken={sendToApp} resetKey={0} />
+  </View>
+);
+
 export default function Accounts() {
   const { pathname, searchParams } = useLocation();
+  if (pathname === "/bot-check") return <BotCheck />;
   const path = ACCOUNT_PATHS.find((p) => p === pathname);
   if (!path) return null;
   return (
@@ -281,6 +289,7 @@ export default function Accounts() {
 }
 
 const styles = StyleSheet.create({
+  botCheck: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0, zIndex: 10, backgroundColor: colors.bg },
   screen: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0, zIndex: 10, backgroundColor: colors.bg },
   inner: { width: "100%", maxWidth: 480, alignSelf: "center", gap: 16, paddingTop: 12, paddingHorizontal: 16, paddingBottom: 24 },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },

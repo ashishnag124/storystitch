@@ -27,6 +27,7 @@ Web app on Cloudflare Pages, plus an API with Postgres on Railway (from v2). All
 | `EXPO_TOKEN` | GitHub secret, not set yet | `mobile.yml` |
 | `MOBILE_DELIVERY_ENABLED` = `true` | GitHub variable, not set yet. Anything else, or no `EXPO_TOKEN`, and `mobile.yml` does nothing | `mobile.yml` |
 | `APP_VARIANT` = `staging` | `apps/app/eas.json`. Unset means production | `apps/app/app.config.ts`: app ID, scheme and name |
+| `EXPO_PUBLIC_WEB_URL` (where the iOS app's bot check and emailed links live) | `apps/app/eas.json`; locally from `.env` | iOS builds |
 | `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_FEATURE_ACCOUNTS`, `EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR` for iOS | `apps/app/eas.json`, read by EAS builds and by `mobile.yml` for updates | iOS builds and updates |
 | `EXPO_PUBLIC_TURNSTILE_SITE_KEY` for iOS | EAS environment variable, `preview` environment, not set yet. GitHub secrets don't reach EAS builds | iOS builds and updates |
 | EAS project ID, App Store Connect app ID | Placeholders in `apps/app/app.config.ts` and `apps/app/eas.json` (both public values) | EAS |

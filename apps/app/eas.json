@@ -11,6 +11,7 @@
       "env": {
         "APP_VARIANT": "staging",
         "EXPO_PUBLIC_API_URL": "https://api-staging.storystitch.ashishnag.com",
+        "EXPO_PUBLIC_WEB_URL": "https://staging.storystitch.ashishnag.com",
         "EXPO_PUBLIC_FEATURE_ACCOUNTS": "true",
         "EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR": "true"
       }
