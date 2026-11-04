@@ -353,7 +353,7 @@ export default function LayoutEditor({ photos, style, start, onCancel, onSaved }
     const found = explain(layoutProblems(layout));
     setProblems(found);
     if (found.length) return setMessage(found[0]!.text);
-    setSaving({ name: start.saved?.name ?? (start.layout.id === "new" ? "My layout" : `My ${start.layout.name.toLowerCase()}`).slice(0, 40), busy: false, error: "" });
+    setSaving({ name: start.saved?.name ?? `My ${start.layout.name.toLowerCase()}`.slice(0, 40), busy: false, error: "" });
   }
 
   async function save(e: FormEvent) {

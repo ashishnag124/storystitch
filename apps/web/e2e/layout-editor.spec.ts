@@ -65,7 +65,9 @@ const savedLayouts = async (page: Page) =>
 
 test("AC-CUSTOM-01 asks a signed-out user to make an account, then opens the editor once they're in", async ({ page, context }) => {
   await pickPhotos(page, 3);
-  await page.getByRole("button", { name: "Make your own" }).click();
+  const edit = page.getByRole("button", { name: "Edit this layout" });
+  await expect(edit).toHaveClass(/primary/); // gold, to stand out
+  await edit.click();
   const ask = page.getByRole("dialog", { name: "Save your own layouts" });
   await expect(ask).toBeVisible();
   await ask.getByRole("button", { name: "Create account" }).click();
@@ -78,18 +80,22 @@ test("AC-CUSTOM-01 asks a signed-out user to make an account, then opens the edi
   await mail.close();
   await page.getByRole("link", { name: "Back to StoryStitch" }).click();
   await expect(editor(page)).toBeVisible();
-  await expect(editor(page).getByRole("heading", { name: "1 of 3 photos" })).toBeVisible();
+  await expect(editor(page).getByRole("heading", { name: "3 of 3 photos" })).toBeVisible();
 });
 
-test("AC-CUSTOM-02 AC-CUSTOM-05 AC-CUSTOM-06 AC-CUSTOM-07 makes a grid by splitting cells and dragging a line, then saves it", async ({ page }) => {
+test("AC-CUSTOM-02 AC-CUSTOM-05 AC-CUSTOM-06 AC-CUSTOM-07 reworks a grid by removing and splitting cells and dragging a line, then saves it", async ({ page }) => {
   await signedIn(page);
   await pickPhotos(page, 3);
-  await page.getByRole("button", { name: "Make your own" }).click();
+  await page.getByRole("radio", { name: "Three stacked", exact: true }).click();
+  await page.getByRole("button", { name: "Edit this layout" }).click();
   const e = editor(page);
+  await tapAt(page, 0.5, 0.5); // the middle row
+  await e.getByRole("button", { name: "Remove" }).click();
+  await expect(e.getByRole("heading", { name: "2 of 3 photos" })).toBeVisible();
   await e.getByRole("button", { name: "Done" }).click();
-  await expect(e.getByRole("status")).toHaveText("Split 2 more cells to fit 3 photos.");
+  await expect(e.getByRole("status")).toHaveText("Split one more cell to fit 3 photos.");
 
-  await e.getByRole("button", { name: "Split across" }).click();
+  await tapAt(page, 0.5, 0.18); // the top row, clear of the line below it
   await e.getByRole("button", { name: "Split down" }).click();
   await expect(e.getByRole("heading", { name: "3 of 3 photos" })).toBeVisible();
 

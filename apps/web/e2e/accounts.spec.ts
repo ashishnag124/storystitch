@@ -136,7 +136,7 @@ test.describe("accounts switched off", () => {
     page.on("request", (r) => r.url().startsWith(API) && apiCalls.push(r.url()));
     await expect(page.getByRole("link", { name: "Account" })).toHaveCount(0);
     await libraryInput(page).setInputFiles(await makePhotos(page, 3));
-    await expect(page.getByRole("button", { name: "Make your own" })).toHaveCount(0); // the layout editor needs accounts
+    await expect(page.getByRole("button", { name: "Edit this layout" })).toHaveCount(0); // the layout editor needs accounts
     await exportImage(page);
     await expect(page.getByRole("link", { name: "Account" })).toHaveCount(0);
 

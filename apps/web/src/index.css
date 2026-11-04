@@ -957,33 +957,8 @@ a.button {
   gap: 6px;
 }
 
-.strip-options {
-  display: flex;
-  gap: 10px;
-}
-
 .thumb {
   position: relative;
-}
-
-.thumb.make {
-  display: flex;
-  width: 64px;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  border: 2px dashed var(--accent);
-  color: var(--accent);
-  font: inherit;
-  font-size: 0.75rem;
-  font-weight: 700;
-  line-height: 1.1;
-}
-
-.thumb.make span {
-  font-size: 1.5rem;
-  line-height: 1;
 }
 
 .yours {

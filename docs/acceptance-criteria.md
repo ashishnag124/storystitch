@@ -178,7 +178,7 @@ Behind `VITE_FEATURE_LAYOUT_EDITOR` (needs accounts): on in staging, off in prod
 
 | ID | Criterion | Check |
 |---|---|---|
-| AC-CUSTOM-01 | The Layouts tool offers "Make your own" and "Edit this layout". A signed-out user is asked to create an account or sign in, and the editor opens by itself once they're signed in, with their collage still there. Grids are edited by their lines, slanted layouts by their corners and lines, and everything else by moving whole cells. | auto |
+| AC-CUSTOM-01 | The Layouts tool offers "Edit this layout", highlighted in gold. A signed-out user is asked to create an account or sign in, and the editor opens by itself once they're signed in, with their collage still there. Grids are edited by their lines, slanted layouts by their corners and lines, and everything else by moving whole cells. | auto |
 | AC-CUSTOM-02 | Grids: dragging a line resizes the cells on both sides and snaps to halves, thirds and other lines; a cell can be split across or down, reshaped (rectangle, arch, capsule) or removed; no cell gets smaller than the minimum; each photo stays with its cell. | auto |
 | AC-CUSTOM-03 | Slanted layouts: dragging a shared corner or a line moves it for every cell that shares it; canvas corners stay put, corners on an edge slide along it, and no cell folds, leaves the frame or stops being convex. | auto |
 | AC-CUSTOM-04 | Circles, hearts, stars, prints and Polaroids: cells move by dragging, resize by pinching, a handle or Bigger/Smaller, and prints turn; cells that mustn't overlap can't be pushed into each other; a cell can be copied or removed. | auto |
