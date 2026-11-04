@@ -4,8 +4,20 @@
     {
       "name": "storystitch-web",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["dev"],
+      "runtimeArgs": [
+        "dev"
+      ],
       "port": 5173
+    },
+    {
+      "name": "storystitch-app",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--filter",
+        "@storystitch/app",
+        "dev"
+      ],
+      "port": 5174
     }
   ]
 }
