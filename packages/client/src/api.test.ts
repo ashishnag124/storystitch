@@ -21,6 +21,22 @@ const respondWith = (body: unknown, status = 200) =>
 
 afterEach(() => vi.unstubAllGlobals());
 
+describe("session on iOS", () => {
+  const sent = () => vi.mocked(fetch).mock.calls[0]![1]!;
+
+  it("sends the app's own cookie header and leaves cookie handling off", async () => {
+    respondWith({ layouts: [], limit: 20 });
+    await createApi({ apiUrl: "https://api.example", popularity: true, sessionHeaders: async () => ({ Cookie: "a=b" }) }).listSaved();
+    expect(sent()).toMatchObject({ credentials: "omit", headers: { Cookie: "a=b" } });
+  });
+
+  it("uses the browser's cookies on web", async () => {
+    respondWith({ layouts: [], limit: 20 });
+    await api.listSaved();
+    expect(sent()).toMatchObject({ credentials: "include" });
+  });
+});
+
 describe("AC-CUSTOM-09 saved layouts from a newer app version", () => {
   it("lists every layout it can read", async () => {
     respondWith({ layouts: [saved("a"), saved("b")], limit: 20 });

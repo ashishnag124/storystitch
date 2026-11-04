@@ -21,10 +21,14 @@ export interface ApiOptions {
   apiUrl: string;
   /** Popularity lives in the API, so it's on wherever the API is; elsewhere ranking is by fit alone. */
   popularity: boolean;
+  /** What proves the session on a platform without browser cookies: the native app's stored cookie. */
+  sessionHeaders?: () => Promise<Record<string, string>>;
 }
 
 /** The calls the app makes to the API. */
-export function createApi({ apiUrl, popularity }: ApiOptions) {
+export function createApi({ apiUrl, popularity, sessionHeaders }: ApiOptions) {
+  // The app sends its stored session itself, so the platform's cookie store stays out of the request.
+  const credentials = sessionHeaders ? "omit" : "include";
   return {
     /** The oldest app version the API still supports, or null when it doesn't answer in time: the app then carries on. */
     async fetchMinimumVersion(): Promise<MinimumVersion | null> {
@@ -60,7 +64,7 @@ export function createApi({ apiUrl, popularity }: ApiOptions) {
      * Leaves out any layout this app version can't read, so one newer layout doesn't lose the user the whole list.
      */
     async listSaved(): Promise<SavedLayout[] | "signed-out"> {
-      const res = await fetch(`${apiUrl}/layouts/mine`, { credentials: "include" });
+      const res = await fetch(`${apiUrl}/layouts/mine`, { credentials, headers: await sessionHeaders?.() });
       if (res.status === 401) return "signed-out";
       if (!res.ok) throw new Error(`GET /layouts/mine: ${res.status}`);
       const { layouts } = SavedLayoutsEnvelopeSchema.parse(await res.json());
@@ -76,8 +80,8 @@ export function createApi({ apiUrl, popularity }: ApiOptions) {
       const body: SaveLayout = { name, layout: SaveLayoutSchema.shape.layout.parse(layout) };
       const res = await fetch(`${apiUrl}/layouts/mine${id ? `/${encodeURIComponent(id)}` : ""}`, {
         method: id ? "PUT" : "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        credentials,
+        headers: { "Content-Type": "application/json", ...(await sessionHeaders?.()) },
         body: JSON.stringify(body),
       }).catch(() => null);
       if (!res) throw new SaveError("Couldn't reach StoryStitch. Check your connection and try again.");
@@ -89,7 +93,7 @@ export function createApi({ apiUrl, popularity }: ApiOptions) {
     },
 
     async deleteSaved(id: string): Promise<void> {
-      const res = await fetch(`${apiUrl}/layouts/mine/${encodeURIComponent(id)}`, { method: "DELETE", credentials: "include" });
+      const res = await fetch(`${apiUrl}/layouts/mine/${encodeURIComponent(id)}`, { method: "DELETE", credentials, headers: await sessionHeaders?.() });
       if (!res.ok && res.status !== 404) throw new Error(`DELETE /layouts/mine: ${res.status}`);
     },
   };

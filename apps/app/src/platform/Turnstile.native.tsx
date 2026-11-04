@@ -1,7 +1,15 @@
-import { Text } from "react-native";
-import { type } from "../theme";
+import { StyleSheet } from "react-native";
+import { WebView } from "react-native-webview";
+import { WEB_URL } from "../config";
 
-// Stage 3: a hosted Turnstile page in a WebView. Until then sign-in can't complete on iOS.
-export const Turnstile = () => (
-  <Text style={type.hint}>Sign-in isn't available in this build yet.</Text>
-);
+/**
+ * Cloudflare's bot check doesn't run natively, so the app shows the web app's /bot-check page in a WebView, on the
+ * domain the Turnstile widget allows. The page sends back a single-use token, or an empty message when it expires.
+ */
+export function Turnstile({ onToken, resetKey }: { onToken: (token: string | null) => void; resetKey: number }) {
+  return <WebView key={resetKey} source={{ uri: `${WEB_URL}/bot-check` }} style={styles.check} scrollEnabled={false} originWhitelist={["*"]} onMessage={(e) => onToken(e.nativeEvent.data || null)} />;
+}
+
+const styles = StyleSheet.create({
+  check: { height: 72, backgroundColor: "transparent" },
+});

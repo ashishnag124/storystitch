@@ -42,6 +42,8 @@ No Apple or Expo account is needed. `apps/app/ios` is generated and gitignored, 
 3. Build `apps/app/ios/StoryStitchStaging.xcworkspace`, scheme `StoryStitchStaging`, with the tool's `build` action, then follow it with `build_status`. A Debug build needs Metro: `EXPO_PUBLIC_API_URL=http://localhost:3001 APP_VARIANT=staging ./node_modules/.bin/expo start --port 8081`.
 4. Open it with `launch`, then check with `screenshot`, `tap`, `touch_path`, `touch2_path` and `open_url`. The simulator reaches this Mac at `localhost`. Add test photos with `xcrun simctl addmedia`.
 
+To test sign-in, start the API with `APP_SCHEME=storystitch://` (a build from Xcode embeds the default scheme) and serve the web app's `/bot-check` page at `EXPO_PUBLIC_WEB_URL`. Failures from the API show up as the bot check message, so read the API's log.
+
 Every PR that changes shared screens gets this check. The simulator can't prove real memory limits, speed, the Instagram share or Universal Links.
 
 ## Rules

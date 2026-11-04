@@ -1,15 +1,12 @@
 import { describeSubjects } from "@storystitch/client";
-import { Suspense, lazy, useState } from "react";
+import { Suspense, useState } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { fetchPopularity } from "./api";
 import { Editor } from "./Editor";
 import { PickScreen } from "./PickScreen";
+import { Accounts } from "./platform/lazyScreens";
 import { UnsupportedPhotoError, analyzePhoto, closePhoto, loadPhoto, type PickedPhoto, type Photo } from "./platform/photos";
 import { Screen } from "./ui/Screen";
-
-// Checked inline (not via config.ts) so the bundler can drop the account screens and auth client entirely from builds
-// with accounts switched off.
-const Accounts = process.env.EXPO_PUBLIC_FEATURE_ACCOUNTS === "true" ? lazy(() => import("./Accounts")) : null;
 
 const MAX_PHOTOS = 8;
 const PRIVACY = "Your photos stay on this device. Nothing is uploaded.";

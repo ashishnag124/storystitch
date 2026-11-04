@@ -1,7 +1,7 @@
 import { assignedScene, cellShapes, newScene, rankedScenes, withCrop, withStyle, type Scene, type Start } from "@storystitch/client";
 import { MAX_ZOOM, MIN_ZOOM, clampCrop } from "@storystitch/layout-engine";
 import { STORY_CANVAS, type SavedLayout } from "@storystitch/shared";
-import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppState, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { AccountLink } from "./AccountLink";
 import { deleteSaved, listSaved, recordExport } from "./api";
@@ -9,6 +9,7 @@ import { LAYOUT_EDITOR_ENABLED } from "./config";
 import { LayoutStrip } from "./LayoutStrip";
 import { canShareFiles, renderExport, shareOrDownload, type ExportFormat } from "./platform/exportImage";
 import { FormatSelect } from "./platform/FormatSelect";
+import { LayoutEditor } from "./platform/lazyScreens";
 import type { Photo } from "./platform/photos";
 import { ACCOUNT_PATHS, navigate, useLocation } from "./platform/route";
 import { Slider } from "./platform/Slider";
@@ -21,12 +22,6 @@ import { upscaleWarnings } from "./upscale";
 
 /** How long the preview must be still before the export is rendered in the background. */
 const EXPORT_DEBOUNCE_MS = 400;
-
-// Loaded on first use, and left out of builds without the layout editor.
-const LayoutEditor =
-  process.env.EXPO_PUBLIC_FEATURE_ACCOUNTS === "true" && process.env.EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR === "true"
-    ? lazy(() => import("./platform/LayoutEditor"))
-    : null;
 
 type Tool = "layouts" | "style" | "export";
 const TOOLS: { id: Tool; label: string }[] = [

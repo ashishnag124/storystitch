@@ -4,6 +4,15 @@ import "./forms.css";
 /** Where emailed links come back to. */
 export const ORIGIN = location.origin;
 
+declare global {
+  interface Window {
+    ReactNativeWebView?: { postMessage(message: string): void };
+  }
+}
+
+/** Passes the bot check's token to the iOS app, which shows this page in a WebView. */
+export const sendToApp = (token: string | null) => window.ReactNativeWebView?.postMessage(token ?? "");
+
 /** A real form, so Enter submits it and password managers recognize it. */
 export function Form({ onSubmit, label, children }: { onSubmit: () => void; label?: string; children: ReactNode }) {
   const submit = (e: FormEvent) => {
