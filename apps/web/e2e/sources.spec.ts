@@ -5,6 +5,14 @@ test.beforeEach(({ page }) => openApp(page));
 
 const button = (page: Page, name: string) => page.getByText(name, { exact: true });
 
+test("AC-PICK-01 AC-PRIV-02 starts on photo picking and says photos stay on the device", async ({ page }) => {
+  const input = libraryInput(page);
+  await expect(input).toHaveAttribute("type", "file");
+  await expect(input).toHaveAttribute("multiple");
+  await expect(input).toHaveAttribute("accept", /\.heic/);
+  await expect(page.getByText(/nothing is uploaded/i)).toBeVisible();
+});
+
 test("AC-PICK-09 phones get one-tap photo sources for their platform, and no camera button", async ({ page }, testInfo) => {
   await expect(page.locator("input[capture]")).toHaveCount(0);
   if (testInfo.project.name === "android-chrome") {

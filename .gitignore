@@ -31,3 +31,6 @@ apps/app/dist-e2e-accounts/
 expo-env.d.ts
 apps/app/dist-ios/
 apps/app/public/fonts/
+apps/app/public/mediapipe/
+apps/app/public/models/
+apps/app/public/detect-worker.js
