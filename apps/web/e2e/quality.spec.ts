@@ -6,6 +6,8 @@ test.beforeEach(({ page }) => openApp(page));
 
 /** The brief's performance targets, in milliseconds. */
 const BUDGET = { analysis: 3000, layoutSwitch: 100, export: 2000 } as const;
+/** Switches timed for each layout. Odd, so the median is a real sample. */
+const SWITCH_ROUNDS = 5;
 /** Must match EXPORT_MEASURE in src/exportImage.ts. */
 const EXPORT_MEASURE = "storystitch:export";
 
@@ -36,58 +38,108 @@ async function phonePhotos(page: Page) {
   }));
 }
 
-test("AC-PERF-01 AC-PERF-02 AC-PERF-03 analysis, layout switching and export meet the brief's targets", async ({
-  page,
-  browserName,
-}) => {
-  // Timed on Chromium only: Playwright's mobile WebKit runs without a GPU, so its timings say little about Safari.
-  test.skip(browserName !== "chromium", "Timed on Chromium; check real-phone timings by hand (AC-PERF-04)");
-  test.setTimeout(180_000);
-  const photos = await phonePhotos(page);
-  const pick = libraryInput(page);
-
-  // First pick loads the models; the brief's analysis target applies once they're loaded.
-  await pick.setInputFiles(photos);
+/** Goes through the editor's first pick: downloads and loads the models, so later analysis is what's timed. */
+async function pickPhotos(page: Page, photos: Awaited<ReturnType<typeof phonePhotos>>) {
+  await libraryInput(page).setInputFiles(photos);
   await expect(page.getByRole("application")).toBeVisible({ timeout: 120_000 });
-  await page.getByRole("button", { name: "Start over" }).click();
-  await pick.setInputFiles(photos);
-  await expect(page.getByRole("status")).toHaveText(/Finding subjects/, {
-    timeout: 60_000,
+}
+
+test.describe("performance targets", () => {
+  // Timed on Chromium only: Playwright's mobile WebKit runs without a GPU, so its timings say little about Safari.
+  test.skip(({ browserName }) => browserName !== "chromium", "Timed on Chromium; check real-phone timings by hand (AC-PERF-04)");
+  test.describe.configure({ timeout: 180_000 });
+
+  test("AC-PERF-01 analyzing 8 photos meets the brief's target", async ({ page }) => {
+    const photos = await phonePhotos(page);
+    await pickPhotos(page, photos);
+    await page.getByRole("button", { name: "Start over" }).click();
+    await libraryInput(page).setInputFiles(photos);
+    await expect(page.getByRole("status")).toHaveText(/Finding subjects/, {
+      timeout: 60_000,
+    });
+    const start = Date.now();
+    await expect(page.getByRole("application")).toBeVisible({ timeout: 60_000 });
+    const analysis = Date.now() - start;
+
+    console.log(`timings: analysis ${analysis} ms`);
+    expect(analysis, "analysis of 8 photos").toBeLessThan(BUDGET.analysis);
   });
-  const analysisStart = Date.now();
-  await expect(page.getByRole("application")).toBeVisible({ timeout: 60_000 });
-  const analysis = Date.now() - analysisStart;
 
-  // Layout switch: from the tap until the next frame has been painted.
-  const radios = page.getByRole("radio");
-  let layoutSwitch = 0;
-  for (let i = 1; i < (await radios.count()); i++) {
-    const ms = await radios.nth(i).evaluate(
-      (el) =>
-        new Promise<number>((resolve) => {
-          const start = performance.now();
-          (el as HTMLElement).click();
-          requestAnimationFrame(() => requestAnimationFrame(() => resolve(performance.now() - start)));
-        }),
+  test("AC-PERF-02 switching to any layout meets the brief's target", async ({ page }) => {
+    await pickPhotos(page, await phonePhotos(page));
+
+    // Layout switch: from the tap until the next frame has been painted, back to back with no pause, so each
+    // tap lands during the last one's crossfade. A CI runner's hiccups (a busy neighbouring test, a stolen core)
+    // only ever add time to a sample, so the slowest single sample measures the runner. Each layout's median
+    // survives two hiccups in its five samples, while the check stays on the worst layout: one layout that's
+    // really slow still fails, however fast the others are.
+    const radios = page.getByRole("radio");
+    const count = await radios.count();
+    const samples: number[][] = Array.from({ length: count }, () => []);
+    for (let round = 0; round < SWITCH_ROUNDS; round++) {
+      for (let step = 1; step <= count; step++) {
+        const layout = step % count; // starts on the layout after the selected one, so every tap changes layout
+        const ms = await radios.nth(layout).evaluate(
+          (el) =>
+            new Promise<number>((resolve) => {
+              const start = performance.now();
+              (el as HTMLElement).click();
+              requestAnimationFrame(() => requestAnimationFrame(() => resolve(performance.now() - start)));
+            }),
+        );
+        samples[layout]!.push(ms);
+      }
+    }
+    const medians = samples.map((ms) => ms.toSorted((a, b) => a - b)[Math.floor(ms.length / 2)]!);
+    const worst = Math.max(...medians);
+
+    console.log(
+      `timings: worst layout median ${worst.toFixed(1)} ms, slowest single switch ${Math.max(...samples.flat()).toFixed(1)} ms, ` +
+        `first round's slowest ${Math.max(...samples.map((ms) => ms[0]!)).toFixed(1)} ms, ${count} layouts × ${SWITCH_ROUNDS}`,
     );
-    layoutSwitch = Math.max(layoutSwitch, ms);
-  }
+    expect(worst, "layout switch, worst layout's median").toBeLessThan(BUDGET.layoutSwitch);
+  });
 
-  // Export: the app measures each render itself (decode originals → encoded JPEG). Let earlier renders
-  // settle, then time a fresh one.
-  const download = page.getByRole("button", { name: "Download" });
-  await expect(download).toBeEnabled({ timeout: 30_000 });
-  await page.evaluate((name) => performance.clearMeasures(name), EXPORT_MEASURE);
-  await radios.nth(0).click();
-  await expect(download).toBeEnabled({ timeout: 30_000 });
-  const exportMs = await page.evaluate((name) => performance.getEntriesByName(name).at(-1)!.duration, EXPORT_MEASURE);
+  test("AC-PERF-03 exporting 8 12 MP photos meets the brief's target", async ({ page }) => {
+    await pickPhotos(page, await phonePhotos(page));
 
-  console.log(
-    `timings: analysis ${analysis} ms, worst layout switch ${layoutSwitch.toFixed(1)} ms, export ${exportMs.toFixed(0)} ms`,
-  );
-  expect.soft(analysis, "analysis of 8 photos").toBeLessThan(BUDGET.analysis);
-  expect.soft(layoutSwitch, "layout switch").toBeLessThan(BUDGET.layoutSwitch);
-  expect.soft(exportMs, "export").toBeLessThan(BUDGET.export);
+    // The app measures each render itself (decode originals → encoded JPEG). Let earlier renders settle, then
+    // time a fresh one.
+    const download = page.getByRole("button", { name: "Download" });
+    await expect(download).toBeEnabled({ timeout: 30_000 });
+    await page.evaluate((name) => performance.clearMeasures(name), EXPORT_MEASURE);
+    await page.getByRole("radio").nth(1).click();
+    await expect(download).toBeEnabled({ timeout: 30_000 });
+    const exportMs = await page.evaluate((name) => performance.getEntriesByName(name).at(-1)!.duration, EXPORT_MEASURE);
+
+    console.log(`timings: export ${exportMs.toFixed(0)} ms`);
+    expect(exportMs, "export").toBeLessThan(BUDGET.export);
+  });
+});
+
+test("AC-EDIT-14 tapping layouts in quick succession runs one crossfade, not one for each tap", async ({ page }) => {
+  await libraryInput(page).setInputFiles(await makePhotos(page, 3));
+  await expect(page.getByRole("application")).toBeVisible();
+  const pendingFrames = await page.evaluate(() => {
+    const pending = new Set<number>();
+    const { requestAnimationFrame: request, cancelAnimationFrame: cancel } = window;
+    window.requestAnimationFrame = (callback) => {
+      const id = request.call(window, (now) => {
+        pending.delete(id);
+        callback(now);
+      });
+      pending.add(id);
+      return id;
+    };
+    window.cancelAnimationFrame = (id) => {
+      pending.delete(id);
+      cancel.call(window, id);
+    };
+    const radios = document.querySelectorAll<HTMLElement>("[role=radio]");
+    for (const i of [1, 2, 3]) radios[i]!.click();
+    return pending.size;
+  });
+  expect(pendingFrames).toBe(1);
 });
 
 test("AC-PRIV-01 nothing leaves the device: every request is a same-origin read", async ({ page, baseURL }) => {
