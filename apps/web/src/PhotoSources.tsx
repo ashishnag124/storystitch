@@ -65,6 +65,8 @@ export function PhotoSources({ platform, disabled, onFiles }: SourcesProps) {
     return (
       <div
         className={`dropzone${dragging ? " dragging" : ""}`}
+        data-testid="dropzone"
+        data-dragging={dragging}
         onDragOver={(e) => {
           e.preventDefault();
           setDragging(true);

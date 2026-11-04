@@ -121,7 +121,7 @@ function smallTargets(page: Page) {
   return page.evaluate(() =>
     [
       ...document.querySelectorAll<HTMLElement>(
-        "button, [role=radio], select, summary, label.button, .swatch, input[type=range], input[type=color]:not(.swatch input)",
+        "button, [role=button], [role=radio], select, summary, label:has(input[type=file], input[type=color]), input[type=range]",
       ),
     ]
       .filter((el) => el.checkVisibility())

@@ -173,7 +173,7 @@ test("AC-CUSTOM-05 fills the screen and keeps every handle thumb-sized", async (
   const viewport = page.viewportSize()!;
   const canvas = (await e.locator("canvas").boundingBox())!;
   expect(canvas.height).toBeGreaterThan(viewport.height * 0.6);
-  const handles = e.locator(".builder-handle, .builder-divider");
+  const handles = e.getByTestId("builder-handle");
   expect(await handles.count()).toBeGreaterThan(3);
   for (const handle of await handles.all()) {
     const box = (await handle.boundingBox())!;

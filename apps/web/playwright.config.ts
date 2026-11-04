@@ -2,6 +2,8 @@ import { defineConfig, devices } from "@playwright/test";
 import { existsSync } from "node:fs";
 
 // Production builds made by `pnpm build:e2e` (the e2e script runs it): accounts off, as in production, and on.
+// E2E_TARGET=app tests those builds of apps/app, the Expo app that's replacing this one, with the same suite.
+const builds = process.env.E2E_TARGET === "app" ? "../app/" : "";
 export const PORT = 4173;
 export const ACCOUNTS_PORT = 4174;
 /** The API the accounts build talks to: real code, local Postgres, emails kept in memory for the tests. */
@@ -29,8 +31,8 @@ export default defineConfig({
     { name: "iphone-webkit", use: { ...devices["iPhone 15"] } },
   ],
   webServer: [
-    preview("dist-e2e", PORT),
-    preview("dist-e2e-accounts", ACCOUNTS_PORT),
+    preview(`${builds}dist-e2e`, PORT),
+    preview(`${builds}dist-e2e-accounts`, ACCOUNTS_PORT),
     {
       command: "pnpm --dir ../api exec tsx src/index.ts",
       url: `http://localhost:${API_PORT}/health`,

@@ -60,8 +60,8 @@ function Diagram({ option }: { option: Scene }) {
 
 function Outline({ outline, className }: { outline: OutlineShape; className: string }) {
   return outline.kind === "circle" ? (
-    <circle className={className} cx={outline.cx} cy={outline.cy} r={outline.r} />
+    <circle className={className} data-testid={className} cx={outline.cx} cy={outline.cy} r={outline.r} />
   ) : (
-    <polygon className={className} points={outline.points.map((p) => `${p.x},${p.y}`).join(" ")} />
+    <polygon className={className} data-testid={className} points={outline.points.map((p) => `${p.x},${p.y}`).join(" ")} />
   );
 }
