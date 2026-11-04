@@ -12,8 +12,7 @@
       "path": "apps/app",
       "stack": "expo",
       "host": "cloudflare-pages",
-      "pagesProjectStaging": "storystitch-app-staging",
-      "stagingUrl": "https://next-staging.storystitch.ashishnag.com",
+      "pagesProjectStaging": "storystitch-web-staging",
       "replaces": "web"
     },
     "api": {
