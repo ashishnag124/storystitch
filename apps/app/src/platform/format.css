@@ -1,0 +1,23 @@
+.format {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #cbb7d9;
+  font-size: 0.875rem;
+}
+
+.format select {
+  min-height: 44px;
+  padding: 0 30px 0 12px;
+  border: 1px solid #5a3577;
+  border-radius: 10px;
+  /* iOS Safari ignores the height of a natively styled menu, so draw our own chevron. */
+  appearance: none;
+  -webkit-appearance: none;
+  background:
+    linear-gradient(45deg, transparent 50%, #cbb7d9 50%) right 16px center / 6px 6px no-repeat,
+    linear-gradient(135deg, #cbb7d9 50%, transparent 50%) right 10px center / 6px 6px no-repeat,
+    #2b1340;
+  color: #fff4e8;
+  font: inherit;
+}

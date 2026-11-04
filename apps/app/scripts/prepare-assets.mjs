@@ -22,8 +22,11 @@ mkdirSync(join(pub, "mediapipe"), { recursive: true });
 cpSync(fileURLToPath(new URL("../../web/public/models/", import.meta.url)), join(pub, "models"), { recursive: true });
 for (const file of ["vision_wasm_module_internal.js", "vision_wasm_module_internal.wasm"]) cpSync(join(wasm, file), join(pub, "mediapipe", file));
 await build({
-  entryPoints: [fileURLToPath(new URL("../src/platform/detect-worker.web.ts", import.meta.url))],
-  outfile: join(pub, "detect-worker.js"),
+  entryPoints: {
+    "detect-worker": fileURLToPath(new URL("../src/platform/detect-worker.web.ts", import.meta.url)),
+    "encode-worker": fileURLToPath(new URL("../src/platform/encode-worker.web.ts", import.meta.url)),
+  },
+  outdir: pub,
   bundle: true,
   format: "esm",
   minify: true,

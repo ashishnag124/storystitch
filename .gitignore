@@ -35,3 +35,4 @@ apps/app/public/fonts/
 apps/app/public/mediapipe/
 apps/app/public/models/
 apps/app/public/detect-worker.js
+apps/app/public/encode-worker.js
