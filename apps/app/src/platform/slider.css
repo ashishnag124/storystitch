@@ -1,0 +1,19 @@
+.tool-slider {
+  display: grid;
+  grid-template-columns: 5.5em 1fr 3em;
+  align-items: center;
+  gap: 8px;
+  color: #cbb7d9;
+  font-size: 0.875rem;
+}
+
+.tool-slider input[type="range"] {
+  width: 100%;
+  min-height: 44px;
+}
+
+.tool-slider .tool-value {
+  color: #fff4e8;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}

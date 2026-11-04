@@ -18,7 +18,10 @@
         -webkit-text-size-adjust: 100%;
       }
       *, *::before, *::after { box-sizing: border-box; }
-      html, body, #root { display: flex; flex: 1; height: 100%; margin: 0; }
+      html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+      body { display: flex; }
+      /* min-width: 0 stops a wide scrolling strip from stretching the page past the screen. */
+      #root { display: flex; flex: 1; min-width: 0; height: 100%; }
       :focus-visible { outline: 3px solid #ffc24b; outline-offset: 2px; }
     </style>
   </head>
