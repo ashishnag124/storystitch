@@ -26,6 +26,12 @@ Web app on Cloudflare Pages, plus an API with Postgres on Railway (from v2). All
 | `PAGES_PROJECT` = `storystitch-web`, `PAGES_PROJECT_STAGING` = `storystitch-web-staging` | GitHub variables | `release.yml` (production), `ci.yml` (staging) |
 | `PAGES_PROJECT_APP_STAGING` = `storystitch-app-staging` | GitHub variable | `ci.yml` (the Expo app at `next-staging.storystitch.ashishnag.com`) |
 | `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_FEATURE_ACCOUNTS`, `EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR`, `EXPO_PUBLIC_TURNSTILE_SITE_KEY` | Set in `_deploy-pages.yml` from the same inputs and secret as the `VITE_*` values; locally from `.env` | Expo app builds |
+| `EXPO_TOKEN` | GitHub secret, not set yet | `mobile.yml` |
+| `MOBILE_DELIVERY_ENABLED` = `true` | GitHub variable, not set yet. Anything else, or no `EXPO_TOKEN`, and `mobile.yml` does nothing | `mobile.yml` |
+| `APP_VARIANT` = `staging` | `apps/app/eas.json`. Unset means production | `apps/app/app.config.ts`: app ID, scheme and name |
+| `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_FEATURE_ACCOUNTS`, `EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR` for iOS | `apps/app/eas.json`, read by EAS builds and by `mobile.yml` for updates | iOS builds and updates |
+| `EXPO_PUBLIC_TURNSTILE_SITE_KEY` for iOS | EAS environment variable, `preview` environment, not set yet. GitHub secrets don't reach EAS builds | iOS builds and updates |
+| EAS project ID, App Store Connect app ID | Placeholders in `apps/app/app.config.ts` and `apps/app/eas.json` (both public values) | EAS |
 | `API_URL_STAGING`, `API_URL_PRODUCTION` | GitHub variables | web builds (`VITE_API_URL`) in `ci.yml` / `release.yml` |
 | `DATABASE_URL` (reference `${{Postgres.DATABASE_URL}}`), `CORS_ORIGIN`, `NODE_ENV` | Railway variables on `api`, per environment | the API |
 | `BETTER_AUTH_URL` (the API's own URL), `BETTER_AUTH_SECRET` (random, per environment), `EMAIL_TRANSPORT=resend`, `EMAIL_FROM`, `RESEND_API_KEY`, `TURNSTILE_SECRET_KEY` | Railway variables on `api`, per environment | accounts (B2) |
@@ -176,6 +182,32 @@ Until this is done, email can only go to the address on your Resend account.
 When parts 1 to 3 are done, tell Claude. Claude opens a PR that builds production with accounts on and, once you
 approve, merges it. Then run `/release`, and sign up on https://storystitch.ashishnag.com from a real phone to check
 the verification email arrives.
+
+### iOS delivery checklist (yours)
+
+`.github/workflows/mobile.yml` does nothing until step 8. No iOS build has run yet, so expect to fix things on the
+first one. Claude can't do these: they need your Apple and Expo accounts. Run commands from `apps/app`.
+
+- [ ] 1. **Apple Developer Program**: join at developer.apple.com/programs. Approval can take a few days.
+- [ ] 2. **Expo account**: sign up at expo.dev, then run `npx eas-cli@27.2.0 login`.
+- [ ] 3. **EAS project**: on expo.dev, create a project with the slug `storystitch`. Don't use `eas init`: it can't edit
+  `app.config.ts`. Copy the project ID into `EAS_PROJECT_ID` in `apps/app/app.config.ts`.
+- [ ] 4. **Staging app in App Store Connect**: add an app with the bundle ID `com.ashishnag.storystitch.staging`, named
+  StoryStitch Staging. Copy its numeric Apple ID into `ascAppId` in `apps/app/eas.json`. Merge steps 3 and 4 as a PR.
+- [ ] 5. **Turnstile site key for iOS**: the same public key as `TURNSTILE_SITE_KEY`, on the `preview` environment:
+  ```bash
+  npx eas-cli@27.2.0 env:set preview --name EXPO_PUBLIC_TURNSTILE_SITE_KEY --value YOUR_SITE_KEY --visibility plaintext --scope project
+  ```
+- [ ] 6. **First build and upload, by hand**: CI can't answer Apple's prompts, so run the `testflight` profile once
+  with `npx eas-cli@27.2.0 build` and `--platform ios --profile testflight --auto-submit`, signing in to Apple when
+  asked. Accept when it offers to create the signing credentials and the App Store Connect API key. Answer the export
+  compliance question for the build in App Store Connect.
+- [ ] 7. **`EXPO_TOKEN`**: expo.dev → Account settings → Access tokens → create one, then `gh secret set EXPO_TOKEN` and
+  paste it.
+- [ ] 8. **Turn it on**, last of all: `gh variable set MOBILE_DELIVERY_ENABLED --body true`. The next merge to `main`
+  that passes CI runs it. To turn it off, delete the variable.
+
+The API side also needs `APP_SCHEME=storystitch-staging://` on staging.
 
 ### DNS records (Cloudflare → ashishnag.com → DNS → Records)
 

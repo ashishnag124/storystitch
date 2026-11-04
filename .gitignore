@@ -30,3 +30,4 @@ apps/app/dist-e2e-accounts/
 .expo/
 expo-env.d.ts
 apps/app/dist-ios/
+apps/app/public/fonts/

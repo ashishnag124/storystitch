@@ -5,9 +5,13 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#2b1340" />
+    <link rel="stylesheet" href="/fonts/bricolage-grotesque.css" />
     <title>StoryStitch</title>
     <style>
+      /* What a browser needs and React Native has no style for. Values from src/theme.ts. */
+      :root { color-scheme: dark; accent-color: #ffc24b; background: #2b1340; -webkit-text-size-adjust: 100%; }
       html, body, #root { display: flex; flex: 1; height: 100%; margin: 0; }
+      :focus-visible { outline: 3px solid #ffc24b; outline-offset: 2px; }
     </style>
   </head>
   <body>
