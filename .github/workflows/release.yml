@@ -127,4 +127,5 @@ jobs:
       branch: production
       api_url: ${{ vars.API_URL_PRODUCTION }}
       accounts: true
+      layout_editor: false
     secrets: inherit

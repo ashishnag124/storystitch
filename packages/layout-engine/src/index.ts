@@ -3,3 +3,4 @@ export * from "./subject";
 export * from "./smartCrop";
 export * from "./saliency";
 export * from "./assignment";
+export * from "./editing";

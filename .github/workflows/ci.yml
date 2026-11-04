@@ -62,4 +62,6 @@ jobs:
       api_url: ${{ vars.API_URL_STAGING }}
       # Accounts are on in staging only until they're switched on for production.
       accounts: true
+      # The layout editor is on in staging only until it's switched on for production (in release.yml).
+      layout_editor: true
     secrets: inherit

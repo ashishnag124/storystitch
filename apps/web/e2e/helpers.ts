@@ -2,6 +2,7 @@
 import { expect, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
+import { API_PORT } from "../playwright.config.js";
 
 /** Photo sizes cycled through for fixtures: landscape, portrait, square, small. */
 export const SIZES = [
@@ -97,3 +98,28 @@ export async function workerHasWebGL2(page: Page) {
 
 /** The main "pick photos" input: "Photo library" on Android, "Choose photos" on iPhone, "Upload photos" on desktop. */
 export const libraryInput = (page: Page) => page.getByLabel(/^(Choose photos|Photo library|Upload photos)$/);
+
+/** The API the accounts build talks to, and the password test accounts use. */
+export const API = `http://localhost:${API_PORT}`;
+export const PASSWORD = "correct horse battery";
+
+/** The link in the latest email the API "sent" to `to` (kept in memory by its test transport). */
+export async function emailedLink(page: Page, to: string) {
+  let link = "";
+  await expect
+    .poll(async () => {
+      const res = await page.request.get(`${API}/test/emails/latest?to=${encodeURIComponent(to)}`);
+      if (!res.ok()) return "";
+      link = ((await res.json()) as { text: string }).text.match(/https?:\/\/\S+/)?.[0] ?? "";
+      return link;
+    })
+    .not.toBe("");
+  return link;
+}
+
+/** Submits a bot-checked form once Turnstile (Cloudflare's always-pass test key) has issued a token. */
+export async function submit(page: Page, name: string) {
+  const button = page.getByRole("button", { name, exact: true });
+  await expect(button).toBeEnabled({ timeout: 20_000 });
+  await button.click();
+}

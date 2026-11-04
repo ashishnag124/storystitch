@@ -7,25 +7,45 @@ interface Props {
   options: Scene[];
   current: Scene;
   onSelect: (option: Scene) => void;
+  /** Ids of the user's own saved layouts among the options, marked "Yours". */
+  mine?: Set<string>;
+  /** Shows a "Make your own" tile first (layout editor). */
+  onMake?: () => void;
 }
 
 /** Each layout option drawn as a plain diagram of its cells, so the shape of the layout is easy to read. */
-export function LayoutStrip({ options, current, onSelect }: Props) {
+export function LayoutStrip({ options, current, onSelect, mine, onMake }: Props) {
   return (
-    <div className="strip" role="radiogroup" aria-label="Layouts">
-      {options.map((option) => (
-        <button
-          key={option.layout.id}
-          type="button"
-          role="radio"
-          aria-checked={option.layout.id === current.layout.id}
-          aria-label={option.layout.name}
-          className="thumb"
-          onClick={() => onSelect(option)}
-        >
-          <Diagram option={option} />
+    <div className="strip">
+      {onMake && (
+        <button type="button" className="thumb make" onClick={onMake}>
+          <span aria-hidden="true">+</span>
+          Make your own
         </button>
-      ))}
+      )}
+      <div className="strip-options" role="radiogroup" aria-label="Layouts">
+        {options.map((option) => {
+          const yours = mine?.has(option.layout.id);
+          return (
+            <button
+              key={option.layout.id}
+              type="button"
+              role="radio"
+              aria-checked={option.layout.id === current.layout.id}
+              aria-label={yours ? `${option.layout.name} (yours)` : option.layout.name}
+              className="thumb"
+              onClick={() => onSelect(option)}
+            >
+              <Diagram option={option} />
+              {yours && (
+                <span className="yours" aria-hidden="true">
+                  Yours
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

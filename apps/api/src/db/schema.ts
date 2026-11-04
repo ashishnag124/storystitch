@@ -1,6 +1,6 @@
 // Drizzle table definitions. The four auth tables and rateLimit are Better Auth's (v1.7 core schema: keys and
 // fields must match its model and field names); columns use snake_case in SQL.
-import { bigint, boolean, index, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { bigint, boolean, index, integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 const createdAt = () => timestamp("created_at", { withTimezone: true }).notNull().defaultNow();
 const updatedAt = () =>
@@ -88,3 +88,20 @@ export const layoutExports = pgTable("layout_exports", {
   count: integer("count").notNull().default(0),
   updatedAt: updatedAt(),
 });
+
+/** Layouts people made or edited, saved in their account (up to SAVED_LAYOUT_LIMIT). Deleted with the account. */
+export const savedLayout = pgTable(
+  "saved_layout",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    /** The layout's cells and flags, as in layouts.json (without id and name). */
+    layout: jsonb("layout").notNull(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("saved_layout_user_id_idx").on(t.userId)],
+);

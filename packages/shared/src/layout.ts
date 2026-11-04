@@ -44,7 +44,7 @@ const RectCellSchema = z.object({
 /** Convex polygon, for diagonal splits. Points are [x, y]. */
 const PolygonCellSchema = z.object({
   shape: z.literal("polygon"),
-  points: z.array(z.tuple([unit, unit])).min(3),
+  points: z.array(z.tuple([unit, unit])).min(3).max(16),
   z: z_order,
 });
 
