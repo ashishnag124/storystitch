@@ -174,7 +174,7 @@ describe the app exactly. When saving ships, AC-SAVE-02 and AC-SAVE-07 replace A
 
 ## Layout editor
 
-Behind `VITE_FEATURE_LAYOUT_EDITOR` (needs accounts): on in staging, off in production until it's switched on.
+Behind `VITE_FEATURE_LAYOUT_EDITOR` (needs accounts): on in staging and production.
 
 | ID | Criterion | Check |
 |---|---|---|
