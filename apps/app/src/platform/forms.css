@@ -1,0 +1,89 @@
+:root {
+  --bg: #2b1340;
+  --text: #fff4e8;
+  --muted: #cbb7d9;
+  --accent: #ffc24b;
+  --accent-text: #2b1340;
+  --surface: #3d1f57;
+  --border: #5a3577;
+  --coral: #ff7a59;
+  --pink: #ff4f8b;
+  --warn-bg: #fef3c7;
+  --warn-text: #78350f;
+  --danger: #ff8f8f;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.field input {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 1rem; /* 16px keeps iOS Safari from zooming in on focus */
+}
+
+.field input:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.danger-zone {
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.danger-zone[open] {
+  padding-bottom: 14px;
+}
+
+.danger-zone summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--danger);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.submit:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.submit.danger {
+  border-color: var(--danger);
+  background: var(--danger);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}

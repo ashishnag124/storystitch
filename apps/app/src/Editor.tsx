@@ -1,13 +1,16 @@
-import { cellShapes, newScene, rankedScenes, withCrop, withStyle, type Scene } from "@storystitch/client";
+import { assignedScene, cellShapes, newScene, rankedScenes, withCrop, withStyle, type Scene, type Start } from "@storystitch/client";
 import { MAX_ZOOM, MIN_ZOOM, clampCrop } from "@storystitch/layout-engine";
-import { STORY_CANVAS } from "@storystitch/shared";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { recordExport } from "./api";
+import { STORY_CANVAS, type SavedLayout } from "@storystitch/shared";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AppState, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { AccountLink } from "./AccountLink";
+import { deleteSaved, listSaved, recordExport } from "./api";
+import { LAYOUT_EDITOR_ENABLED } from "./config";
 import { LayoutStrip } from "./LayoutStrip";
 import { canShareFiles, renderExport, shareOrDownload, type ExportFormat } from "./platform/exportImage";
 import { FormatSelect } from "./platform/FormatSelect";
 import type { Photo } from "./platform/photos";
+import { ACCOUNT_PATHS, navigate, useLocation } from "./platform/route";
 import { Slider } from "./platform/Slider";
 import { Stage, type StageHandle } from "./platform/Stage";
 import { StylePanel } from "./StylePanel";
@@ -18,6 +21,12 @@ import { upscaleWarnings } from "./upscale";
 
 /** How long the preview must be still before the export is rendered in the background. */
 const EXPORT_DEBOUNCE_MS = 400;
+
+// Loaded on first use, and left out of builds without the layout editor.
+const LayoutEditor =
+  process.env.EXPO_PUBLIC_FEATURE_ACCOUNTS === "true" && process.env.EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR === "true"
+    ? lazy(() => import("./platform/LayoutEditor"))
+    : null;
 
 type Tool = "layouts" | "style" | "export";
 const TOOLS: { id: Tool; label: string }[] = [
@@ -41,6 +50,15 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
   // Every layout with its own best photo assignment, best fit first. Picking one starts from that.
   const options = useMemo(() => rankedScenes(photos, undefined, popularity), [photos, popularity]);
   const [scene, setScene] = useState<Scene>(() => options[0]!);
+  // The user's saved layouts (layout editor): a list, "signed-out", or null until known (or when the API is down).
+  const [saved, setSaved] = useState<SavedLayout[] | "signed-out" | null>(null);
+  const [building, setBuilding] = useState<Start | null>(null);
+  const [askToSignIn, setAskToSignIn] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  /** Whether to open the layout editor once the user has signed in (they were asked to). */
+  const pendingEdit = useRef(false);
+  const { pathname } = useLocation();
+  const onAccountScreen = (ACCOUNT_PATHS as readonly string[]).includes(pathname);
   const [selected, setSelected] = useState<number | null>(null);
   const [status, setStatus] = useState("");
   const [tool, setTool] = useState<Tool>("layouts");
@@ -56,7 +74,13 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
   const shareable = useMemo(() => canShareFiles(), []);
   const warnings = useMemo(() => upscaleWarnings(scene, photos), [scene, photos]);
   const onScene = useCallback((next: (s: Scene) => Scene) => setScene(next), []);
-  const styledOptions = useMemo(() => options.map((o) => ({ ...o, style: scene.style })), [options, scene.style]);
+  // The user's own layouts for this many photos go first, marked "Yours".
+  const mine = useMemo(() => (Array.isArray(saved) ? saved.filter((s) => s.layout.cells.length === photos.length) : []), [saved, photos.length]);
+  const mineIds = useMemo(() => new Set(mine.map((s) => s.id)), [mine]);
+  const styledOptions = useMemo(
+    () => [...mine.map((s) => assignedScene(s.layout, photos, scene.style)), ...options.map((o) => ({ ...o, style: scene.style }))],
+    [mine, options, photos, scene.style],
+  );
 
   // Render the export ahead of time so Share can open the share sheet within the tap.
   useEffect(() => {
@@ -81,6 +105,68 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
     stage.current?.crossfade();
     setScene(newScene(option.layout, photos, scene.style, option.order));
     setSelected(null);
+    setConfirmDelete(false);
+  }
+
+  // --- Layout editor: edit the current layout. Layouts save to the account, so it needs a sign-in.
+
+  function openEditor() {
+    setConfirmDelete(false);
+    setSelected(null);
+    setBuilding({ layout: scene.layout, order: scene.order, saved: mine.find((s) => s.id === scene.layout.id) });
+  }
+  function requestEditor() {
+    if (Array.isArray(saved)) return openEditor();
+    pendingEdit.current = true;
+    setAskToSignIn(true);
+  }
+  const openEditorRef = useRef(openEditor);
+  useEffect(() => {
+    openEditorRef.current = openEditor;
+  });
+
+  // Load saved layouts, and again when the user is back from the account screens or another tab (they may have
+  // signed in, or confirmed their email): then open the editor they asked for.
+  useEffect(() => {
+    if (!LAYOUT_EDITOR_ENABLED || onAccountScreen) return;
+    let current = true;
+    const load = () =>
+      listSaved()
+        .then((list) => {
+          if (!current) return;
+          setSaved(list);
+          if (list !== "signed-out" && pendingEdit.current) {
+            pendingEdit.current = false;
+            openEditorRef.current();
+          }
+        })
+        .catch(() => current && setSaved(null));
+    void load();
+    const subscription = AppState.addEventListener("change", (state) => state === "active" && pendingEdit.current && void load());
+    return () => {
+      current = false;
+      subscription.remove();
+    };
+  }, [onAccountScreen]);
+
+  function onLayoutSaved(layout: SavedLayout, order: number[]) {
+    setSaved((list) => [layout, ...(Array.isArray(list) ? list.filter((s) => s.id !== layout.id) : [])]);
+    setBuilding(null);
+    setScene(newScene(layout.layout, photos, scene.style, order));
+    setStatus(`Saved ${layout.name}.`);
+  }
+
+  async function deleteCurrent() {
+    const id = scene.layout.id;
+    try {
+      await deleteSaved(id);
+    } catch {
+      setStatus("Couldn't delete that layout. Please try again.");
+      return;
+    }
+    setSaved((list) => (Array.isArray(list) ? list.filter((s) => s.id !== id) : list));
+    chooseLayout({ ...options[0]!, style: scene.style });
+    setStatus("Layout deleted.");
   }
 
   function setZoom(cell: number, zoom: number) {
@@ -90,6 +176,7 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
     });
   }
 
+  const showActions = LAYOUT_EDITOR_ENABLED && selected === null && tool === "layouts";
   const panelTitle = selected !== null ? `Photo ${selected + 1}` : TOOLS.find((t) => t.id === tool)!.label;
 
   return (
@@ -99,14 +186,20 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
           StoryStitch editor
         </Text>
         <Button label="Start over" onPress={onStartOver} />
-        <Button
-          label={ready ? (shareable ? "Share" : "Download") : "Preparing…"}
-          primary
-          disabled={!ready}
-          onPress={async () => {
-            if (ready && (await shareOrDownload(ready, `storystitch.${extension}`))) recordExport(scene.layout.id);
-          }}
-        />
+        <View style={styles.barActions}>
+          <AccountLink />
+          <Button
+            label={ready ? (shareable ? "Share" : "Download") : "Preparing…"}
+            primary
+            disabled={!ready}
+            onPress={async () => {
+              // Only built-in layouts are counted: saved layouts are the user's own.
+              if (ready && (await shareOrDownload(ready, `storystitch.${extension}`)) && !mineIds.has(scene.layout.id)) {
+                recordExport(scene.layout.id);
+              }
+            }}
+          />
+        </View>
       </View>
 
       <View style={styles.stage}>
@@ -126,7 +219,7 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
         </Text>
       </View>
 
-      <View role="region" aria-label={panelTitle} style={styles.panel}>
+      <View role="region" aria-label={panelTitle} style={[styles.panel, showActions && styles.panelActions]}>
         {selected !== null ? (
           <View style={styles.photoTool}>
             <Text style={typography.hint}>Tap another photo to swap them. Double-tap to zoom.</Text>
@@ -141,7 +234,24 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
             />
           </View>
         ) : tool === "layouts" ? (
-          <LayoutStrip options={styledOptions} current={scene} onSelect={chooseLayout} />
+          <View style={styles.layoutsTool}>
+            <LayoutStrip options={styledOptions} current={scene} onSelect={chooseLayout} mine={mineIds} />
+            {LAYOUT_EDITOR_ENABLED && (
+              <View style={styles.layoutActions}>
+                <Button label="Edit this layout" primary onPress={requestEditor} />
+                {mineIds.has(scene.layout.id) &&
+                  (confirmDelete ? (
+                    <>
+                      <Text style={typography.body}>Delete {scene.layout.name}?</Text>
+                      <Button label="Delete" onPress={() => void deleteCurrent()} />
+                      <Button label="Keep" onPress={() => setConfirmDelete(false)} />
+                    </>
+                  ) : (
+                    <Button label="Delete" onPress={() => setConfirmDelete(true)} />
+                  ))}
+              </View>
+            )}
+          </View>
         ) : tool === "style" ? (
           <StylePanel layout={scene.layout} style={scene.style} onChange={(style) => setScene((s) => withStyle(s, style, photos))} />
         ) : (
@@ -181,6 +291,49 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
           );
         })}
       </View>
+
+      {building && LayoutEditor && (
+        <Suspense fallback={null}>
+          <LayoutEditor photos={photos} style={scene.style} start={building} onCancel={() => setBuilding(null)} onSaved={onLayoutSaved} />
+        </Suspense>
+      )}
+      {askToSignIn && (
+        <View style={styles.backdrop}>
+          <View role="dialog" aria-modal aria-label="Save your own layouts" style={styles.sheet}>
+            <Text role="heading" aria-level={2} style={typography.title}>
+              Save your own layouts
+            </Text>
+            <Text style={typography.body}>
+              Make and edit layouts with a free account. They're saved in your account (up to 20), ready for your next
+              collage. Your photos still stay on this device.
+            </Text>
+            <View style={styles.sheetActions}>
+              <Button
+                label="Create account"
+                primary
+                onPress={() => {
+                  setAskToSignIn(false);
+                  navigate("/sign-up");
+                }}
+              />
+              <Button
+                label="Sign in"
+                onPress={() => {
+                  setAskToSignIn(false);
+                  navigate("/account");
+                }}
+              />
+              <Button
+                label="Not now"
+                onPress={() => {
+                  setAskToSignIn(false);
+                  pendingEdit.current = false;
+                }}
+              />
+            </View>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -212,6 +365,13 @@ function Toast({ text, alert, onClose }: { text: string; alert: boolean; onClose
 const styles = StyleSheet.create({
   editor: { flex: 1, width: "100%", maxWidth: 560, alignSelf: "center", overflow: "hidden" },
   bar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8, paddingVertical: 6, paddingHorizontal: 12 },
+  barActions: { flexDirection: "row", gap: 8 },
+  panelActions: { height: "auto", minHeight: 132, paddingVertical: 8 },
+  layoutsTool: { gap: 6 },
+  layoutActions: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "center", gap: 8 },
+  backdrop: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0, zIndex: 20, justifyContent: "flex-end", backgroundColor: "rgba(0, 0, 0, 0.5)" },
+  sheet: { gap: 12, padding: 20, borderTopLeftRadius: 20, borderTopRightRadius: 20, backgroundColor: colors.surface },
+  sheetActions: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   hidden: { position: "absolute", width: 1, height: 1, overflow: "hidden", opacity: 0 },
   stage: { flex: 1, minHeight: 0 },
   toasts: { position: "absolute", top: 8, left: 12, right: 12, zIndex: 3, alignItems: "center", gap: 6 },

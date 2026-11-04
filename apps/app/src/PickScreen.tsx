@@ -1,4 +1,5 @@
 import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { AccountLink } from "./AccountLink";
 import { Hero } from "./platform/Hero";
 import { PhotoSources } from "./platform/PhotoSources";
 import type { PickedPhoto } from "./platform/photos";
@@ -21,6 +22,9 @@ export function PickScreen({ privacy, progress, notices, onPicked }: Props) {
           <Text role="heading" aria-level={1} style={styles.name}>
             StoryStitch
           </Text>
+        </View>
+        <View style={styles.account}>
+          <AccountLink />
         </View>
         <Hero />
         <Text style={styles.headline}>
@@ -49,6 +53,7 @@ const styles = StyleSheet.create({
   page: { flexGrow: 1 },
   main: { flexGrow: 1, alignItems: "center", justifyContent: "center", gap: 16, paddingVertical: 24, paddingHorizontal: 16 },
   brand: { position: "absolute", top: 16, left: 16, flexDirection: "row", alignItems: "center", gap: 8 },
+  account: { position: "absolute", top: 12, right: 16 },
   name: { fontFamily, fontSize: 22, fontWeight: "800", letterSpacing: -0.44, color: colors.text },
   headline: { fontFamily, fontSize: 36, fontWeight: "800", lineHeight: 36, letterSpacing: -0.72, color: colors.text, textAlign: "center" },
   accent: { color: colors.accent },

@@ -1,4 +1,4 @@
 import { createApi } from "@storystitch/client";
 import { ACCOUNTS_ENABLED, API_URL } from "./config";
 
-export const { fetchPopularity, recordExport } = createApi({ apiUrl: API_URL, popularity: ACCOUNTS_ENABLED && !!API_URL });
+export const { fetchPopularity, recordExport, listSaved, saveLayout, deleteSaved } = createApi({ apiUrl: API_URL, popularity: ACCOUNTS_ENABLED && !!API_URL });
