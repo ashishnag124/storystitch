@@ -1,14 +1,16 @@
 import {
   LayoutPopularitySchema,
+  MinimumVersionSchema,
   SaveLayoutSchema,
   SavedLayoutSchema,
   SavedLayoutsEnvelopeSchema,
   type Layout,
+  type MinimumVersion,
   type SaveLayout,
   type SavedLayout,
 } from "@storystitch/shared";
 
-/** How long to wait for the counts before ranking by fit alone. */
+/** How long to wait for an answer the app can do without: the counts for ranking, or the minimum version. */
 const FETCH_TIMEOUT_MS = 2000;
 
 /** Why a save didn't go through, in words for the user. */
@@ -24,6 +26,16 @@ export interface ApiOptions {
 /** The calls the app makes to the API. */
 export function createApi({ apiUrl, popularity }: ApiOptions) {
   return {
+    /** The oldest app version the API still supports, or null when it doesn't answer in time: the app then carries on. */
+    async fetchMinimumVersion(): Promise<MinimumVersion | null> {
+      try {
+        const res = await fetch(`${apiUrl}/app/minimum-version`, { credentials: "omit", signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+        return res.ok ? MinimumVersionSchema.parse(await res.json()) : null;
+      } catch {
+        return null;
+      }
+    },
+
     /** Exports per layout id, from the API. Empty when popularity is off or the API doesn't answer in time. */
     async fetchPopularity(): Promise<Record<string, number>> {
       if (!popularity) return {};
