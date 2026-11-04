@@ -23,6 +23,8 @@
       /* min-width: 0 stops a wide scrolling strip from stretching the page past the screen. */
       #root { display: flex; flex: 1; min-width: 0; height: 100%; }
       :focus-visible { outline: 3px solid #ffc24b; outline-offset: 2px; }
+      /* Headings take focus when a screen opens, for screen readers, but aren't controls. */
+      [role="heading"]:focus { outline: none; }
     </style>
   </head>
   <body>

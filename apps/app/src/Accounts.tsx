@@ -2,6 +2,7 @@
 // opening "Account" mid-edit doesn't lose the collage.
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ScrollView, StyleSheet, Text, View, type HostInstance } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { authClient, errorMessage } from "./authClient";
 import { Disclosure, Field, Form, ORIGIN, SubmitButton } from "./platform/forms";
 import { ACCOUNT_PATHS, navigate, useLocation } from "./platform/route";
@@ -16,7 +17,7 @@ function Screen({ title, children }: { title: string; children: ReactNode }) {
   const heading = useRef<HostInstance>(null);
   useEffect(() => heading.current?.focus?.(), [title]);
   return (
-    <View role="main" style={styles.screen}>
+    <SafeAreaView role="main" style={styles.screen}>
       <ScrollView contentContainerStyle={styles.inner}>
         <View style={styles.header}>
           <Text ref={heading} role="heading" aria-level={1} {...{ tabIndex: -1 }} style={styles.title}>
@@ -26,7 +27,7 @@ function Screen({ title, children }: { title: string; children: ReactNode }) {
         </View>
         {children}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -283,7 +284,7 @@ const styles = StyleSheet.create({
   screen: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0, zIndex: 10, backgroundColor: colors.bg },
   inner: { width: "100%", maxWidth: 480, alignSelf: "center", gap: 16, paddingTop: 12, paddingHorizontal: 16, paddingBottom: 24 },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
-  title: { ...type.title, outlineStyle: "none" as never },
+  title: { ...type.title, flexShrink: 1 },
   form: { gap: 12 },
   message: { fontFamily, fontSize: 16, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 10 },
   notice: { backgroundColor: colors.warnBg, color: colors.warnText },
