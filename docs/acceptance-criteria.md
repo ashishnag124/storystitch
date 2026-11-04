@@ -92,6 +92,7 @@ reuse IDs.
 | AC-EDIT-11 | Double-tapping a photo zooms in around the tap, and double-tapping again goes back to fit. | auto |
 | AC-EDIT-12 | On a real phone the motion feels natural: a held photo lifts and follows the finger, swapped photos glide into place, a flicked photo keeps gliding, layouts crossfade, and Android vibrates briefly on lift and drop. With "reduce motion" on, changes are instant. | manual |
 | AC-EDIT-13 | The Layouts tool shows each layout as a plain diagram of its cells (one shape per photo, no photos drawn on it), with the current one highlighted. | auto |
+| AC-EDIT-14 | Tapping another layout during a crossfade replaces it, so quick taps never pile up crossfades that slow the preview. | auto |
 
 ## Style
 
@@ -122,7 +123,7 @@ reuse IDs.
 | ID | Criterion | Check |
 |---|---|---|
 | AC-PERF-01 | Analyzing 8 photos takes under 3 s once the models are loaded (CI, Chromium). | auto |
-| AC-PERF-02 | Switching layouts updates the preview in under 100 ms. | auto |
+| AC-PERF-02 | Switching layouts updates the preview in under 100 ms (CI, Chromium: every layout's median of 5 back-to-back switches). | auto |
 | AC-PERF-03 | Exporting 8 × 12 MP photos takes under 2 s. | auto |
 | AC-PERF-04 | The three targets above hold on a recent iPhone. | manual |
 
