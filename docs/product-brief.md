@@ -106,8 +106,9 @@ replaces parts of it. Build order and status: see "Backend milestones" in `PROJE
 
 ## Layout editor
 
-- "Make your own" and "Edit this layout" in the Layouts tool. Layouts are saved to the account (up to 20), so a
-  signed-out user is asked to create an account or sign in, and comes straight back to the editor.
+- "Edit this layout" in the Layouts tool, highlighted in gold, starts from the layout on screen. (Making a layout
+  from a blank frame is set aside for now.) Layouts are saved to the account (up to 20), so a signed-out user is
+  asked to create an account or sign in, and comes straight back to the editor.
 - Full screen on the phone, with large touch targets, snapping, Undo, and buttons (Bigger, Smaller, Turn) for small
   adjustments without precise dragging. The preview shows the user's own photos.
 - How a layout is edited depends on what it's made of: grids by dragging the lines between cells and splitting,

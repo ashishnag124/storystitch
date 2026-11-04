@@ -5,7 +5,7 @@ import type { SavedLayout } from "@storystitch/shared";
 import { AccountLink } from "./account/AccountLink";
 import { ACCOUNT_PATHS, navigate, useLocation } from "./account/route";
 import { deleteSaved, listSaved } from "./builder/savedLayouts";
-import { blankLayout, type Start } from "./builder/draft";
+import type { Start } from "./builder/draft";
 import { LAYOUT_EDITOR_ENABLED } from "./config";
 import {
   canShareFiles,
@@ -108,8 +108,8 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
   const [building, setBuilding] = useState<Start | null>(null);
   const [askToSignIn, setAskToSignIn] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  /** What to open once the user has signed in, if they were asked to. */
-  const pendingEdit = useRef<"new" | "edit" | null>(null);
+  /** Whether to open the layout editor once the user has signed in (they were asked to). */
+  const pendingEdit = useRef(false);
   const { pathname } = useLocation();
   const onAccountScreen = (ACCOUNT_PATHS as readonly string[]).includes(pathname);
   const [selected, setSelected] = useState<number | null>(null);
@@ -358,20 +358,16 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
     setConfirmDelete(false);
   }
 
-  // --- Layout editor: make a layout, or edit the current one. Layouts save to the account, so it needs a sign-in.
+  // --- Layout editor: edit the current layout. Layouts save to the account, so it needs a sign-in.
 
-  function openEditor(kind: "new" | "edit") {
+  function openEditor() {
     setConfirmDelete(false);
     setSelected(null);
-    setBuilding(
-      kind === "new"
-        ? { layout: blankLayout(), order: [0] }
-        : { layout: scene.layout, order: scene.order, saved: mine.find((s) => s.id === scene.layout.id) },
-    );
+    setBuilding({ layout: scene.layout, order: scene.order, saved: mine.find((s) => s.id === scene.layout.id) });
   }
-  function requestEditor(kind: "new" | "edit") {
-    if (Array.isArray(saved)) return openEditor(kind);
-    pendingEdit.current = kind;
+  function requestEditor() {
+    if (Array.isArray(saved)) return openEditor();
+    pendingEdit.current = true;
     setAskToSignIn(true);
   }
   const openEditorRef = useRef(openEditor);
@@ -389,10 +385,9 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
         .then((list) => {
           if (!current) return;
           setSaved(list);
-          const kind = pendingEdit.current;
-          if (list !== "signed-out" && kind) {
-            pendingEdit.current = null;
-            openEditorRef.current(kind);
+          if (list !== "signed-out" && pendingEdit.current) {
+            pendingEdit.current = false;
+            openEditorRef.current();
           }
         })
         .catch(() => current && setSaved(null));
@@ -737,11 +732,10 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
                 current={scene}
                 onSelect={chooseLayout}
                 mine={mineIds}
-                onMake={LAYOUT_EDITOR_ENABLED ? () => requestEditor("new") : undefined}
               />
               {LAYOUT_EDITOR_ENABLED && (
                 <div className="layout-actions">
-                  <button type="button" className="button" onClick={() => requestEditor("edit")}>
+                  <button type="button" className="button primary" onClick={requestEditor}>
                     Edit this layout
                   </button>
                   {mineIds.has(scene.layout.id) &&
@@ -847,7 +841,7 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
                 className="button ghost"
                 onClick={() => {
                   setAskToSignIn(false);
-                  pendingEdit.current = null;
+                  pendingEdit.current = false;
                 }}
               >
                 Not now

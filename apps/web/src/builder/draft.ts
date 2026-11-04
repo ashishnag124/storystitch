@@ -12,19 +12,6 @@ export interface Start extends Draft {
   saved?: SavedLayout;
 }
 
-/** A layout to start from when making one from scratch: one cell filling the frame, to split up. */
-export function blankLayout(): Layout {
-  return {
-    id: "new",
-    name: "My layout",
-    family: "grid",
-    allowOverlap: false,
-    bleed: false,
-    blurBackground: false,
-    cells: [{ shape: "rect", x: 0, y: 0, w: 1, h: 1, rotate: 0, z: 0 }],
-  };
-}
-
 /** Problems from layoutProblems, said plainly, with the cells they're about. */
 export function explain(problems: string[]): { text: string; cells: number[] }[] {
   return problems.map((p) => {

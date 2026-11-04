@@ -1,13 +1,13 @@
 import { splitCell, removeCell } from "@storystitch/layout-engine";
 import { layoutProblems, layouts } from "@storystitch/shared";
 import { describe, expect, it } from "vitest";
-import { blankLayout, explain, withOrigin } from "./draft";
+import { explain, withOrigin } from "./draft";
 
 const byId = (id: string) => layouts.find((l) => l.id === id)!;
 
 describe("AC-CUSTOM-06 layout editor checks", () => {
   it("says plainly which photo sits under Instagram's buttons", () => {
-    const low = { ...blankLayout(), cells: [{ shape: "rect" as const, x: 0, y: 0.85, w: 1, h: 0.15, rotate: 0, z: 0 }] };
+    const low = { ...byId("single-bleed"), bleed: false, cells: [{ shape: "rect" as const, x: 0, y: 0.85, w: 1, h: 0.15, rotate: 0, z: 0 }] };
     expect(explain(layoutProblems(low))).toEqual([
       { text: "Photo 1 sits mostly under Instagram's buttons. Move it toward the middle.", cells: [0] },
     ]);
