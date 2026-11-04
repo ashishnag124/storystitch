@@ -12,7 +12,7 @@ Product requirements: `docs/product-brief.md`. Acceptance criteria (what QA chec
 | Cropping, assignment, ranking (pure functions) | `packages/layout-engine/src/` |
 | App logic with no UI or browser APIs (scene, layout editor drafts, API calls) | `packages/client/src/` |
 | Web app UI | `apps/web/src/` |
-| The Expo app replacing `apps/web` (web now, iOS next) | `apps/app/src/`; anything browser-only goes in a `*.web.ts(x)` file (lint enforces it) |
+| The Expo app, on staging now and replacing `apps/web` in production at the next stage (web and iOS) | `apps/app/src/`; anything browser-only goes in a `*.web.ts(x)` file (lint enforces it) |
 | On-device subject detection (Web Worker, MediaPipe) | `apps/web/src/detect/`; models in `apps/web/public/models/` |
 | End-to-end tests (Playwright) | `apps/web/e2e/` |
 | API request/response shapes | `packages/shared/src/api.ts` (zod) first, then the API and its callers |
@@ -25,8 +25,8 @@ A request that needs an app or service not in `project.json` (e.g. "add an iOS a
 ## Environments
 
 - **Local** is the default for everything: `.env`, `pnpm dev`. Run, test and debug here.
-- **Staging** = whatever is on `main`. You get there by merging a PR, nothing else.
-- **Production** = the `production` branch, moved only by `/release` after the user confirms.
+- **Staging** = whatever is on `main`, served by the Expo app (`apps/app`). You get there by merging a PR, nothing else.
+- **Production** = the `production` branch, moved only by `/release` after the user confirms. It serves `apps/web` until the Expo app replaces it.
 - Never deploy to or change settings on staging or production yourself. If debugging needs hosted logs, ask the user to run the command and paste the output.
 
 ## Commands
