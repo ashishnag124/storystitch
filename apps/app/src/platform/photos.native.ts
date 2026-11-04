@@ -1,5 +1,6 @@
 import type { Detection } from "@storystitch/layout-engine";
 import { Skia, type SkImage } from "@shopify/react-native-skia";
+import StoryVision from "../../modules/story-vision";
 
 /** Long side of the working copies used for previews. Exports always use the originals. */
 const PREVIEW_LONG_SIDE = 1280;
@@ -18,7 +19,7 @@ export interface Photo {
   width: number;
   height: number;
   preview: SkImage;
-  /** What subject detection found; empty until Apple Vision arrives in Stage 3. */
+  /** What subject detection found; empty until analyzed or when nothing was found. */
   detections: Detection[];
 }
 
@@ -51,6 +52,14 @@ export async function loadPhoto({ name, uri }: PickedPhoto): Promise<Photo> {
   }
 }
 
-// Stage 3: Apple Vision.
-export const analyzePhoto = async (): Promise<Detection[]> => [];
+/** Finds what matters in a photo. If detection fails, the photo uses a center crop. */
+export async function analyzePhoto(photo: Photo): Promise<Detection[]> {
+  try {
+    return await StoryVision.detect(photo.source);
+  } catch (err) {
+    console.warn("Detection failed; using a center crop.", err);
+    return [];
+  }
+}
+
 export const closePhoto = (photo: Photo) => photo.preview.dispose();
