@@ -1,3 +1,4 @@
+import { AppVersionSchema } from "@storystitch/shared";
 import { z } from "zod";
 
 const flag = z.enum(["true", "false"]).default("false").transform((v) => v === "true");
@@ -12,6 +13,13 @@ const EnvSchema = z
       .min(1)
       .transform((s) => s.split(",").map((o) => o.trim()))
       .pipe(z.array(z.url())),
+    /** The app's URL scheme, trusted for sign-in. No wildcards. Staging's build has its own, to sit beside production's on one phone. */
+    APP_SCHEME: z
+      .string()
+      .regex(/^[a-z][a-z0-9+.-]*:\/\/$/)
+      .default("storystitch://"),
+    /** The oldest iOS app version still supported. Raising it asks everyone on an older version to update. */
+    MIN_IOS_APP_VERSION: AppVersionSchema.default("1.0.0"),
     /** Set by Railway on each deploy. */
     RAILWAY_GIT_COMMIT_SHA: z.string().optional(),
     /** Where this API is reachable from browsers; emailed links point here first. */

@@ -1,4 +1,5 @@
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
+import { expo } from "@better-auth/expo";
 import { betterAuth } from "better-auth";
 import { captcha } from "better-auth/plugins";
 import type { Db } from "./db/client";
@@ -13,6 +14,8 @@ export interface AuthOptions {
   baseURL: string;
   /** The web app's origins: allowed for CORS, redirects in emailed links, and cross-site request checks. */
   webOrigins: string[];
+  /** The native app's URL scheme, e.g. storystitch://: trusted for the same checks, but never for CORS. */
+  appScheme: string;
   mailer: Mailer;
   turnstileSecret: string;
   /** Off only for end-to-end tests, whose requests all come from one address (the limits have their own tests). */
@@ -34,12 +37,14 @@ export const AUTH_RATE_LIMITS = {
  * email, and can delete their account (with their password). Sign-up, sign-in and reset require a Turnstile token.
  */
 export function createAuth(options: AuthOptions) {
-  const { db, secret, baseURL, webOrigins, mailer, turnstileSecret, rateLimit = true, turnstileVerifyUrl } = options;
+  const { db, secret, baseURL, webOrigins, appScheme, mailer, turnstileSecret, rateLimit = true, turnstileVerifyUrl } = options;
   return betterAuth({
     appName: "StoryStitch",
     secret,
     baseURL,
-    trustedOrigins: webOrigins,
+    trustedOrigins: [...webOrigins, appScheme],
+    // The Expo plugin's route for social sign-in, which we don't use. It redirects to any https address it's given.
+    disabledPaths: ["/expo-authorization-proxy"],
     database: drizzleAdapter(db, { provider: "pg", schema }),
     emailAndPassword: {
       enabled: true,
@@ -87,6 +92,8 @@ export function createAuth(options: AuthOptions) {
       ipAddress: { ipAddressHeaders: ["x-real-ip"] },
     },
     plugins: [
+      // The app has no browser Origin. This reads its expo-origin header instead, only when a request has no Origin.
+      expo(),
       captcha({ provider: "cloudflare-turnstile", secretKey: turnstileSecret, siteVerifyURLOverride: turnstileVerifyUrl }),
     ],
   });

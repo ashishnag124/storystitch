@@ -29,6 +29,7 @@ Web app on Cloudflare Pages, plus an API with Postgres on Railway (from v2). All
 | `API_URL_STAGING`, `API_URL_PRODUCTION` | GitHub variables | web builds (`VITE_API_URL`) in `ci.yml` / `release.yml` |
 | `DATABASE_URL` (reference `${{Postgres.DATABASE_URL}}`), `CORS_ORIGIN`, `NODE_ENV` | Railway variables on `api`, per environment | the API |
 | `BETTER_AUTH_URL` (the API's own URL), `BETTER_AUTH_SECRET` (random, per environment), `EMAIL_TRANSPORT=resend`, `EMAIL_FROM`, `RESEND_API_KEY`, `TURNSTILE_SECRET_KEY` | Railway variables on `api`, per environment | accounts (B2) |
+| `APP_SCHEME` (optional, default `storystitch://`; `storystitch-staging://` on staging), `MIN_IOS_APP_VERSION` (optional, default `1.0.0`) | Railway variables on `api`, per environment | iOS app sign-in; `GET /app/minimum-version`, raised when old app versions must update |
 | `TURNSTILE_SITE_KEY` (public), plus the Cloudflare and Resend keys | GitHub secrets, synced with `gh secret set -f ~/.config/new-project/secrets.env` | web builds (`VITE_TURNSTILE_SITE_KEY`) |
 | Accounts flag (`VITE_FEATURE_ACCOUNTS`) | `accounts:` input to `_deploy-pages.yml`: `true` in `ci.yml` (staging) and `release.yml` (production) | web builds |
 | Layout editor flag (`VITE_FEATURE_LAYOUT_EDITOR`, needs accounts) | `layout_editor:` input to `_deploy-pages.yml`: `true` in `ci.yml` (staging) and `release.yml` (production) | web builds |
