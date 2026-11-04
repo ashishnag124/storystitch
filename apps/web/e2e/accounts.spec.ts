@@ -126,12 +126,29 @@ test("AC-AUTH-08 delete the account with its password", async ({ page }) => {
 
 test("AC-AUTH-01 making and exporting a collage never asks you to sign in", async ({ page }) => {
   const authCalls: string[] = [];
-  page.on("request", (r) => r.url().startsWith(API) && authCalls.push(r.url()));
+  page.on("request", (r) => r.url().startsWith(`${API}/api/auth`) && authCalls.push(r.url()));
   await libraryInput(page).setInputFiles(await makePhotos(page, 3));
   await exportImage(page);
   await expect(page.getByRole("link", { name: "Account" })).toBeVisible();
   await expect(page.getByText(/sign in/i)).toHaveCount(0);
   expect(authCalls).toEqual([]);
+});
+
+test("AC-RANK-05 an export counts its layout, sending nothing but the layout's id", async ({ page }) => {
+  const totals = async () => {
+    const { exports } = (await (await page.request.get(`${API}/layouts/popularity`)).json()) as { exports: Record<string, number> };
+    return exports;
+  };
+  await libraryInput(page).setInputFiles(await makePhotos(page, 3));
+  await expect(page.getByRole("radiogroup", { name: "Layouts" })).toBeVisible({ timeout: 30_000 });
+  const before = await totals();
+  const sent = page.waitForRequest((r) => r.url().startsWith(`${API}/layouts/`) && r.method() === "POST");
+  await exportImage(page);
+  const request = await sent;
+  expect(request.postData()).toBeNull();
+  expect(await request.headerValue("cookie")).toBeNull();
+  const id = decodeURIComponent(new URL(request.url()).pathname.split("/")[2]!);
+  await expect.poll(async () => (await totals())[id] ?? 0).toBe((before[id] ?? 0) + 1);
 });
 
 test.describe("accounts switched off", () => {

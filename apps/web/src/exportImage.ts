@@ -76,16 +76,17 @@ export function canShareFiles(): boolean {
 
 /**
  * Opens the share sheet (where the user picks Instagram → Story) or downloads. Call it first thing in
- * a tap handler: Safari rejects share() once the tap's user activation has expired.
+ * a tap handler: Safari rejects share() once the tap's user activation has expired. False if the user closed
+ * the share sheet.
  */
-export async function shareOrDownload(blob: Blob, filename: string): Promise<void> {
+export async function shareOrDownload(blob: Blob, filename: string): Promise<boolean> {
   const file = new File([blob], filename, { type: blob.type });
   if (navigator.canShare?.({ files: [file] })) {
     try {
       await navigator.share({ files: [file] });
-      return;
+      return true;
     } catch (e) {
-      if (e instanceof DOMException && e.name === "AbortError") return; // user closed the sheet
+      if (e instanceof DOMException && e.name === "AbortError") return false; // user closed the sheet
     }
   }
   const url = URL.createObjectURL(blob);
@@ -94,4 +95,5 @@ export async function shareOrDownload(blob: Blob, filename: string): Promise<voi
   a.download = filename;
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return true;
 }

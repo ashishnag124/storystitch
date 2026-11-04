@@ -132,10 +132,13 @@ function cellTargets(layout: Layout, style: Style): CellTarget[] {
   }));
 }
 
-/** A scene for every layout that fits this many photos, best fit first, with photos assigned to cells. */
-export function rankedScenes(photos: CropSource[], style: Style = DEFAULT_STYLE): Scene[] {
+/**
+ * A scene for every layout that fits this many photos, best fit first (more often exported layouts first
+ * among near-equal fits), with photos assigned to cells.
+ */
+export function rankedScenes(photos: CropSource[], style: Style = DEFAULT_STYLE, popularity: Record<string, number> = {}): Scene[] {
   const options = layoutsFor(photos.length).map((layout) => ({ layout, cells: cellTargets(layout, style) }));
-  return rankLayouts(options, photos).map(({ layout, assignment: { order, crops } }) => ({ layout, style, order, crops }));
+  return rankLayouts(options, photos, popularity).map(({ layout, assignment: { order, crops } }) => ({ layout, style, order, crops }));
 }
 
 /** Swaps the photos in two cells; both get fresh automatic crops for their new cells. */
