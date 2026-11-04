@@ -104,7 +104,7 @@ test.describe("error states", () => {
   });
 
   test("AC-DETECT-04 works when the detection worker can't start", async ({ page }) => {
-    await page.route(/\/worker[-.]/, (route) => route.abort());
+    await page.route(/\/(detect-)?worker[-.]/, (route) => route.abort());
     await libraryInput(page).setInputFiles(await makePhotos(page, 3));
     expect(jpegSize(await exportImage(page))).toEqual({
       width: 1080,
