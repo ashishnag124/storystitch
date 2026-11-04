@@ -18,6 +18,20 @@ export const LayoutPopularitySchema = z.object({
 
 export type LayoutPopularity = z.infer<typeof LayoutPopularitySchema>;
 
+/** An app version as the App Store shows it: major.minor.patch. */
+export const AppVersionSchema = z.string().regex(/^\d+\.\d+\.\d+$/);
+
+/** `GET /app/minimum-version`: the oldest app version the API still supports. Anything older asks the user to update. */
+export const MinimumVersionSchema = z.object({ ios: AppVersionSchema });
+
+export type MinimumVersion = z.infer<typeof MinimumVersionSchema>;
+
+/**
+ * Sent by the native app when it changes saved layouts. The app sends no Origin, so this stands in for one. CORS must
+ * never allow this header: that's what stops a web page on another site from sending it.
+ */
+export const NATIVE_APP_HEADER = "x-storystitch-app";
+
 /** Most layouts one account can save. */
 export const SAVED_LAYOUT_LIMIT = 20;
 
@@ -40,6 +54,9 @@ export const SavedLayoutsSchema = z.object({
   layouts: z.array(SavedLayoutSchema),
   limit: z.number().int(),
 });
+
+/** `GET /layouts/mine` as an app reads it: a newer version may have saved shapes this one can't, so each layout is checked alone. */
+export const SavedLayoutsEnvelopeSchema = SavedLayoutsSchema.extend({ layouts: z.array(z.unknown()) });
 
 export type SaveLayout = z.infer<typeof SaveLayoutSchema>;
 export type SavedLayout = z.infer<typeof SavedLayoutSchema>;

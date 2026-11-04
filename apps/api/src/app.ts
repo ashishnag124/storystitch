@@ -1,4 +1,4 @@
-import { layouts, type Health, type LayoutPopularity } from "@storystitch/shared";
+import { layouts, type Health, type LayoutPopularity, type MinimumVersion } from "@storystitch/shared";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { secureHeaders } from "hono/secure-headers";
@@ -12,12 +12,14 @@ interface AppOptions {
   auth: Auth;
   corsOrigins: string[];
   version: string;
+  /** The oldest iOS app version still supported. */
+  minimumIosVersion: string;
   /** Emails captured by the memory mailer, readable at /test/emails. Only passed outside staging and production. */
   testEmails?: Email[];
 }
 
 /** The HTTP API, separate from the server so tests can call it directly with `app.request()`. */
-export function createApp({ pool, auth, corsOrigins, version, testEmails }: AppOptions) {
+export function createApp({ pool, auth, corsOrigins, version, minimumIosVersion, testEmails }: AppOptions) {
   const app = new Hono();
   app.use(secureHeaders());
   // Only StoryStitch's own web origins may call the API, with cookies (the sign-in session).
@@ -33,6 +35,9 @@ export function createApp({ pool, auth, corsOrigins, version, testEmails }: AppO
     const body: Health = { ok: database === "up", version, database };
     return c.json(body, database === "up" ? 200 : 503);
   });
+
+  // Public, because an app has to ask this before it knows whether it can talk to the rest of the API.
+  app.get("/app/minimum-version", (c) => c.json<MinimumVersion>({ ios: minimumIosVersion }));
 
   // Popular layouts: the web app reports each export's layout (nothing else) and reads the totals to break ranking ties.
   const layoutIds = new Set(layouts.map((l) => l.id));

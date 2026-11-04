@@ -1,9 +1,9 @@
-import { HealthSchema, LayoutPopularitySchema } from "@storystitch/shared";
+import { HealthSchema, LayoutPopularitySchema, MinimumVersionSchema, NATIVE_APP_HEADER } from "@storystitch/shared";
 import { afterAll, describe, expect, it } from "vitest";
 import { createApp } from "./app";
 import { createDb } from "./db/client";
 import { loadEnv } from "./env";
-import { WEB, testApi } from "./test-helpers";
+import { MINIMUM_IOS_VERSION, WEB, testApi } from "./test-helpers";
 
 // Real Postgres: `docker compose up` locally, a service container in CI.
 const api = testApi();
@@ -19,10 +19,18 @@ describe("AC-API-04 health", () => {
 
   it("returns 503 when the database is unreachable", async () => {
     const down = createDb("postgres://app:app@127.0.0.1:1/app");
-    const res = await createApp({ pool: down.pool, auth: api.auth, corsOrigins: [WEB], version: "x" }).request("/health");
+    const res = await createApp({ pool: down.pool, auth: api.auth, corsOrigins: [WEB], version: "x", minimumIosVersion: "1.0.0" }).request("/health");
     expect(res.status).toBe(503);
     expect(await res.json()).toMatchObject({ ok: false, database: "down" });
     await down.pool.end();
+  });
+});
+
+describe("AC-API-06 minimum app version", () => {
+  it("tells anyone which iOS app version is the oldest still supported", async () => {
+    const res = await app.request("/app/minimum-version");
+    expect(res.status).toBe(200);
+    expect(MinimumVersionSchema.parse(await res.json())).toEqual({ ios: MINIMUM_IOS_VERSION });
   });
 });
 
@@ -46,6 +54,16 @@ describe("AC-API-01 CORS", () => {
       expect(res.headers.get("Access-Control-Allow-Origin")).toBeNull();
     }
   });
+
+  it("never lets a browser send the native app's header, so a web page can't use it", async () => {
+    for (const origin of ["https://evil.example", WEB]) {
+      const res = await app.request("/layouts/mine", {
+        method: "OPTIONS",
+        headers: { Origin: origin, "Access-Control-Request-Method": "POST", "Access-Control-Request-Headers": NATIVE_APP_HEADER },
+      });
+      expect(res.headers.get("Access-Control-Allow-Headers")?.toLowerCase() ?? "").not.toContain(NATIVE_APP_HEADER);
+    }
+  });
 });
 
 describe("env", () => {
@@ -61,12 +79,19 @@ describe("env", () => {
     expect(loadEnv(base)).toMatchObject({ PORT: 3000, CORS_ORIGIN: ["https://a.example", "https://b.example"] });
   });
 
+  it("defaults the app's scheme and minimum version, so a deploy doesn't depend on setting them", () => {
+    expect(loadEnv(base)).toMatchObject({ APP_SCHEME: "storystitch://", MIN_IOS_APP_VERSION: "1.0.0" });
+  });
+
   it("refuses to start with missing or malformed values", () => {
     expect(() => loadEnv({ ...base, DATABASE_URL: undefined })).toThrow();
     expect(() => loadEnv({ ...base, CORS_ORIGIN: "not a url" })).toThrow();
     expect(() => loadEnv({ ...base, BETTER_AUTH_SECRET: "short" })).toThrow();
     expect(() => loadEnv({ ...base, EMAIL_TRANSPORT: "resend" })).toThrow(/RESEND_API_KEY/);
     expect(() => loadEnv({ ...base, DISABLE_RATE_LIMIT: "true" })).toThrow(/tests only/);
+    expect(() => loadEnv({ ...base, APP_SCHEME: "storystitch" })).toThrow();
+    expect(() => loadEnv({ ...base, APP_SCHEME: "storystitch://*" })).toThrow();
+    expect(() => loadEnv({ ...base, MIN_IOS_APP_VERSION: "1.2" })).toThrow();
   });
 });
 

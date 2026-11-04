@@ -8,6 +8,9 @@ import { memoryMailer } from "./email";
 
 export const WEB = "https://storystitch.ashishnag.com";
 export const API = "https://api.storystitch.ashishnag.com";
+/** The native app's URL scheme. */
+export const APP = "storystitch://";
+export const MINIMUM_IOS_VERSION = "1.2.3";
 /** Cloudflare's documented test secrets: one accepts every token, the other rejects every token. */
 export const TURNSTILE_PASS = "1x0000000000000000000000000000000AA";
 export const TURNSTILE_FAIL = "2x0000000000000000000000000000000AA";
@@ -43,20 +46,22 @@ export function testApi({ turnstileSecret = TURNSTILE_PASS } = {}) {
     secret: "test-secret-test-secret-test-secret-0123",
     baseURL: API,
     webOrigins: [WEB],
+    appScheme: APP,
     mailer,
     turnstileSecret,
     turnstileVerifyUrl,
   });
-  const app = createApp({ pool, auth, corsOrigins: [WEB], version: "test-sha", testEmails: mailer.sent });
+  const app = createApp({ pool, auth, corsOrigins: [WEB], version: "test-sha", minimumIosVersion: MINIMUM_IOS_VERSION, testEmails: mailer.sent });
   /** A browser-like client with its own IP address (so rate limits don't leak between tests) and cookies. */
   function client() {
     const ip = `10.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}`;
     const jar = new Map<string, string>();
-    async function call(path: string, init: { method?: string; body?: unknown; headers?: Record<string, string> } = {}) {
+    /** `native` sends what the iOS app sends: no Origin, unlike a browser. */
+    async function call(path: string, init: { method?: string; body?: unknown; headers?: Record<string, string>; native?: boolean } = {}) {
       const res = await app.request(new URL(path, API).toString(), {
         method: init.method ?? (init.body ? "POST" : "GET"),
         headers: {
-          Origin: WEB,
+          ...(init.native ? {} : { Origin: WEB }),
           "x-real-ip": ip,
           ...(init.body ? { "Content-Type": "application/json" } : {}),
           ...(jar.size ? { Cookie: [...jar].map(([k, v]) => `${k}=${v}`).join("; ") } : {}),

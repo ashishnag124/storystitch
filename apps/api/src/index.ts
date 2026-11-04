@@ -22,6 +22,7 @@ const auth = createAuth({
   secret: env.BETTER_AUTH_SECRET,
   baseURL: env.BETTER_AUTH_URL,
   webOrigins: env.CORS_ORIGIN,
+  appScheme: env.APP_SCHEME,
   mailer,
   turnstileSecret: env.TURNSTILE_SECRET_KEY,
   rateLimit: !env.DISABLE_RATE_LIMIT,
@@ -31,6 +32,7 @@ const app = createApp({
   auth,
   corsOrigins: env.CORS_ORIGIN,
   version: env.RAILWAY_GIT_COMMIT_SHA ?? "dev",
+  minimumIosVersion: env.MIN_IOS_APP_VERSION,
   testEmails: env.ENABLE_TEST_ROUTES ? memory.sent : undefined,
 });
 

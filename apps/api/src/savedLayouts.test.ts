@@ -1,6 +1,6 @@
-import { SAVED_LAYOUT_LIMIT, SavedLayoutSchema, SavedLayoutsSchema } from "@storystitch/shared";
+import { NATIVE_APP_HEADER, SAVED_LAYOUT_LIMIT, SavedLayoutSchema, SavedLayoutsSchema } from "@storystitch/shared";
 import { afterAll, describe, expect, it } from "vitest";
-import { testApi, verifiedUser } from "./test-helpers";
+import { APP, WEB, testApi, verifiedUser } from "./test-helpers";
 
 // Real Postgres: `docker compose up` locally, a service container in CI.
 const api = testApi();
@@ -75,8 +75,33 @@ describe("AC-CUSTOM-07 saved layouts", () => {
 
   it("only accepts changes sent from StoryStitch's own web origins", async () => {
     const { c } = await verifiedUser(api);
+    expect((await c.call("/layouts/mine", { body: save(), headers: { Origin: WEB } })).status).toBe(201);
     const res = await c.call("/layouts/mine", { body: save(), headers: { Origin: "https://evil.example" } });
     expect(res.status).toBe(403);
+  });
+
+  const asApp = { native: true, headers: { [NATIVE_APP_HEADER]: "ios" } };
+
+  it("accepts changes from the native app, which sends its header and no Origin", async () => {
+    const { c } = await verifiedUser(api);
+    const saved = await c.call("/layouts/mine", { body: save("From the app"), ...asApp });
+    expect(saved.status).toBe(201);
+    const { id } = SavedLayoutSchema.parse(await saved.json());
+    expect((await c.call(`/layouts/mine/${id}`, { method: "PUT", body: save("Renamed"), ...asApp })).status).toBe(200);
+    expect((await c.call(`/layouts/mine/${id}`, { method: "DELETE", ...asApp })).status).toBe(204);
+  });
+
+  it("doesn't let a browser request through by claiming to be the native app", async () => {
+    const { c } = await verifiedUser(api);
+    const countMine = async () => SavedLayoutsSchema.parse(await (await c.call("/layouts/mine")).json()).layouts.length;
+    const before = await countMine();
+    for (const Origin of ["https://evil.example", "null", APP]) {
+      const res = await c.call("/layouts/mine", { body: save(), headers: { Origin, [NATIVE_APP_HEADER]: "ios" } });
+      expect(res.status).toBe(403);
+    }
+    // Neither an Origin nor the header: what's left of a request that hides where it came from.
+    expect((await c.call("/layouts/mine", { body: save(), native: true })).status).toBe(403);
+    expect(await countMine()).toBe(before);
   });
 
   it("AC-AUTH-08 deletes a user's layouts with their account", async () => {
