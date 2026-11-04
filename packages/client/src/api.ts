@@ -2,7 +2,7 @@ import {
   LayoutPopularitySchema,
   SaveLayoutSchema,
   SavedLayoutSchema,
-  SavedLayoutsSchema,
+  SavedLayoutsEnvelopeSchema,
   type Layout,
   type SaveLayout,
   type SavedLayout,
@@ -43,12 +43,19 @@ export function createApi({ apiUrl, popularity }: ApiOptions) {
       );
     },
 
-    /** The user's saved layouts, or "signed-out" when there's no session. Throws when the API can't be reached. */
+    /**
+     * The user's saved layouts, or "signed-out" when there's no session. Throws when the API can't be reached.
+     * Leaves out any layout this app version can't read, so one newer layout doesn't lose the user the whole list.
+     */
     async listSaved(): Promise<SavedLayout[] | "signed-out"> {
       const res = await fetch(`${apiUrl}/layouts/mine`, { credentials: "include" });
       if (res.status === 401) return "signed-out";
       if (!res.ok) throw new Error(`GET /layouts/mine: ${res.status}`);
-      return SavedLayoutsSchema.parse(await res.json()).layouts;
+      const { layouts } = SavedLayoutsEnvelopeSchema.parse(await res.json());
+      return layouts.flatMap((layout) => {
+        const parsed = SavedLayoutSchema.safeParse(layout);
+        return parsed.success ? [parsed.data] : [];
+      });
     },
 
     /** Saves a new layout, or replaces the saved one with id `id`. */

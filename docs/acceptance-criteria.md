@@ -158,7 +158,8 @@ describe the app exactly. When saving ships, AC-SAVE-02 and AC-SAVE-07 replace A
 | AC-API-02 | Database migrations are backward compatible: the previous API version still works against the new schema. | planned |
 | AC-API-03 | With the accounts flag off, the app behaves exactly as v1: no account features and no requests to the API. | auto |
 | AC-API-04 | `GET /health` reports the deployed version and whether the database is up, with status 503 when it isn't. | auto |
-| AC-API-05 | Account requests that change data are refused unless they come from StoryStitch's own web origins (cross-site request forgery). | auto |
+| AC-API-05 | Account requests that change data are refused unless they come from StoryStitch's own web origins or its native app, which names its URL scheme (cross-site request forgery). Emailed links return only to those two, and a browser on another site can't pass as the app. | auto |
+| AC-API-06 | `GET /app/minimum-version` is public and reports the oldest iOS app version still supported. | auto |
 
 ## Accounts
 
@@ -184,7 +185,8 @@ Behind `VITE_FEATURE_LAYOUT_EDITOR` (needs accounts): on in staging and producti
 | AC-CUSTOM-04 | Circles, hearts, stars, prints and Polaroids: cells move by dragging, resize by pinching, a handle or Bigger/Smaller, and prints turn; cells that mustn't overlap can't be pushed into each other; a cell can be copied or removed. | auto |
 | AC-CUSTOM-05 | The editor fills the screen; every line and handle has a touch target of at least 44 px (48 px drawn), buttons are at least 44 px tall, and Undo reverses the last change. | auto |
 | AC-CUSTOM-06 | Done only proceeds once there's one cell per photo, and says what's missing; cells under Instagram's buttons, overlapping or past the edge are outlined and explained, and such a layout isn't saved. | auto |
-| AC-CUSTOM-07 | Layouts save to the account with a name (up to 20, with a clear message when full), come first in the Layouts tool marked "Yours" for their photo count, and can be edited (replacing the saved one) and deleted. The API accepts only valid layouts, only from StoryStitch's own origins, and only touches the signed-in user's own layouts. | auto |
+| AC-CUSTOM-07 | Layouts save to the account with a name (up to 20, with a clear message when full), come first in the Layouts tool marked "Yours" for their photo count, and can be edited (replacing the saved one) and deleted. The API accepts only valid layouts, only from StoryStitch's own web origins or its native app (whose header a browser can't use to get past this), and only touches the signed-in user's own layouts. | auto |
+| AC-CUSTOM-09 | A saved layout this app version can't read is left out of the Layouts tool, and the user's other saved layouts still appear. | auto |
 | AC-CUSTOM-08 | The layout editor feels right one-handed on a real iPhone and Android phone: lines, corners and photos are easy to grab and drag without precise aim. | manual |
 
 ## Saved collages

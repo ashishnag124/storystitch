@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, it } from "vitest";
-import { CAPTCHA, TURNSTILE_FAIL, WEB, testApi, verifiedUser } from "./test-helpers";
+import { APP, CAPTCHA, TURNSTILE_FAIL, WEB, testApi, verifiedUser } from "./test-helpers";
 
 const api = testApi();
 afterAll(() => api.close());
@@ -125,5 +125,54 @@ describe("AC-API-05 cross-site requests", () => {
     const res = await c.call("/api/auth/sign-out", { body: {}, headers: { Origin: "https://evil.example" } });
     expect(res.status).toBe(403);
     expect(await session(c)).not.toBeNull();
+  });
+
+  const signOut = (c: ReturnType<typeof api.client>, headers: Record<string, string>) =>
+    c.call("/api/auth/sign-out", { body: {}, native: true, headers });
+
+  it("accepts account requests from the app, which names its scheme because it has no Origin", async () => {
+    const { email, password, c } = await verifiedUser(api);
+    const app = api.client();
+    const signedIn = await app.call("/api/auth/sign-in/email", {
+      body: { email, password },
+      native: true,
+      headers: { ...CAPTCHA, "expo-origin": APP },
+    });
+    expect(signedIn.status).toBe(200);
+    expect((await session(app))?.user?.email).toBe(email);
+    expect((await signOut(c, { "expo-origin": APP })).status).toBe(200);
+    expect(await session(c)).toBeNull();
+  });
+
+  it("refuses a request that has a session but no Origin, or names another scheme", async () => {
+    const { c } = await verifiedUser(api);
+    expect((await signOut(c, {})).status).toBe(403);
+    expect((await signOut(c, { "expo-origin": "evil://" })).status).toBe(403);
+    expect(await session(c)).not.toBeNull();
+  });
+
+  it("doesn't let a browser on another site pass as the app", async () => {
+    const { c } = await verifiedUser(api);
+    const res = await c.call("/api/auth/sign-out", { body: {}, headers: { Origin: "https://evil.example", "expo-origin": APP } });
+    expect(res.status).toBe(403);
+    expect(await session(c)).not.toBeNull();
+  });
+
+  it("only sends emailed links back to the web app or the app", async () => {
+    const email = api.email();
+    const body = { email, password: "correct horse battery", name: "Test" };
+    const c = api.client();
+    const signUp = (callbackURL: string) =>
+      c.call("/api/auth/sign-up/email", { body: { ...body, callbackURL }, native: true, headers: { ...CAPTCHA, "expo-origin": APP } });
+    expect((await signUp("evil://account")).status).toBe(403);
+    expect((await signUp(`${APP}account`)).status).toBe(200);
+    const location = new URL((await c.call(api.lastEmail(email).link)).headers.get("location")!);
+    expect(location.protocol + location.host).toBe("storystitch:account");
+    expect(location.searchParams.get("cookie")).toContain("session_token");
+  });
+
+  it("has no open redirect through the Expo plugin's sign-in proxy", async () => {
+    const res = await api.client().call("/api/auth/expo-authorization-proxy?authorizationURL=https://evil.example&oauthState=x");
+    expect(res.status).toBe(404);
   });
 });
