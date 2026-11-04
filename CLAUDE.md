@@ -12,6 +12,7 @@ Product requirements: `docs/product-brief.md`. Acceptance criteria (what QA chec
 | Cropping, assignment, ranking (pure functions) | `packages/layout-engine/src/` |
 | App logic with no UI or browser APIs (scene, layout editor drafts, API calls) | `packages/client/src/` |
 | Web app UI | `apps/web/src/` |
+| The Expo app replacing `apps/web` (web now, iOS next) | `apps/app/src/`; anything browser-only goes in a `*.web.ts(x)` file (lint enforces it) |
 | On-device subject detection (Web Worker, MediaPipe) | `apps/web/src/detect/`; models in `apps/web/public/models/` |
 | End-to-end tests (Playwright) | `apps/web/e2e/` |
 | API request/response shapes | `packages/shared/src/api.ts` (zod) first, then the API and its callers |
@@ -30,7 +31,7 @@ A request that needs an app or service not in `project.json` (e.g. "add an iOS a
 
 ## Commands
 
-- `pnpm dev` (local Postgres in Docker, web :5173, API :3001; this Mac has an SSH tunnel on :3000) · `pnpm db:generate` / `pnpm db:migrate` · `pnpm check` (lint + typecheck + test, run before saying done) · `pnpm build` · `pnpm e2e` (Playwright, Android Chrome + iPhone WebKit emulation) · `pnpm qa` (everything above, graded against the acceptance criteria; CI and every release run it; `--target=app` grades the Expo app instead of `apps/web`)
+- `pnpm dev` (local Postgres in Docker, web :5173, Expo app :5174, API :3001; this Mac has an SSH tunnel on :3000) · `pnpm db:generate` / `pnpm db:migrate` · `pnpm check` (lint + typecheck + test, run before saying done) · `pnpm build` · `pnpm e2e` (Playwright, Android Chrome + iPhone WebKit emulation) · `pnpm qa` (everything above, graded against the acceptance criteria; CI and every release run it; `--target=app` grades the Expo app instead of `apps/web`)
 
 ## Rules
 

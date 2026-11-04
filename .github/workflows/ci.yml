@@ -38,6 +38,8 @@ jobs:
       - run: pnpm --filter @storystitch/web exec playwright install --with-deps chromium webkit
       # Lint, typecheck, unit + end-to-end tests, and every criterion in docs/acceptance-criteria.md.
       - run: pnpm qa
+      # The Expo app's iOS bundle: shows it still builds, long before there's an iOS app to run it in.
+      - run: pnpm --filter @storystitch/app run build:ios
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -61,6 +63,24 @@ jobs:
       branch: main
       api_url: ${{ vars.API_URL_STAGING }}
       # Accounts are on in staging only until they're switched on for production.
+      accounts: true
+      layout_editor: true
+    secrets: inherit
+
+  # The Expo app replacing apps/web, at its own address until it matches: next-staging.storystitch.ashishnag.com.
+  deploy-app-staging:
+    needs: check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      deployments: write
+    uses: ./.github/workflows/_deploy-pages.yml
+    with:
+      app: app
+      project: ${{ vars.PAGES_PROJECT_APP_STAGING }}
+      ref: ${{ github.sha }}
+      branch: main
+      api_url: ${{ vars.API_URL_STAGING }}
       accounts: true
       layout_editor: true
     secrets: inherit

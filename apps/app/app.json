@@ -1,0 +1,9 @@
+{
+  "expo": {
+    "name": "StoryStitch",
+    "slug": "storystitch",
+    "scheme": "storystitch",
+    "platforms": ["ios", "web"],
+    "web": { "bundler": "metro", "output": "single" }
+  }
+}

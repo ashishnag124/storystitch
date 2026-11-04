@@ -8,6 +8,14 @@
       "pagesProject": "storystitch-web",
       "pagesProjectStaging": "storystitch-web-staging"
     },
+    "app": {
+      "path": "apps/app",
+      "stack": "expo",
+      "host": "cloudflare-pages",
+      "pagesProjectStaging": "storystitch-app-staging",
+      "stagingUrl": "https://next-staging.storystitch.ashishnag.com",
+      "replaces": "web"
+    },
     "api": {
       "path": "apps/api",
       "stack": "hono-drizzle",

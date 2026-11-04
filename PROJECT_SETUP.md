@@ -15,6 +15,7 @@ Web app on Cloudflare Pages, plus an API with Postgres on Railway (from v2). All
 - Cloudflare Pages projects (classic Pages, Direct Upload):
   - `storystitch-web`: production, deploys the `production` branch (via `/release`).
   - `storystitch-web-staging`: staging, deploys `main` as its own production. It's a separate project because Pages routes a custom domain to a branch only through Cloudflare-proxied DNS, and ashishnag.com's DNS was at Squarespace when staging was set up (it moved to Cloudflare on 2026-11-02). The old staging alias `main.storystitch-web.pages.dev` no longer updates.
+  - `storystitch-app-staging`: the Expo app replacing `apps/web`, at https://next-staging.storystitch.ashishnag.com, deploys `main`. Goes away once staging itself moves to the Expo app.
 - Railway project: `storystitch`, services `api` and `Postgres`, environments `staging` (deploys `main`) and `production` (deploys the `production` branch, so only `/release` moves it). The API applies pending migrations itself at startup, before it serves requests (`apps/api/src/db/migrate.ts`; Railway never ran the `railway.json` pre-deploy command for this service), and Railway only switches traffic once `/health` answers.
 
 ## Where config lives
@@ -23,6 +24,8 @@ Web app on Cloudflare Pages, plus an API with Postgres on Railway (from v2). All
 |---|---|---|
 | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` | GitHub secrets (loaded from `~/.config/new-project/secrets.env`) | `_deploy-pages.yml` |
 | `PAGES_PROJECT` = `storystitch-web`, `PAGES_PROJECT_STAGING` = `storystitch-web-staging` | GitHub variables | `release.yml` (production), `ci.yml` (staging) |
+| `PAGES_PROJECT_APP_STAGING` = `storystitch-app-staging` | GitHub variable | `ci.yml` (the Expo app at `next-staging.storystitch.ashishnag.com`) |
+| `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_FEATURE_ACCOUNTS`, `EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR`, `EXPO_PUBLIC_TURNSTILE_SITE_KEY` | Set in `_deploy-pages.yml` from the same inputs and secret as the `VITE_*` values; locally from `.env` | Expo app builds |
 | `API_URL_STAGING`, `API_URL_PRODUCTION` | GitHub variables | web builds (`VITE_API_URL`) in `ci.yml` / `release.yml` |
 | `DATABASE_URL` (reference `${{Postgres.DATABASE_URL}}`), `CORS_ORIGIN`, `NODE_ENV` | Railway variables on `api`, per environment | the API |
 | `BETTER_AUTH_URL` (the API's own URL), `BETTER_AUTH_SECRET` (random, per environment), `EMAIL_TRANSPORT=resend`, `EMAIL_FROM`, `RESEND_API_KEY`, `TURNSTILE_SECRET_KEY` | Railway variables on `api`, per environment | accounts (B2) |
