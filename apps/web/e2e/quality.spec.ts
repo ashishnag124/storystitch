@@ -208,8 +208,16 @@ test("AC-MOBILE-01 nothing scrolls sideways at phone width", async ({ page }) =>
     await page.goto("/");
     expect(await overflow(), `pick screen at ${width}px`).toBeLessThanOrEqual(0);
     await libraryInput(page).setInputFiles(await makePhotos(page, 8));
-    await page.getByText("Style", { exact: true }).click();
-    expect(await overflow(), `editor at ${width}px`).toBeLessThanOrEqual(0);
+    // Every panel, not just one: the layout strip once stretched the page only while Layouts was open.
+    await expect(page.getByRole("radio").first()).toBeVisible();
+    for (const tab of ["Layouts", "Style", "Export"]) {
+      await page.getByRole("tab", { name: tab }).click();
+      expect(await overflow(), `${tab} tool at ${width}px`).toBeLessThanOrEqual(0);
+    }
+    const box = (await page.getByRole("application").boundingBox())!;
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    await expect(page.getByRole("slider", { name: "Zoom" })).toBeVisible();
+    expect(await overflow(), `photo selected at ${width}px`).toBeLessThanOrEqual(0);
   }
 });
 
