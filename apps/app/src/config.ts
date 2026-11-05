@@ -1,5 +1,7 @@
 /** Accounts ship dark: on only in builds with EXPO_PUBLIC_FEATURE_ACCOUNTS=true. */
 export const ACCOUNTS_ENABLED = process.env.EXPO_PUBLIC_FEATURE_ACCOUNTS === "true";
+/** Timing numbers on screen, for checking speed on a real phone. Never on in hosted builds. */
+export const PERF_READOUT = process.env.EXPO_PUBLIC_PERF_READOUT === "true";
 /** The API's origin, e.g. https://api.storystitch.ashishnag.com. */
 export const API_URL: string = process.env.EXPO_PUBLIC_API_URL ?? "";
 /** The web app's origin: where the iOS app's bot check and emailed links live. */

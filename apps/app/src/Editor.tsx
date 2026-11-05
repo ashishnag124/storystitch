@@ -7,7 +7,8 @@ import { AccountLink } from "./AccountLink";
 import { deleteSaved, listSaved, recordExport } from "./api";
 import { LAYOUT_EDITOR_ENABLED } from "./config";
 import { LayoutStrip } from "./LayoutStrip";
-import { canShareFiles, canWaitToShare, renderExport, shareOrDownload, type ExportFormat } from "./platform/exportImage";
+import { perfTimes, resetPerfPeak, timeLayoutSwitch } from "./PerfReadout";
+import { EXPORT_PAUSE_MS, canShareFiles, canWaitToShare, renderExport, shareOrDownload, type ExportFormat } from "./platform/exportImage";
 import { FormatSelect } from "./platform/FormatSelect";
 import { LayoutEditor } from "./platform/lazyScreens";
 import type { Photo } from "./platform/photos";
@@ -19,9 +20,6 @@ import { MIN_TARGET, colors, fontFamily, shadows, type as typography } from "./t
 import { Button } from "./ui/Button";
 import { Choice } from "./ui/Choice";
 import { upscaleWarnings } from "./upscale";
-
-/** How long the preview must be still before the export is rendered in the background. */
-const EXPORT_DEBOUNCE_MS = 400;
 
 type Tool = "layouts" | "style" | "export";
 const TOOLS: { id: Tool; label: string }[] = [
@@ -68,6 +66,8 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
   /** Share was tapped before the image was ready, and opens once it is. */
   const [shareWaiting, setShareWaiting] = useState(false);
   const stage = useRef<StageHandle>(null);
+  /** Starts the waiting export straight away. */
+  const startExport = useRef(() => {});
   const shareable = useMemo(() => canShareFiles(), []);
   const warnings = useMemo(() => upscaleWarnings(scene, photos), [scene, photos]);
   const onScene = useCallback((next: (s: Scene) => Scene) => setScene(next), []);
@@ -79,19 +79,35 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
     [mine, options, photos, scene.style],
   );
 
+  useEffect(resetPerfPeak, []);
+
   // Render the export ahead of time so Share can open the share sheet within the tap.
   useEffect(() => {
-    let current = true;
-    const timer = setTimeout(() => {
-      renderExport(scene, photos, format)
-        .then((blob) => current && (setExported({ scene, format, blob }), setExportError(false)))
+    const job = { cancelled: false };
+    let started = false;
+    const run = () => {
+      if (started) return;
+      started = true;
+      clearTimeout(timer);
+      // An earlier failure says nothing about this export, and would end a wait for it.
+      setExportError(false);
+      const start = performance.now();
+      renderExport(scene, photos, format, job)
+        .then((blob) => {
+          if (!blob || job.cancelled) return;
+          perfTimes.exportMs = performance.now() - start;
+          setExported({ scene, format, blob });
+          setExportError(false);
+        })
         .catch((err) => {
           console.error(err);
-          if (current) setExportError(true);
+          if (!job.cancelled) setExportError(true);
         });
-    }, EXPORT_DEBOUNCE_MS);
+    };
+    const timer = setTimeout(run, EXPORT_PAUSE_MS);
+    startExport.current = run;
     return () => {
-      current = false;
+      job.cancelled = true;
       clearTimeout(timer);
     };
   }, [scene, photos, format]);
@@ -112,6 +128,7 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
   }, [shareWaiting, ready, exportError]);
 
   function chooseLayout(option: Scene) {
+    timeLayoutSwitch();
     stage.current?.crossfade();
     setScene(newScene(option.layout, photos, scene.style, option.order));
     setSelected(null);
@@ -205,7 +222,11 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
             label={(canWaitToShare ? !shareWaiting : ready) ? (shareable ? "Share" : "Download") : "Preparing…"}
             primary
             disabled={canWaitToShare ? shareWaiting : !ready}
-            onPress={() => (ready ? void share(ready) : setShareWaiting(true))}
+            onPress={() => {
+              if (ready) return void share(ready);
+              setShareWaiting(true);
+              startExport.current();
+            }}
           />
         </View>
       </View>
