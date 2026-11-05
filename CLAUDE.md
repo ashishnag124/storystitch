@@ -52,7 +52,7 @@ Every PR that changes shared screens gets this check. The simulator can't prove 
 ## CI
 
 - **Fast tier:** `fast` in `ci.yml` on every PR: `pnpm check`, `pnpm build` and the iOS bundle.
-- **Slow tier:** `check` in `ci.yml` (`pnpm qa --target=app`) and `ios.yml` (the simulator, 30+ minutes) on PRs into `main`, pushes to `main`, nightly on `dev`, and PRs labeled `run-sim`.
+- **Slow tier:** `check` in `ci.yml` (`pnpm qa --target=app`) and `ios.yml` (the simulator, 30+ minutes) on PRs into `main`, nightly on `dev`, and PRs labeled `run-sim`. Pushes to `main` run `check` too, because releases and deploys need a passed run on the merge commit. They don't run the simulator.
 - **Before pushing:** run the affected tests locally. For simulator changes, run only the affected flows, e.g. `maestro test apps/app/maestro/core/06-share.yaml`. After pushing, move on: don't watch or poll CI.
 - **Promoting:** one PR from `dev` into `main`, once or twice a session. It needs 30+ minutes plus fix time, so remind the user and start well before the session ends.
   1. On the latest `dev`, run `pnpm qa --target=app` locally, because PRs into `dev` skip Playwright and acceptance grading. Don't open the PR until it passes.
