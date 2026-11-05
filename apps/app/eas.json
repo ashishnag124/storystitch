@@ -24,12 +24,31 @@
       "extends": "base",
       "distribution": "store",
       "autoIncrement": true
+    },
+    "production": {
+      "pnpm": "12.16.1",
+      "channel": "production",
+      "environment": "production",
+      "distribution": "store",
+      "autoIncrement": true,
+      "env": {
+        "APP_VARIANT": "production",
+        "EXPO_PUBLIC_API_URL": "https://api.storystitch.ashishnag.com",
+        "EXPO_PUBLIC_WEB_URL": "https://storystitch.ashishnag.com",
+        "EXPO_PUBLIC_FEATURE_ACCOUNTS": "true",
+        "EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR": "true"
+      }
     }
   },
   "submit": {
     "testflight": {
       "ios": {
         "ascAppId": "REPLACE_WITH_APP_STORE_CONNECT_APP_ID"
+      }
+    },
+    "production": {
+      "ios": {
+        "ascAppId": "REPLACE_WITH_PRODUCTION_APP_STORE_CONNECT_APP_ID"
       }
     }
   }

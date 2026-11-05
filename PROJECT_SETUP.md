@@ -30,6 +30,7 @@ Web app on Cloudflare Pages, plus an API with Postgres on Railway (from v2). All
 | `EXPO_PUBLIC_WEB_URL` (where the iOS app's bot check and emailed links live) | `apps/app/eas.json`; locally from `.env` | iOS builds |
 | `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_FEATURE_ACCOUNTS`, `EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR` for iOS | `apps/app/eas.json`, read by EAS builds and by `mobile.yml` for updates | iOS builds and updates |
 | `EXPO_PUBLIC_TURNSTILE_SITE_KEY` for iOS | EAS environment variable, `preview` environment. GitHub secrets don't reach EAS builds | iOS builds and updates |
+| `MOBILE_PRODUCTION_ENABLED` | GitHub variable, off until the "iOS production checklist" is done. Allows `mobile-release.yml` to run | production iOS builds |
 | `EXPO_PUBLIC_PERF_READOUT` (optional) | Set by hand for a test build on a real phone; never in a hosted environment | shows timing numbers on screen |
 | EAS project ID, App Store Connect app ID | Placeholders in `apps/app/app.config.ts` and `apps/app/eas.json` (both public values) | EAS |
 | `API_URL_STAGING`, `API_URL_PRODUCTION` | GitHub variables | web builds (`VITE_API_URL`) in `ci.yml` / `release.yml` |
@@ -209,6 +210,28 @@ first one. Claude can't do these: they need your Apple and Expo accounts. Run co
   that passes CI runs it. To turn it off, delete the variable.
 
 The API side also needs `APP_SCHEME=storystitch-staging://` on staging.
+
+### iOS production checklist (yours)
+
+`.github/workflows/mobile-release.yml` builds the production app from a release tag and sends it to App Store
+Connect. It only runs when started by hand, and nothing reaches the App Store until you submit the build for review.
+No production build has run yet, so expect to fix things on the first one. Run commands from `apps/app`.
+
+- [ ] 1. **Move production web to the Expo app first.** iOS sign-in loads the bot check from `/bot-check` on the
+  production site, and `apps/web` doesn't have that page. Until this ships, sign-in fails in the production iOS app.
+- [ ] 2. **Production app in App Store Connect**: add an app with the bundle ID `com.ashishnag.storystitch`, named
+  StoryStitch. Copy its numeric Apple ID into `submit.production.ios.ascAppId` in `apps/app/eas.json`, and merge that.
+- [ ] 3. **Turnstile site key for production builds**: the same public key, on the `production` environment:
+  ```bash
+  npx eas-cli@27.2.0 env:set production --name EXPO_PUBLIC_TURNSTILE_SITE_KEY --value YOUR_SITE_KEY --visibility plaintext --scope project
+  ```
+- [ ] 4. **First production build, by hand**: run the `production` profile once with `npx eas-cli@27.2.0 build` and
+  `--platform ios --profile production --auto-submit`, signing in to Apple when asked. Answer the export compliance
+  question for the build in App Store Connect.
+- [ ] 5. **Turn it on**: `gh variable set MOBILE_PRODUCTION_ENABLED --body true`. To turn it off, delete the variable.
+- [ ] 6. **Each later build**: after `/release`, run `gh workflow run mobile-release.yml -f version=vX.Y.Z`.
+
+The production API already defaults to `APP_SCHEME=storystitch://`, which matches this app.
 
 ### DNS records (Cloudflare → ashishnag.com → DNS → Records)
 
