@@ -65,11 +65,16 @@ async function decode(photo: Photo): Promise<Drawable & { image: ImageBitmap }> 
   return { image, width: image.width, height: image.height };
 }
 
+/** Set `cancelled` to stop a render that's no longer wanted, between photos. */
+export interface ExportJob {
+  cancelled: boolean;
+}
+
 /**
  * Renders the 1080×1920 export from the original photos, decoding one at a time
- * so memory stays at a single full-resolution photo.
+ * so memory stays at a single full-resolution photo. Returns null if the job was cancelled.
  */
-export async function renderExport(scene: Scene, photos: Photo[], format: ExportFormat): Promise<Blob> {
+export async function renderExport(scene: Scene, photos: Photo[], format: ExportFormat, job: ExportJob): Promise<Blob | null> {
   const start = performance.now();
   const size = STORY_CANVAS;
   const canvas = document.createElement("canvas");
@@ -87,6 +92,7 @@ export async function renderExport(scene: Scene, photos: Photo[], format: Export
     img.image.close();
   }
   for (const i of drawOrder(scene.layout.cells)) {
+    if (job.cancelled) return null;
     const img = await decode(photos[scene.order[i]!]!);
     drawCell(ctx, shapes[i]!, img, scene.crops[i]!, radius, border, scene.style.borderColor);
     img.image.close();
@@ -96,6 +102,12 @@ export async function renderExport(scene: Scene, photos: Photo[], format: Export
   performance.measure(EXPORT_MEASURE, { start });
   return blob;
 }
+
+/** Encoding runs in a worker, so it can start soon after a change. */
+export const EXPORT_PAUSE_MS = 400;
+
+/** A browser only opens its share sheet during the tap itself, so the image has to be ready first. */
+export const canWaitToShare: boolean = false;
 
 /** Whether this browser can hand image files to the native share sheet. */
 export function canShareFiles(): boolean {

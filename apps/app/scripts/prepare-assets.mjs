@@ -19,6 +19,7 @@ writeFileSync(join(out, "bricolage-grotesque.css"), readFileSync(join(font, "ind
 const pub = fileURLToPath(new URL("../public/", import.meta.url));
 const wasm = join(dirname(createRequire(import.meta.url).resolve("@mediapipe/tasks-vision")), "wasm");
 mkdirSync(join(pub, "mediapipe"), { recursive: true });
+for (const file of ["privacy.html", "support.html", "legal.css"]) cpSync(fileURLToPath(new URL(`../../web/public/${file}`, import.meta.url)), join(pub, file));
 cpSync(fileURLToPath(new URL("../../web/public/models/", import.meta.url)), join(pub, "models"), { recursive: true });
 for (const file of ["vision_wasm_module_internal.js", "vision_wasm_module_internal.wasm"]) cpSync(join(wasm, file), join(pub, "mediapipe", file));
 await build({

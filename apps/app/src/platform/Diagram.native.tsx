@@ -1,14 +1,17 @@
 import { cellShapes, type Scene } from "@storystitch/client";
 import { Canvas, Path } from "@shopify/react-native-skia";
 import { drawOrder } from "@storystitch/shared";
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import { colors } from "../theme";
 import { outlinePath } from "./render.native";
 
 const SIZE = { width: 54, height: 96 };
 
-/** A layout option drawn as a plain diagram of its cells, so the shape of the layout is easy to read. */
-export function Diagram({ option, checked }: { option: Scene; checked: boolean }) {
+/**
+ * A layout option drawn as a plain diagram of its cells, so the shape of the layout is easy to read. Memoized because
+ * each is its own Skia canvas, and the strip re-renders on every change to the collage.
+ */
+export const Diagram = memo(function Diagram({ option, checked }: { option: Scene; checked: boolean }) {
   const shapes = useMemo(() => cellShapes(option.layout, option.style, SIZE), [option]);
   const cell = checked ? colors.coral : colors.border;
   return (
@@ -22,4 +25,4 @@ export function Diagram({ option, checked }: { option: Scene; checked: boolean }
       })}
     </Canvas>
   );
-}
+});

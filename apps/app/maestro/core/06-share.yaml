@@ -14,10 +14,8 @@ name: AC-IOS-06 Share opens the share sheet with a JPEG or a PNG
 # Tapping outside the sheet closes it, and the tap also reaches the app, so use the empty part of the header.
 - tapOn:
     point: "40%,10%"
+# Share doesn't wait for the new image: a tap straight away still gets the PNG.
 - tapOn: PNG
-- extendedWaitUntil:
-    visible: Share
-    timeout: 20000
 - tapOn: Share
 - extendedWaitUntil:
     visible: "PNG Image.*"

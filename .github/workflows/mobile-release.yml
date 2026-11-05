@@ -1,0 +1,59 @@
+# Builds the production iOS app from a release tag and sends it to App Store Connect. It doesn't publish anything:
+# the build waits there until someone submits it for review by hand.
+#
+# Only ever started by hand, after /release has put that tag on production. Off until EXPO_TOKEN is set and the
+# MOBILE_PRODUCTION_ENABLED variable is `true`. Setup: "iOS production checklist" in PROJECT_SETUP.md.
+name: Mobile release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release tag already on production, e.g. v1.0.0"
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-release
+  cancel-in-progress: false
+
+jobs:
+  production:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: apps/app
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      VERSION: ${{ inputs.version }}
+      ENABLED: ${{ vars.MOBILE_PRODUCTION_ENABLED }}
+    steps:
+      - name: Check that production delivery is on
+        working-directory: .
+        run: |
+          if [ -z "$EXPO_TOKEN" ] || [ "$ENABLED" != "true" ]; then
+            echo "::error::Production delivery is off: it needs the EXPO_TOKEN secret and MOBILE_PRODUCTION_ENABLED=true."
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.version }}
+          fetch-depth: 0
+      - name: Check that this tag is on production
+        working-directory: .
+        run: |
+          git fetch origin production
+          if ! git merge-base --is-ancestor "$(git rev-parse HEAD)" origin/production; then
+            echo "::error::$VERSION isn't on the production branch. Run /release first."
+            exit 1
+          fi
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: npm install --global eas-cli@27.2.0
+      - run: eas build --platform ios --profile production --auto-submit --non-interactive
