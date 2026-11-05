@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createApi } from "./api";
+import { authFetch, createApi } from "./api";
 
 const api = createApi({ apiUrl: "https://api.example", popularity: true });
 
@@ -98,5 +98,36 @@ describe("AC-UPDATE-01 asking the API for the minimum app version", () => {
       vi.fn((_url: string, { signal }: RequestInit) => new Promise((_, reject) => signal?.addEventListener("abort", () => reject(signal.reason)))),
     );
     expect(await api.fetchMinimumVersion()).toBeNull();
+  });
+});
+
+describe("authFetch", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  it("AC-AUTH-11 answers 503 when the connection fails", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => Promise.reject(new TypeError("Network request failed"))));
+    expect((await authFetch("https://api.example/api/auth/sign-in/email")).status).toBe(503);
+  });
+
+  it("AC-AUTH-11 answers 503 when no answer comes", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        (_: string, init: RequestInit) =>
+          new Promise((_, reject) => init.signal!.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")))),
+      ),
+    );
+    const answer = authFetch("https://api.example/api/auth/sign-in/email");
+    await vi.advanceTimersByTimeAsync(20_000);
+    expect((await answer).status).toBe(503);
+  });
+
+  it("AC-AUTH-11 passes on an answer from the API, errors included", async () => {
+    respondWith({ code: "INVALID_EMAIL_OR_PASSWORD" }, 401);
+    expect((await authFetch("https://api.example/api/auth/sign-in/email")).status).toBe(401);
   });
 });

@@ -7,7 +7,8 @@ import { AccountLink } from "./AccountLink";
 import { deleteSaved, listSaved, recordExport } from "./api";
 import { LAYOUT_EDITOR_ENABLED } from "./config";
 import { LayoutStrip } from "./LayoutStrip";
-import { canShareFiles, renderExport, shareOrDownload, type ExportFormat } from "./platform/exportImage";
+import { perfTimes, resetPerfPeak, timeLayoutSwitch } from "./PerfReadout";
+import { EXPORT_PAUSE_MS, canShareFiles, canWaitToShare, renderExport, shareOrDownload, type ExportFormat } from "./platform/exportImage";
 import { FormatSelect } from "./platform/FormatSelect";
 import { LayoutEditor } from "./platform/lazyScreens";
 import type { Photo } from "./platform/photos";
@@ -19,9 +20,6 @@ import { MIN_TARGET, colors, fontFamily, shadows, type as typography } from "./t
 import { Button } from "./ui/Button";
 import { Choice } from "./ui/Choice";
 import { upscaleWarnings } from "./upscale";
-
-/** How long the preview must be still before the export is rendered in the background. */
-const EXPORT_DEBOUNCE_MS = 400;
 
 type Tool = "layouts" | "style" | "export";
 const TOOLS: { id: Tool; label: string }[] = [
@@ -65,7 +63,11 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
   const [format, setFormat] = useState<ExportFormat>("image/jpeg");
   const [exported, setExported] = useState<{ scene: Scene; format: ExportFormat; blob: Blob } | null>(null);
   const [exportError, setExportError] = useState(false);
+  /** Share was tapped before the image was ready, and opens once it is. */
+  const [shareWaiting, setShareWaiting] = useState(false);
   const stage = useRef<StageHandle>(null);
+  /** Starts the waiting export straight away. */
+  const startExport = useRef(() => {});
   const shareable = useMemo(() => canShareFiles(), []);
   const warnings = useMemo(() => upscaleWarnings(scene, photos), [scene, photos]);
   const onScene = useCallback((next: (s: Scene) => Scene) => setScene(next), []);
@@ -77,26 +79,56 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
     [mine, options, photos, scene.style],
   );
 
+  useEffect(resetPerfPeak, []);
+
   // Render the export ahead of time so Share can open the share sheet within the tap.
   useEffect(() => {
-    let current = true;
-    const timer = setTimeout(() => {
-      renderExport(scene, photos, format)
-        .then((blob) => current && (setExported({ scene, format, blob }), setExportError(false)))
+    const job = { cancelled: false };
+    let started = false;
+    const run = () => {
+      if (started) return;
+      started = true;
+      clearTimeout(timer);
+      // An earlier failure says nothing about this export, and would end a wait for it.
+      setExportError(false);
+      const start = performance.now();
+      renderExport(scene, photos, format, job)
+        .then((blob) => {
+          if (!blob || job.cancelled) return;
+          perfTimes.exportMs = performance.now() - start;
+          setExported({ scene, format, blob });
+          setExportError(false);
+        })
         .catch((err) => {
           console.error(err);
-          if (current) setExportError(true);
+          if (!job.cancelled) setExportError(true);
         });
-    }, EXPORT_DEBOUNCE_MS);
+    };
+    const timer = setTimeout(run, EXPORT_PAUSE_MS);
+    startExport.current = run;
     return () => {
-      current = false;
+      job.cancelled = true;
       clearTimeout(timer);
     };
   }, [scene, photos, format]);
   const ready = exported && exported.scene === scene && exported.format === format ? exported.blob : null;
   const extension = format === "image/png" ? "png" : "jpg";
 
+  async function share(file: NonNullable<typeof ready>) {
+    // Only built-in layouts are counted: saved layouts are the user's own.
+    if ((await shareOrDownload(file, `storystitch.${extension}`)) && !mineIds.has(scene.layout.id)) recordExport(scene.layout.id);
+  }
+
+  useEffect(() => {
+    if (!shareWaiting || (!ready && !exportError)) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- the wait ends when the export finishes, which is outside React.
+    setShareWaiting(false);
+    if (ready) void share(ready);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs when the wait ends, not whenever `share` changes.
+  }, [shareWaiting, ready, exportError]);
+
   function chooseLayout(option: Scene) {
+    timeLayoutSwitch();
     stage.current?.crossfade();
     setScene(newScene(option.layout, photos, scene.style, option.order));
     setSelected(null);
@@ -187,14 +219,13 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
         <View style={styles.barActions}>
           <AccountLink />
           <Button
-            label={ready ? (shareable ? "Share" : "Download") : "Preparing…"}
+            label={(canWaitToShare ? !shareWaiting : ready) ? (shareable ? "Share" : "Download") : "Preparing…"}
             primary
-            disabled={!ready}
-            onPress={async () => {
-              // Only built-in layouts are counted: saved layouts are the user's own.
-              if (ready && (await shareOrDownload(ready, `storystitch.${extension}`)) && !mineIds.has(scene.layout.id)) {
-                recordExport(scene.layout.id);
-              }
+            disabled={canWaitToShare ? shareWaiting : !ready}
+            onPress={() => {
+              if (ready) return void share(ready);
+              setShareWaiting(true);
+              startExport.current();
             }}
           />
         </View>
@@ -397,7 +428,7 @@ const styles = StyleSheet.create({
   tabLabel: { fontFamily, fontSize: 16, fontWeight: "600", color: colors.muted },
   tabCurrent: { fontWeight: "800", color: colors.accent },
   badge: { position: "absolute", top: 10, right: "30%", width: 8, height: 8, borderRadius: 4, backgroundColor: "#d97706" },
-  exportTool: { gap: 8 },
+  exportTool: { flexGrow: 1, justifyContent: "center", gap: 8 },
   exportError: { fontFamily, padding: 12, borderRadius: 14, fontSize: 14, backgroundColor: colors.warnBg, color: colors.warnText },
   warnings: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, backgroundColor: colors.warnBg },
   warning: { fontFamily, fontSize: 13, color: colors.warnText },
