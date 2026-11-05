@@ -4,6 +4,7 @@ export { authClient } from "./platform/auth";
 export function errorMessage(error: { status?: number; code?: string; message?: string } | null | undefined): string {
   if (!error) return "Something went wrong. Please try again.";
   if (error.status === 429) return "Too many attempts. Please wait a minute and try again.";
+  if (error.status === 503) return "Couldn't reach StoryStitch. Check your connection and try again.";
   switch (error.code) {
     case "INVALID_EMAIL_OR_PASSWORD":
       return "That email and password don't match.";

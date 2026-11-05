@@ -46,3 +46,6 @@ apps/app/public/mediapipe/
 apps/app/public/models/
 apps/app/public/detect-worker.js
 apps/app/public/encode-worker.js
+apps/app/public/privacy.html
+apps/app/public/support.html
+apps/app/public/legal.css

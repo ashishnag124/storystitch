@@ -1,10 +1,14 @@
 import { describeSubjects } from "@storystitch/client";
 import { Suspense, useState } from "react";
+import { View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { fetchPopularity } from "./api";
 import { Editor } from "./Editor";
 import { PickScreen } from "./PickScreen";
+import { PERF_READOUT } from "./config";
+import { PerfReadout } from "./PerfReadout";
 import { Accounts } from "./platform/lazyScreens";
+import { ACCOUNT_PATHS, useLocation } from "./platform/route";
 import { UnsupportedPhotoError, analyzePhoto, closePhoto, loadPhoto, type PickedPhoto, type Photo } from "./platform/photos";
 import { Screen } from "./ui/Screen";
 
@@ -52,19 +56,26 @@ export default function App() {
     setNotices([]);
   }
 
+  // VoiceOver stays on an open account screen, which covers this one. The bot check's page also holds only the check.
+  const { pathname } = useLocation();
+  const covered = Boolean(Accounts) && (pathname === "/bot-check" || ACCOUNT_PATHS.some((p) => p === pathname));
+
   return (
     <SafeAreaProvider>
       <Screen>
-        {photos.length ? (
-          <Editor photos={photos} summary={summary} notices={notices} privacy={PRIVACY} popularity={popularity} onStartOver={startOver} />
-        ) : (
-          <PickScreen privacy={PRIVACY} progress={progress} notices={notices} onPicked={(p) => void openPhotos(p)} />
-        )}
+        <View aria-hidden={covered} collapsable={false} style={{ flex: 1 }}>
+          {photos.length ? (
+            <Editor photos={photos} summary={summary} notices={notices} privacy={PRIVACY} popularity={popularity} onStartOver={startOver} />
+          ) : (
+            <PickScreen privacy={PRIVACY} progress={progress} notices={notices} onPicked={(p) => void openPhotos(p)} />
+          )}
+        </View>
         {Accounts && (
           <Suspense fallback={null}>
             <Accounts />
           </Suspense>
         )}
+        {PERF_READOUT && <PerfReadout />}
       </Screen>
     </SafeAreaProvider>
   );
