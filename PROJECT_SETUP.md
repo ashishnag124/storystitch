@@ -329,4 +329,6 @@ Run `/add-app` (e.g. an iOS app, API + database, accounts). It updates `project.
 
 Don't move or force-push the `production` branch. It stays where it is, and the next `/release` fast-forwards it.
 
+Tested locally on November 5, 2026, on a database with `0004`: v0.6.0's API kept working during a deploy and after rolling back and forward again, v0.6.0's `apps/web` passed its own end-to-end tests against the current API, and the Expo app passed its end-to-end tests, leaving out usage, against v0.6.0's API. The Cloudflare and Railway rollback buttons themselves haven't been tried.
+
 **Once a production iOS app is live**, rolling web back removes `/bot-check`, so sign-in and sign-up fail in that app until the Expo web app is back. Prefer fixing forward then. Rolling back the API is safe for the app until the app depends on something newer.
