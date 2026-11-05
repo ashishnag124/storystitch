@@ -38,7 +38,7 @@ const turnstileVerifyUrl = await new Promise<string>((resolve) => {
   });
 });
 
-export function testApi({ turnstileSecret = TURNSTILE_PASS } = {}) {
+export function testApi({ turnstileSecret = TURNSTILE_PASS, usageIngestEnabled = false } = {}) {
   const { pool, db } = createDb(process.env.DATABASE_URL!);
   const mailer = memoryMailer();
   const auth = createAuth({
@@ -51,7 +51,15 @@ export function testApi({ turnstileSecret = TURNSTILE_PASS } = {}) {
     turnstileSecret,
     turnstileVerifyUrl,
   });
-  const app = createApp({ pool, auth, corsOrigins: [WEB], version: "test-sha", minimumIosVersion: MINIMUM_IOS_VERSION, testEmails: mailer.sent });
+  const app = createApp({
+    pool,
+    auth,
+    corsOrigins: [WEB],
+    version: "test-sha",
+    minimumIosVersion: MINIMUM_IOS_VERSION,
+    usageIngestEnabled,
+    testEmails: mailer.sent,
+  });
   /** A browser-like client with its own IP address (so rate limits don't leak between tests) and cookies. */
   function client() {
     const ip = `10.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}`;

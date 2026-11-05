@@ -20,6 +20,8 @@ const EnvSchema = z
       .default("storystitch://"),
     /** The oldest iOS app version still supported. Raising it asks everyone on an older version to update. */
     MIN_IOS_APP_VERSION: AppVersionSchema.default("1.0.0"),
+    /** Counts usage events. Also the emergency off switch: turning it off stops every write, with no app release. */
+    USAGE_INGEST_ENABLED: flag,
     /** Set by Railway on each deploy. */
     RAILWAY_GIT_COMMIT_SHA: z.string().optional(),
     /** Where this API is reachable from browsers; emailed links point here first. */

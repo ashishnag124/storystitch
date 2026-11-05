@@ -33,6 +33,7 @@ const app = createApp({
   corsOrigins: env.CORS_ORIGIN,
   version: env.RAILWAY_GIT_COMMIT_SHA ?? "dev",
   minimumIosVersion: env.MIN_IOS_APP_VERSION,
+  usageIngestEnabled: env.USAGE_INGEST_ENABLED,
   testEmails: env.ENABLE_TEST_ROUTES ? memory.sent : undefined,
 });
 

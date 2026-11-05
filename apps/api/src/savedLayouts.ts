@@ -30,6 +30,14 @@ const toSaved = (r: Row): SavedLayout => ({
   updatedAt: r.updated_at.toISOString(),
 });
 
+// Changes must come from our own web origins (CORS alone doesn't stop a form post), or from the native app. The app
+// sends no Origin, so it sends NATIVE_APP_HEADER, which counts only when Origin is absent: browsers always send Origin
+// on these methods, and can't add this header cross-site without passing CORS.
+export const fromOurApps = (c: Context, corsOrigins: string[]) => {
+  const origin = c.req.header("Origin");
+  return origin === undefined ? !!c.req.header(NATIVE_APP_HEADER) : corsOrigins.includes(origin);
+};
+
 /**
  * Saved layouts: the signed-in user's own layouts, made or edited in the layout editor. Every route needs a session
  * and only ever touches that user's rows. Layouts are checked like the built-in ones before they're stored.
@@ -50,14 +58,6 @@ export function savedLayoutRoutes(app: Hono, { pool, auth, corsOrigins }: { pool
     return { name, layout };
   }
 
-  // Cookies carry the session, so changes must come from our own web origins (CORS alone doesn't stop a form post),
-  // or from the native app. The app sends no Origin, so it sends NATIVE_APP_HEADER, which counts only when Origin is
-  // absent: browsers always send Origin on these methods, and can't add this header cross-site without passing CORS.
-  const fromOurApps = (c: Context) => {
-    const origin = c.req.header("Origin");
-    return origin === undefined ? !!c.req.header(NATIVE_APP_HEADER) : corsOrigins.includes(origin);
-  };
-
   app.use("/layouts/mine/*", bodyLimit({ maxSize: MAX_BODY_BYTES }));
   app.use("/layouts/mine", bodyLimit({ maxSize: MAX_BODY_BYTES }));
 
@@ -74,7 +74,7 @@ export function savedLayoutRoutes(app: Hono, { pool, auth, corsOrigins }: { pool
   });
 
   app.post("/layouts/mine", async (c) => {
-    if (!fromOurApps(c)) return c.json({ error: "FORBIDDEN" }, 403);
+    if (!fromOurApps(c, corsOrigins)) return c.json({ error: "FORBIDDEN" }, 403);
     const user = await userId(c);
     if (!user) return c.json({ error: "SIGNED_OUT" }, 401);
     const input = await parse(c);
@@ -91,7 +91,7 @@ export function savedLayoutRoutes(app: Hono, { pool, auth, corsOrigins }: { pool
   });
 
   app.put("/layouts/mine/:id", async (c) => {
-    if (!fromOurApps(c)) return c.json({ error: "FORBIDDEN" }, 403);
+    if (!fromOurApps(c, corsOrigins)) return c.json({ error: "FORBIDDEN" }, 403);
     const user = await userId(c);
     if (!user) return c.json({ error: "SIGNED_OUT" }, 401);
     const input = await parse(c);
@@ -105,7 +105,7 @@ export function savedLayoutRoutes(app: Hono, { pool, auth, corsOrigins }: { pool
   });
 
   app.delete("/layouts/mine/:id", async (c) => {
-    if (!fromOurApps(c)) return c.json({ error: "FORBIDDEN" }, 403);
+    if (!fromOurApps(c, corsOrigins)) return c.json({ error: "FORBIDDEN" }, 403);
     const user = await userId(c);
     if (!user) return c.json({ error: "SIGNED_OUT" }, 401);
     const { rowCount } = await pool.query("delete from saved_layout where id = $1 and user_id = $2", [c.req.param("id"), user]);
