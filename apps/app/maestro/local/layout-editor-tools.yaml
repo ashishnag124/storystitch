@@ -10,6 +10,8 @@ name: Layout editor tools
 - extendedWaitUntil:
     visible: "4 of 4 photos"
     timeout: 8000
+# The screen behind the dialog is hidden from VoiceOver.
+- assertNotVisible: Start over
 - tapOn:
     text: "Layout being edited.*"
     point: "30%,45%"

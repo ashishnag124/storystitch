@@ -52,7 +52,7 @@ export function CustomSwatch({ checked, onChange }: { value: string; checked: bo
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Pressable role="button" aria-label="Custom background color" aria-pressed={checked} onPress={() => setOpen(true)} style={[styles.swatch, checked && styles.checked]}>
+      <Pressable role="button" aria-label="Custom background color" aria-pressed={checked} accessibilityState={{ selected: checked }} onPress={() => setOpen(true)} style={[styles.swatch, checked && styles.checked]}>
         <Canvas style={styles.face}>
           <Circle cx={R} cy={R} r={R}>
             <SweepGradient c={vec(R, R)} colors={RAINBOW} />

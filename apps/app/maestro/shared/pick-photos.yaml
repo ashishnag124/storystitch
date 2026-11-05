@@ -5,10 +5,11 @@ appId: com.ashishnag.storystitch.staging
 - launchApp:
     clearState: true
 - tapOn: Choose photos
+# The picker runs in its own iOS process, and CI's simulator can take a while to show it.
 - extendedWaitUntil:
     visible:
       id: PXGGridLayout-Info
-    timeout: 20000
+    timeout: 60000
 - tapOn:
     text: Close
     optional: true
@@ -25,6 +26,7 @@ appId: com.ashishnag.storystitch.staging
     id: PXGGridLayout-Info
     index: 3
 - tapOn: Done
+# The first pick after a fresh start is the slowest: iOS hands over the photos, then detection loads.
 - extendedWaitUntil:
     visible: "Story preview: .*, 4 photos"
-    timeout: 30000
+    timeout: 120000

@@ -86,6 +86,7 @@ export function StylePanel({ layout, style, onChange }: Props) {
                   role="button"
                   aria-label={s.name}
                   aria-pressed={pressed}
+                  accessibilityState={{ selected: pressed }}
                   onPress={() => set({ background: { kind: "color", color: s.color } })}
                   style={[styles.swatch, { backgroundColor: s.color }, pressed && styles.swatchPressed]}
                 />
@@ -95,6 +96,7 @@ export function StylePanel({ layout, style, onChange }: Props) {
               role="button"
               aria-label="Blurred photo"
               aria-pressed={background.kind === "blur"}
+              accessibilityState={{ selected: background.kind === "blur" }}
               onPress={() => set({ background: { kind: "blur" } })}
               style={[styles.swatch, background.kind === "blur" && styles.swatchPressed]}
             >

@@ -4,6 +4,7 @@
     "slug": "storystitch",
     "scheme": "storystitch",
     "version": "1.0.0",
+    "orientation": "portrait",
     "icon": "./assets/icon.png",
     "runtimeVersion": { "policy": "fingerprint" },
     "platforms": ["ios", "web"],

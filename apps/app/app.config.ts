@@ -1,7 +1,7 @@
 import type { ConfigContext, ExpoConfig } from "expo/config";
 
-// PLACEHOLDER until the EAS project exists: see "iOS delivery checklist" in PROJECT_SETUP.md. Both variants share it.
-const EAS_PROJECT_ID = "REPLACE_WITH_EAS_PROJECT_ID";
+// Both variants share it.
+const EAS_PROJECT_ID = "a20aeea2-ff98-407f-bfb3-40a0dd40d7af";
 
 // Two app IDs so both can sit on one phone. The schemes must match the API's APP_SCHEME for that environment.
 const variants = {
@@ -19,7 +19,28 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     name,
     slug: "storystitch",
     scheme,
-    ios: { ...config.ios, bundleIdentifier },
+    ios: {
+      ...config.ios,
+      bundleIdentifier,
+      infoPlist: {
+        ...config.ios?.infoPlist,
+        // Without this, Save Image in the share sheet asks for the whole library.
+        NSPhotoLibraryAddUsageDescription: "StoryStitch saves your finished collage to your photo library.",
+      },
+    },
+    plugins: [
+      ...(config.plugins ?? []),
+      // The picker's native code refers to the camera and microphone, so Apple's upload check expects these two keys
+      // even though the app never asks for either.
+      [
+        "expo-image-picker",
+        {
+          photosPermission: "StoryStitch only uses the photos you choose. They stay on this device.",
+          cameraPermission: "StoryStitch doesn't use your camera. It only uses photos you choose from your library.",
+          microphonePermission: "StoryStitch doesn't use your microphone.",
+        },
+      ],
+    ],
     updates: { url: `https://u.expo.dev/${EAS_PROJECT_ID}` },
     extra: { ...config.extra, eas: { projectId: EAS_PROJECT_ID } },
   };

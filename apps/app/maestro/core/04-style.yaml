@@ -4,6 +4,9 @@ name: AC-IOS-04 The Style tool changes colors and spacing
 - runFlow: ../shared/pick-photos.yaml
 - tapOn: Style
 - tapOn: Black
+- assertVisible:
+    text: Black
+    selected: true
 - tapOn: Spacing
 - assertVisible: "14"
 - swipe:
