@@ -5,10 +5,11 @@ appId: com.ashishnag.storystitch.staging
 - launchApp:
     clearState: true
 - tapOn: Choose photos
+# The picker runs in its own iOS process, and CI's simulator can take a while to show it.
 - extendedWaitUntil:
     visible:
       id: PXGGridLayout-Info
-    timeout: 20000
+    timeout: 60000
 - tapOn:
     text: Close
     optional: true
