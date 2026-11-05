@@ -41,6 +41,18 @@ Web app on Cloudflare Pages, plus an API with Postgres on Railway (from v2). All
 | Layout editor flag (`VITE_FEATURE_LAYOUT_EDITOR`, needs accounts) | `layout_editor:` input to `_deploy-pages.yml`: `true` in `ci.yml` (staging) and `release.yml` (production) | web builds |
 | Local values (`DATABASE_URL`, `PORT`, `CORS_ORIGIN`, `VITE_API_URL`) | `.env` (copy of `.env.example`) | `pnpm dev`, tests |
 
+## Reading usage numbers
+
+`pnpm usage:report --days 30` prints the counts as Markdown tables and only reads from the database. Locally it uses `.env`.
+
+For staging or production, run the built copy inside the API's container, where `DATABASE_URL` is already set, so the database needs no public address. This has to be run by hand, and hasn't been tried on a hosted environment yet:
+
+```bash
+railway ssh --service api --environment staging node dist/reportUsage.js --days 30
+```
+
+Staging and production have separate databases. Visitors are daily estimates, so adding days gives visitor-days, not unique people.
+
 ## Open checklist
 
 - [ ] Protect the `production` branch (GitHub → Settings → Branches). Needs GitHub Pro or a public repo; the release workflow works without it, it just isn't enforced.

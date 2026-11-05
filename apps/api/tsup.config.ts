@@ -1,7 +1,7 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-  entry: ["src/index.ts", "src/migrate.ts"],
+  entry: ["src/index.ts", "src/migrate.ts", "src/reportUsage.ts"],
   format: "esm",
   platform: "node",
   target: "node22",
