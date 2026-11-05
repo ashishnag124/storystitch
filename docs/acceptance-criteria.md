@@ -176,13 +176,13 @@ Maestro reads the accessibility tree, so `ios` rows prove what a person can reac
 | AC-IOS-01 | The app opens on the pick screen with its headline and privacy line, with or without the API. | ios |
 | AC-IOS-02 | Picking photos, including a HEIC, in the iOS picker opens the editor with a preview naming its layout and photo count, and a strip of layouts. | ios |
 | AC-IOS-03 | Tapping a layout in the strip switches the preview to it. | ios |
-| AC-IOS-04 | The Style tool offers colors and a spacing slider that changes the value. | ios |
+| AC-IOS-04 | The Style tool offers colors, and tells VoiceOver which one is chosen, and a spacing slider that changes the value. | ios |
 | AC-IOS-05 | Tapping a photo offers a zoom slider, Fit undoes the zoom, and Done closes the photo's tools. | ios |
 | AC-IOS-06 | Share opens the iOS share sheet with the export as a JPEG, or a PNG when that's the chosen format. | ios |
 | AC-IOS-07 | Start over returns to the pick screen. | ios |
-| AC-IOS-08 | Save Image in the share sheet adds a 1080×1920 image to Photos. | manual |
-| AC-IOS-09 | With an account signed in on a simulator, `apps/app/maestro/local` passes: every layout editor tool for grids and free cells works and can be undone. | manual |
-| AC-IOS-10 | On a real iPhone, a double-tap zooms a photo in and back out, and a flicked photo keeps gliding. The simulator's tools can't tap fast enough to count as a double-tap. | manual |
+| AC-IOS-08 | Save Image in the share sheet adds a 1080×1920 image to Photos without asking for access to the whole library. | manual |
+| AC-IOS-09 | With an account signed in on a simulator, `apps/app/maestro/local` passes: every layout editor tool for grids and free cells works and can be undone, and VoiceOver can't reach the screen behind the editor. | manual |
+| AC-IOS-10 | On a real iPhone, a double-tap zooms a photo in and back out, and a flicked photo keeps gliding, and Fit undoes a full zoom on a Polaroid. The simulator's tools can't tap fast enough to count as a double-tap, and Maestro's tap on Fit has no effect there though a direct tap works. | manual |
 
 ## Accounts
 

@@ -174,9 +174,12 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
   const showActions = LAYOUT_EDITOR_ENABLED && selected === null && tool === "layouts";
   const panelTitle = selected !== null ? `Photo ${selected + 1}` : TOOLS.find((t) => t.id === tool)!.label;
 
+  // VoiceOver stays inside an open dialog.
+  const covered = Boolean((building && LayoutEditor) || askToSignIn);
+
   return (
     <View role="main" style={styles.editor}>
-      <View style={styles.bar}>
+      <View aria-hidden={covered} style={styles.bar}>
         <Text role="heading" aria-level={1} style={styles.hidden}>
           StoryStitch editor
         </Text>
@@ -197,7 +200,7 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
         </View>
       </View>
 
-      <View style={styles.stage}>
+      <View aria-hidden={covered} style={styles.stage}>
         <Stage ref={stage} scene={scene} photos={photos} selected={selected} onSelect={setSelected} onScene={onScene} onStatus={setStatus} />
         <View aria-live="polite" style={styles.toasts} pointerEvents="box-none">
           {toasts.map((t) => (
@@ -214,7 +217,7 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
         </Text>
       </View>
 
-      <View role="region" aria-label={panelTitle} style={[styles.panel, showActions && styles.panelActions]}>
+      <View aria-hidden={covered} role="region" aria-label={panelTitle} style={[styles.panel, showActions && styles.panelActions]}>
         {selected !== null ? (
           <View style={styles.photoTool}>
             <Text style={typography.hint}>Tap another photo to swap them. Double-tap to zoom.</Text>
@@ -266,7 +269,7 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
         )}
       </View>
 
-      <View role="tablist" aria-label="Tools" style={styles.tabbar}>
+      <View aria-hidden={covered} role="tablist" aria-label="Tools" style={styles.tabbar}>
         {TOOLS.map((t) => {
           const current = selected === null && tool === t.id;
           return (

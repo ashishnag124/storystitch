@@ -188,8 +188,8 @@ the verification email arrives.
 first one. Claude can't do these: they need your Apple and Expo accounts. Run commands from `apps/app`.
 
 - [ ] 1. **Apple Developer Program**: join at developer.apple.com/programs. Approval can take a few days.
-- [ ] 2. **Expo account**: sign up at expo.dev, then run `npx eas-cli@27.2.0 login`.
-- [ ] 3. **EAS project**: on expo.dev, create a project with the slug `storystitch`. Don't use `eas init`: it can't edit
+- [x] 2. **Expo account**: sign up at expo.dev, then run `npx eas-cli@27.2.0 login`.
+- [x] 3. **EAS project**: on expo.dev, create a project with the slug `storystitch`. Don't use `eas init`: it can't edit
   `app.config.ts`. Copy the project ID into `EAS_PROJECT_ID` in `apps/app/app.config.ts`.
 - [ ] 4. **Staging app in App Store Connect**: add an app with the bundle ID `com.ashishnag.storystitch.staging`, named
   StoryStitch Staging. Copy its numeric Apple ID into `ascAppId` in `apps/app/eas.json`. Merge steps 3 and 4 as a PR.
