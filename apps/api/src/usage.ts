@@ -12,8 +12,8 @@ const BATCHES_PER_MINUTE = 60;
 /** Keeps what's held in memory bounded, however many addresses or browsers a request claims to be. */
 const MAX_REMEMBERED = 100_000;
 /** Rows the API adds itself. Neither is in the registry, so no app can send them. */
-const VISITORS = "visitors";
-const DROPPED = "usage_dropped";
+export const VISITORS = "visitors";
+export const DROPPED = "usage_dropped";
 
 const utcDay = () => new Date().toISOString().slice(0, 10);
 const hash = (salt: Buffer, ...parts: string[]) => createHash("sha256").update(salt).update(JSON.stringify(parts)).digest("hex");

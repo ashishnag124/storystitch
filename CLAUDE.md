@@ -32,7 +32,7 @@ A request that needs an app or service not in `project.json` (e.g. "add an iOS a
 
 ## Commands
 
-- `pnpm dev` (local Postgres in Docker, web :5173, Expo app :5174, API :3001; this Mac has an SSH tunnel on :3000) · `pnpm db:generate` / `pnpm db:migrate` · `pnpm check` (lint + typecheck + test, run before saying done) · `pnpm build` · `pnpm e2e` (Playwright, Android Chrome + iPhone WebKit emulation) · `pnpm qa` (everything above, graded against the acceptance criteria; CI and every release run it; `--target=app` grades the Expo app instead of `apps/web`; `--target=ios` grades only the `ios` criteria, in the iOS workflow and on a booted simulator with the app installed)
+- `pnpm dev` (local Postgres in Docker, web :5173, Expo app :5174, API :3001; this Mac has an SSH tunnel on :3000) · `pnpm db:generate` / `pnpm db:migrate` · `pnpm usage:report --days 30` (usage counts as Markdown tables; read-only) · `pnpm check` (lint + typecheck + test, run before saying done) · `pnpm build` · `pnpm e2e` (Playwright, Android Chrome + iPhone WebKit emulation) · `pnpm qa` (everything above, graded against the acceptance criteria; CI and every release run it; `--target=app` grades the Expo app instead of `apps/web`; `--target=ios` grades only the `ios` criteria, in the iOS workflow and on a booted simulator with the app installed)
 
 ## iOS simulator
 
