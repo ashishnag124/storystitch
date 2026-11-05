@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { MIN_TARGET, colors, type } from "../theme";
 import { Button } from "../ui/Button";
+import { prefersReducedMotion } from "./motion.native";
 import { Slider } from "./Slider.native";
 
 /** A color as `#rrggbb`, from hue (0–360), saturation and lightness (0–100). */
@@ -25,7 +26,7 @@ function ColorSheet({ title, onChoose, onClose }: { title: string; onChoose: (co
     onChoose(hslToHex(next.h, next.s, next.l));
   };
   return (
-    <Modal transparent animationType="slide" onRequestClose={onClose}>
+    <Modal transparent animationType={prefersReducedMotion() ? "none" : "slide"} onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <View role="dialog" aria-modal aria-label={title} style={styles.sheet}>
           <View style={styles.heading}>
