@@ -9,7 +9,7 @@ import { ACCOUNT_PATHS, navigate, useLocation } from "./platform/route";
 import { Turnstile } from "./platform/Turnstile";
 import { colors, fontFamily, type } from "./theme";
 import { Button } from "./ui/Button";
-import { NavLink, TextLink } from "./ui/NavLink";
+import { ExternalLink, NavLink, TextLink } from "./ui/NavLink";
 
 const MIN_PASSWORD = 8;
 
@@ -18,7 +18,7 @@ function Screen({ title, children }: { title: string; children: ReactNode }) {
   useEffect(() => heading.current?.focus?.(), [title]);
   return (
     <SafeAreaView role="main" style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.inner}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.inner}>
         <View style={styles.header}>
           <Text ref={heading} role="heading" aria-level={1} {...{ tabIndex: -1 }} style={styles.title}>
             {title}
@@ -26,6 +26,9 @@ function Screen({ title, children }: { title: string; children: ReactNode }) {
           <NavLink to="/" label="Back to StoryStitch" />
         </View>
         {children}
+        <Text style={type.hint}>
+          <ExternalLink url={`${ORIGIN}/privacy`}>Privacy policy</ExternalLink> · <ExternalLink url={`${ORIGIN}/support`}>Support</ExternalLink>
+        </Text>
       </ScrollView>
     </SafeAreaView>
   );

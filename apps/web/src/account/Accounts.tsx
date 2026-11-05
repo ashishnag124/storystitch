@@ -44,6 +44,9 @@ function Screen({ title, children }: { title: string; children: ReactNode }) {
           </a>
         </header>
         {children}
+        <p className="account-links">
+          <a href="/privacy">Privacy policy</a> · <a href="/support">Support</a>
+        </p>
       </div>
     </main>
   );

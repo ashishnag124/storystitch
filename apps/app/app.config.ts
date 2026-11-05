@@ -30,6 +30,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
     plugins: [
       ...(config.plugins ?? []),
+      ["expo-font", { fonts: ["./assets/fonts/BricolageGrotesque.ttf"] }],
       // The picker's native code refers to the camera and microphone, so Apple's upload check expects these two keys
       // even though the app never asks for either.
       [
