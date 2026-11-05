@@ -5,6 +5,8 @@ runs the whole test suite and checks each criterion here:
 
 - **auto** criteria pass only when at least one test names their ID in its title (or a `describe` around it),
   every such test passes, and at least one of them actually ran (not skipped in every browser).
+- **ios** criteria are graded only by `pnpm qa --target=ios`, which runs the Maestro flows in `apps/app/maestro/core` on a
+  simulator. A flow proves a criterion by starting its `name:` with the ID. The other targets leave them out.
 - **manual** criteria are checked by hand on staging before running `/release`. `pnpm qa` lists them as reminders.
 - **planned** criteria belong to features that haven't shipped yet (the v2 sections at the end). `pnpm qa` lists them
   without failing; when the feature ships, switch each row to `auto` or `manual` in the same PR as its tests.
@@ -164,6 +166,23 @@ describe the app exactly. When saving ships, AC-SAVE-02 and AC-SAVE-07 replace A
 | AC-UPDATE-01 | The iOS app compares its version with the API's minimum number by number (1.10.0 is newer than 1.9.0), and only an older version needs updating. A check that fails, is slow or can't be read never gets in the way: the app carries on. | auto |
 | AC-UPDATE-02 | Web never asks for the minimum version and never shows the "please update" screen. | auto |
 | AC-UPDATE-03 | An iOS app older than the minimum shows a "please update" screen with no way past it, on a real build of the app. | manual |
+
+## iOS app
+
+Maestro reads the accessibility tree, so `ios` rows prove what a person can reach and do, not how a collage looks: Skia's drawing isn't visible to it.
+
+| ID | Criterion | Check |
+|---|---|---|
+| AC-IOS-01 | The app opens on the pick screen with its headline and privacy line, with or without the API. | ios |
+| AC-IOS-02 | Picking photos, including a HEIC, in the iOS picker opens the editor with a preview naming its layout and photo count, and a strip of layouts. | ios |
+| AC-IOS-03 | Tapping a layout in the strip switches the preview to it. | ios |
+| AC-IOS-04 | The Style tool offers colors and a spacing slider that changes the value. | ios |
+| AC-IOS-05 | Tapping a photo offers a zoom slider, Fit undoes the zoom, and Done closes the photo's tools. | ios |
+| AC-IOS-06 | Share opens the iOS share sheet with the export as a JPEG, or a PNG when that's the chosen format. | ios |
+| AC-IOS-07 | Start over returns to the pick screen. | ios |
+| AC-IOS-08 | Save Image in the share sheet adds a 1080×1920 image to Photos. | manual |
+| AC-IOS-09 | With an account signed in on a simulator, `apps/app/maestro/local` passes: every layout editor tool for grids and free cells works and can be undone. | manual |
+| AC-IOS-10 | On a real iPhone, a double-tap zooms a photo in and back out, and a flicked photo keeps gliding. The simulator's tools can't tap fast enough to count as a double-tap. | manual |
 
 ## Accounts
 

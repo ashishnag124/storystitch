@@ -1,0 +1,47 @@
+# AC-IOS-09, run by hand: needs an account already signed in on the simulator, and the local API.
+appId: com.ashishnag.storystitch.staging
+name: Layout editor tools
+---
+- runFlow: ../shared/pick-photos.yaml
+
+# A grid: each tool changes the count or can be undone.
+- tapOn: "Grid, space above"
+- tapOn: Edit this layout
+- extendedWaitUntil:
+    visible: "4 of 4 photos"
+    timeout: 8000
+- tapOn:
+    text: "Layout being edited.*"
+    point: "30%,45%"
+- tapOn: Split across
+- assertVisible: "5 of 4 photos"
+- tapOn: Undo
+- tapOn: Split down
+- assertVisible: "5 of 4 photos"
+- tapOn: Undo
+- tapOn: Shape
+- tapOn: Undo
+- tapOn: Remove
+- assertVisible: "3 of 4 photos"
+- tapOn: Undo
+- assertVisible: "4 of 4 photos"
+- tapOn: Cancel
+
+# Free cells: size, turn, copy and remove.
+- tapOn: "Four Polaroids"
+- tapOn: Edit this layout
+- extendedWaitUntil:
+    visible: "4 of 4 photos"
+    timeout: 8000
+- tapOn:
+    text: "Layout being edited.*"
+    point: "35%,35%"
+- tapOn: Smaller
+- tapOn: Bigger
+- tapOn: Turn left
+- tapOn: Turn right
+- tapOn: Add copy
+- assertVisible: "5 of 4 photos"
+- tapOn: Remove
+- assertVisible: "4 of 4 photos"
+- tapOn: Cancel

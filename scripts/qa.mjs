@@ -7,6 +7,8 @@
 // any failure, missing test, unknown ID or failed step.
 //
 // `pnpm qa --target=app` runs the end-to-end tests against apps/app, the Expo app that's replacing apps/web.
+// `pnpm qa --target=ios` runs only the Maestro flows in apps/app/maestro/core and grades only the `ios` criteria.
+// It needs a booted simulator with the app installed, so the other two targets leave those criteria out.
 import { spawnSync } from "node:child_process";
 import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
@@ -16,7 +18,9 @@ const out = join(root, "qa-results");
 const CRITERIA_FILE = join(root, "docs/acceptance-criteria.md");
 const ID = /\bAC-[A-Z0-9]+-\d{2}\b/g;
 const target = process.argv.find((a) => a.startsWith("--target="))?.slice("--target=".length) ?? "web";
-const ROW = /^\|\s*(AC-[A-Z0-9]+-\d{2})\s*\|\s*(.+?)\s*\|\s*(auto|manual|planned)\s*\|\s*$/;
+const ROW = /^\|\s*(AC-[A-Z0-9]+-\d{2})\s*\|\s*(.+?)\s*\|\s*(auto|ios|manual|planned)\s*\|\s*$/;
+const ios = target === "ios";
+const automated = ios ? "ios" : "auto";
 
 rmSync(out, { recursive: true, force: true });
 mkdirSync(out, { recursive: true });
@@ -34,7 +38,7 @@ function run(name, cmd, args, opts = {}) {
   return status === 0;
 }
 
-const workspaces = ["apps", "packages"].flatMap((dir) =>
+const workspaces = (ios ? [] : ["apps", "packages"]).flatMap((dir) =>
   readdirSync(join(root, dir), { withFileTypes: true })
     .filter((d) => d.isDirectory() && existsSync(join(root, dir, d.name, "package.json")))
     .map((d) => {
@@ -47,7 +51,11 @@ const workspaces = ["apps", "packages"].flatMap((dir) =>
     }),
 );
 
-run("Lint and typecheck", "pnpm", ["turbo", "run", "lint", "typecheck"]);
+if (ios) {
+  run("iOS simulator flows", "maestro", ["test", "apps/app/maestro/core", "--format", "junit", "--output", join(out, "maestro.xml")], {
+    env: { MAESTRO_CLI_NO_ANALYTICS: "1" },
+  });
+} else run("Lint and typecheck", "pnpm", ["turbo", "run", "lint", "typecheck"]);
 // The API's tests use a real Postgres: Docker locally, a service container in CI (which sets DATABASE_URL).
 if (workspaces.some((w) => w.scripts["db:migrate"])) {
   if (!process.env.CI) run("Start local Postgres", "docker", ["compose", "up", "-d", "--wait"]);
@@ -69,7 +77,7 @@ for (const ws of workspaces.filter((w) => w.scripts.test && (target === "web" ? 
     { cwd: ws.path },
   );
 }
-const built = run("Build", "pnpm", ["turbo", "run", "build"]);
+const built = ios || run("Build", "pnpm", ["turbo", "run", "build"]);
 for (const ws of workspaces.filter((w) => w.scripts.e2e)) {
   if (!built) break;
   // The builds the end-to-end tests serve (e.g. with a feature flag on and off), when the app defines them.
@@ -85,6 +93,12 @@ for (const ws of workspaces.filter((w) => w.scripts.e2e)) {
 
 // Collect every test result as { title, where, status } with status passed | failed | skipped.
 const results = [];
+if (existsSync(join(out, "maestro.xml"))) {
+  const xml = readFileSync(join(out, "maestro.xml"), "utf8");
+  for (const [, title, status] of xml.matchAll(/<testcase\b[^>]*\bname="([^"]*)"[^>]*\bstatus="([^"]*)"/g)) {
+    results.push({ title, where: "iOS simulator", status: status === "SUCCESS" ? "passed" : "failed" });
+  }
+}
 for (const file of readdirSync(out).filter((f) => f.endsWith(".json"))) {
   const data = JSON.parse(readFileSync(join(out, file), "utf8"));
   if (file.startsWith("unit-")) {
@@ -137,7 +151,9 @@ const graded = criteria.map((c) => {
   const count = (s) => tests.filter((t) => t.status === s).length;
   const [passed, failed, skipped] = [count("passed"), count("failed"), count("skipped")];
   let result;
-  if (c.check === "manual") result = "MANUAL";
+  if (c.check === "ios" && !ios) result = "IOS";
+  else if (c.check === "auto" && ios) result = "NOT THIS TARGET";
+  else if (c.check === "manual") result = "MANUAL";
   else if (c.check === "planned") result = "PLANNED";
   else if (!tests.length) result = "NO TEST";
   else if (failed) result = "FAIL";
@@ -166,13 +182,15 @@ const icon = {
   SKIPPED: "⚠️",
   MANUAL: "👀",
   PLANNED: "🗓️",
+  IOS: "📱",
+  "NOT THIS TARGET": "➖",
 };
 const lines = [
   `# QA report: ${ok ? "PASS" : "FAIL"}`,
   "",
   `${new Date().toISOString()} · commit \`${spawnSync("git", ["rev-parse", "--short", "HEAD"], { cwd: root }).stdout.toString().trim()}\``,
   "",
-  `**${tally("PASS")} of ${graded.filter((g) => g.check === "auto").length} automated criteria pass**, ${tally("FAIL")} fail, ${tally("NO TEST")} have no test, ${tally("SKIPPED")} only skipped. ${tally("MANUAL")} need a check by hand on staging before release; ${tally("PLANNED")} are planned for features not built yet. ${results.length} tests ran (${results.filter((r) => r.status === "passed").length} passed, ${failedTests.length} failed, ${results.filter((r) => r.status === "skipped").length} skipped).`,
+  `**${tally("PASS")} of ${graded.filter((g) => g.check === automated).length} automated criteria pass**, ${tally("FAIL")} fail, ${tally("NO TEST")} have no test, ${tally("SKIPPED")} only skipped. ${tally("MANUAL")} need a check by hand on staging before release; ${tally("PLANNED")} are planned for features not built yet. ${results.length} tests ran (${results.filter((r) => r.status === "passed").length} passed, ${failedTests.length} failed, ${results.filter((r) => r.status === "skipped").length} skipped).`,
   "",
   "## Steps",
   "",
@@ -195,7 +213,7 @@ lines.push(
   "|---|---|---|---|",
   ...graded.map(
     (g) =>
-      `| ${icon[g.result]} ${g.result} | ${g.id} | ${g.text} | ${g.check === "manual" ? "check by hand" : g.check === "planned" ? "not built yet" : `${g.passed} / ${g.failed} / ${g.skipped}${g.flaky ? ` (${g.flaky} flaky)` : ""}`} |`,
+      `| ${icon[g.result]} ${g.result} | ${g.id} | ${g.text} | ${g.check === "manual" ? "check by hand" : g.check === "planned" ? "not built yet" : g.check !== automated ? "other target" : `${g.passed} / ${g.failed} / ${g.skipped}${g.flaky ? ` (${g.flaky} flaky)` : ""}`} |`,
   ),
   "",
 );
@@ -205,11 +223,11 @@ if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMM
 
 console.log(`\n${"─".repeat(60)}`);
 for (const g of graded)
-  if (g.result !== "PASS" && g.result !== "PLANNED") console.log(`${icon[g.result]} ${g.result.padEnd(8)} ${g.id}  ${g.text}`);
+  if (!["PASS", "PLANNED", "IOS", "NOT THIS TARGET"].includes(g.result)) console.log(`${icon[g.result]} ${g.result.padEnd(8)} ${g.id}  ${g.text}`);
 for (const id of unknown) console.log(`❌ UNKNOWN  ${id}  named by a test but not in docs/acceptance-criteria.md`);
 for (const t of failedTests) console.log(`❌ FAILED   ${t.title} (${t.where})`);
 for (const s of steps.filter((s) => !s.ok)) console.log(`❌ STEP     ${s.name}`);
 console.log(
-  `\nQA ${ok ? "PASSED" : "FAILED"}: ${tally("PASS")}/${graded.filter((g) => g.check === "auto").length} automated criteria pass; ${tally("MANUAL")} manual; ${tally("PLANNED")} planned. Report: qa-results/report.md`,
+  `\nQA ${ok ? "PASSED" : "FAILED"}: ${tally("PASS")}/${graded.filter((g) => g.check === automated).length} automated criteria pass; ${tally("MANUAL")} manual; ${tally("PLANNED")} planned. Report: qa-results/report.md`,
 );
 process.exit(ok ? 0 : 1);

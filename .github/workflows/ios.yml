@@ -1,0 +1,70 @@
+name: iOS
+
+# Grades the `ios` criteria on a simulator. It stays out of ci.yml, like mobile.yml, so a failed or slow iOS run
+# can't block a web or API release.
+on:
+  pull_request:
+    paths: &app
+      - "apps/app/**"
+      - "packages/**"
+      - "pnpm-lock.yaml"
+      - "scripts/qa.mjs"
+      - ".github/workflows/ios.yml"
+  push:
+    branches: [main]
+    paths: *app
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  simulator:
+    runs-on: macos-26
+    timeout-minutes: 75
+    env:
+      APP_VARIANT: staging
+      # Compiled into the Release bundle. Nothing listens here: the core flows need no API.
+      EXPO_PUBLIC_API_URL: http://localhost:3001
+      EXPO_PUBLIC_WEB_URL: http://localhost:5174
+      EXPO_PUBLIC_FEATURE_ACCOUNTS: "true"
+      EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR: "true"
+      EXPO_NO_TELEMETRY: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - run: pnpm install --frozen-lockfile
+      - run: brew install mobile-dev-inc/tap/maestro
+      - run: pnpm run prebuild:ios
+        working-directory: apps/app
+      - name: Build for the simulator
+        working-directory: apps/app/ios
+        run: >-
+          xcodebuild -workspace StoryStitchStaging.xcworkspace -scheme StoryStitchStaging -configuration Release
+          -sdk iphonesimulator -destination "generic/platform=iOS Simulator" -derivedDataPath "$RUNNER_TEMP/build"
+          CODE_SIGNING_ALLOWED=NO -quiet
+      # A Pro: the flows' sliders are at percentages of its screen shape.
+      - name: Boot a simulator with test photos
+        run: |
+          UDID=$(xcrun simctl list devices available -j | jq -r '[.devices[][] | select(.name | test("^iPhone.* Pro$"))][0].udid')
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl install "$UDID" "$RUNNER_TEMP/build/Build/Products/Release-iphonesimulator/StoryStitchStaging.app"
+          xcrun simctl addmedia "$UDID" apps/web/e2e/fixtures/*.jpg apps/web/e2e/fixtures/*.heic
+      - run: pnpm qa --target=ios
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-qa-results
+          # Maestro's own folder holds a screenshot of each failure.
+          path: |
+            qa-results/
+            ~/.maestro/tests/

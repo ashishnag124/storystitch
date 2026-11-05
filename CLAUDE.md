@@ -15,6 +15,7 @@ Product requirements: `docs/product-brief.md`. Acceptance criteria (what QA chec
 | The Expo app, on staging now and replacing `apps/web` in production at the next stage (web and iOS) | `apps/app/src/`; anything browser-only goes in a `*.web.ts(x)` file (lint enforces it) |
 | On-device subject detection (Web Worker, MediaPipe) | `apps/web/src/detect/`; models in `apps/web/public/models/` |
 | End-to-end tests (Playwright) | `apps/web/e2e/` |
+| iOS simulator tests (Maestro) | `apps/app/maestro/`: `core/` needs no API and is graded by `pnpm qa --target=ios` (a flow's `name:` starts with its `AC-IOS-*` ID); `local/` needs a signed-in account and the local API, and isn't graded |
 | API request/response shapes | `packages/shared/src/api.ts` (zod) first, then the API and its callers |
 | API routes, database access | `apps/api/src/` (Hono); tables in `apps/api/src/db/schema.ts` |
 | Accounts (sign-in, sessions, emails) | API: `apps/api/src/auth.ts` (Better Auth), `src/email.ts`; web: `apps/web/src/account/` (loaded only when `VITE_FEATURE_ACCOUNTS=true`) |
@@ -31,7 +32,7 @@ A request that needs an app or service not in `project.json` (e.g. "add an iOS a
 
 ## Commands
 
-- `pnpm dev` (local Postgres in Docker, web :5173, Expo app :5174, API :3001; this Mac has an SSH tunnel on :3000) · `pnpm db:generate` / `pnpm db:migrate` · `pnpm check` (lint + typecheck + test, run before saying done) · `pnpm build` · `pnpm e2e` (Playwright, Android Chrome + iPhone WebKit emulation) · `pnpm qa` (everything above, graded against the acceptance criteria; CI and every release run it; `--target=app` grades the Expo app instead of `apps/web`)
+- `pnpm dev` (local Postgres in Docker, web :5173, Expo app :5174, API :3001; this Mac has an SSH tunnel on :3000) · `pnpm db:generate` / `pnpm db:migrate` · `pnpm check` (lint + typecheck + test, run before saying done) · `pnpm build` · `pnpm e2e` (Playwright, Android Chrome + iPhone WebKit emulation) · `pnpm qa` (everything above, graded against the acceptance criteria; CI and every release run it; `--target=app` grades the Expo app instead of `apps/web`; `--target=ios` grades only the `ios` criteria, in the iOS workflow and on a booted simulator with the app installed)
 
 ## iOS simulator
 
@@ -43,6 +44,8 @@ No Apple or Expo account is needed. `apps/app/ios` is generated and gitignored, 
 4. Open it with `launch`, then check with `screenshot`, `tap`, `touch_path`, `touch2_path` and `open_url`. The simulator reaches this Mac at `localhost`. Add test photos with `xcrun simctl addmedia`.
 
 To test sign-in, start the API with `APP_SCHEME=storystitch://` (a build from Xcode embeds the default scheme) and serve the web app's `/bot-check` page at `EXPO_PUBLIC_WEB_URL`. Failures from the API show up as the bot check message, so read the API's log.
+
+Maestro: `brew install mobile-dev-inc/tap/maestro` (not the `maestro` cask, an unrelated app). Homebrew's Java isn't on the path, so set `JAVA_HOME=/opt/homebrew/opt/openjdk/libexec/openjdk.jdk/Contents/Home`. Maestro sees the accessibility tree, not what Skia draws. The share sheet reports positions relative to itself, so tap inside it with `point`.
 
 Every PR that changes shared screens gets this check. The simulator can't prove real memory limits, speed, the Instagram share or Universal Links.
 

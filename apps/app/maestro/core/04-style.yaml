@@ -1,0 +1,13 @@
+appId: com.ashishnag.storystitch.staging
+name: AC-IOS-04 The Style tool changes colors and spacing
+---
+- runFlow: ../shared/pick-photos.yaml
+- tapOn: Style
+- tapOn: Black
+- tapOn: Spacing
+- assertVisible: "14"
+- swipe:
+    start: "60%,86%"
+    end: "85%,86%"
+    duration: 600
+- assertNotVisible: "14"

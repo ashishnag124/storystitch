@@ -1,0 +1,8 @@
+appId: com.ashishnag.storystitch.staging
+name: AC-IOS-07 Start over returns to the pick screen
+---
+- runFlow: ../shared/pick-photos.yaml
+- tapOn: Start over
+- extendedWaitUntil:
+    visible: Choose photos
+    timeout: 10000

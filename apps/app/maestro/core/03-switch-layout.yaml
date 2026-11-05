@@ -1,0 +1,6 @@
+appId: com.ashishnag.storystitch.staging
+name: AC-IOS-03 Tapping a layout in the strip switches the preview
+---
+- runFlow: ../shared/pick-photos.yaml
+- tapOn: "Four .*"
+- assertVisible: "Story preview: Four .*, 4 photos"

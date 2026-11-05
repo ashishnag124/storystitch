@@ -1,0 +1,10 @@
+appId: com.ashishnag.storystitch.staging
+name: AC-IOS-01 The app opens on the pick screen
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: Choose photos
+    timeout: 30000
+- assertVisible: "Up to 8 photos.*"
+- assertVisible: "Your photos stay on this device.*"
