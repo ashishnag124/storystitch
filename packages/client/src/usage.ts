@@ -1,6 +1,7 @@
 import {
   NATIVE_APP_HEADER,
   USAGE_BATCH_LIMIT,
+  layouts,
   type USAGE_EVENTS,
   type UsageBatch,
   type UsageEvent,
@@ -43,6 +44,11 @@ export interface Usage {
 }
 
 const off: Usage = { track() {}, foreground() {}, background() {} };
+
+const builtInLayouts = new Set(layouts.map((l) => l.id));
+
+/** How usage counts name a layout. Anything that isn't built in is the user's own, and its id stays on the device. */
+export const usageLayout = (id: string) => (builtInLayouts.has(id) ? id : "custom");
 
 /** The fixed name for where the user is. The only thing that reads paths, so a query string or token can't be sent. */
 export function screenFor(pathname: string, hasPhotos: boolean): UsageProps<"screen_viewed">["screen"] {

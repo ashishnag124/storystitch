@@ -1,6 +1,6 @@
-import { NATIVE_APP_HEADER, UsageBatchSchema, parseUsageEvent } from "@storystitch/shared";
+import { NATIVE_APP_HEADER, UsageBatchSchema, layouts, parseUsageEvent } from "@storystitch/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createUsage, screenFor } from "./usage";
+import { createUsage, screenFor, usageLayout } from "./usage";
 
 const options = { apiUrl: "https://api.example", enabled: true, platform: "ios", appVersion: "1.2.0" } as const;
 const ok = () => new Response(null, { status: 204 });
@@ -248,6 +248,13 @@ describe("AC-USAGE-07 screen names", () => {
     ["/anything/else", false, "other"],
   ])("AC-USAGE-07 calls %s, with photos %s, %s", (pathname, hasPhotos, screen) => {
     expect(screenFor(pathname, hasPhotos)).toBe(screen);
+  });
+});
+
+describe("AC-USAGE-02 layout names", () => {
+  it("AC-USAGE-02 keeps a built-in layout's id, and never sends a saved layout's", () => {
+    expect(usageLayout(layouts[0]!.id)).toBe(layouts[0]!.id);
+    expect(usageLayout("custom-1234")).toBe("custom");
   });
 });
 

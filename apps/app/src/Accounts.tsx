@@ -10,6 +10,7 @@ import { Turnstile } from "./platform/Turnstile";
 import { colors, fontFamily, type } from "./theme";
 import { Button } from "./ui/Button";
 import { ExternalLink, NavLink, TextLink } from "./ui/NavLink";
+import { track } from "./usage";
 
 const MIN_PASSWORD = 8;
 
@@ -122,6 +123,7 @@ function SignUp() {
     bot.reset();
     setError(error ? errorMessage(error) : null);
     setSent(!error);
+    if (!error) track("signed_up");
   }
 
   if (sent) {

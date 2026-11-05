@@ -37,6 +37,7 @@ export default function App() {
       } catch (err) {
         if (!(err instanceof UnsupportedPhotoError)) console.error(err);
         notes.push(`Couldn't open ${file.name}. Try a JPEG, PNG, WebP or HEIC photo.`);
+        track("error_shown", { code: "photo_unreadable" });
       }
       setProgress({ step: "Preparing photos", done: i + 1, total: files.length });
     }
@@ -49,6 +50,7 @@ export default function App() {
     setNotices(notes);
     setSummary(describeSubjects(loaded.map((p) => p.detections)));
     setPhotos(loaded);
+    if (loaded.length) track("photos_picked", { count: loaded.length });
   }
 
   function startOver() {

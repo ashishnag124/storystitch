@@ -1,7 +1,7 @@
 import { expect, test, type Page, type Request } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { ACCOUNTS_PORT, PORT } from "../playwright.config.js";
-import { PASSWORD, emailedLink, libraryInput, makePhotos, openApp, submit } from "./helpers.js";
+import { PASSWORD, emailedLink, exportImage, libraryInput, makePhotos, openApp, submit } from "./helpers.js";
 
 // Only the Expo app tracks usage. apps/web is being replaced, so it gets none.
 test.skip(process.env.E2E_TARGET !== "app", "Only the Expo app tracks usage");
@@ -79,6 +79,104 @@ test.describe("usage on", () => {
     await page.evaluate(() => window.dispatchEvent(new Event("pagehide")));
     await page.waitForTimeout(500);
     expect(sends).toEqual([]);
+  });
+});
+
+test.describe("a whole session", () => {
+  test.use({ baseURL: `http://localhost:${ACCOUNTS_PORT}` });
+
+  test("AC-ADMIN-01 AC-ADMIN-02 records each event, and every request holds only what the rules allow", async ({ page }) => {
+    const bodies: string[] = [];
+    page.on("request", (req) => {
+      if (isUsage(req)) bodies.push(req.postData()!);
+    });
+    const email = `e2e-${randomUUID()}@example.com`;
+    const layoutName = `Holiday ${randomUUID()}`;
+
+    await openApp(page);
+    await page.goto("/sign-up");
+    await page.getByLabel("Email").fill(email);
+    await page.getByLabel(/^Password/).fill(PASSWORD);
+    await submit(page, "Create account");
+    await expect(page.getByText(/Check your email/)).toBeVisible();
+    // Sent before leaving: a send made while a page closes arrives, but Playwright doesn't always see it.
+    await sentScreens(page);
+    await page.goto(await emailedLink(page, email));
+    await expect(page.getByText(`Signed in as ${email}`)).toBeVisible();
+    await sentScreens(page);
+    await page.goto("/");
+
+    // A file that can't open, so the session shows an error that names a file.
+    const broken = { name: "private-name.jpg", mimeType: "image/jpeg", buffer: Buffer.from("not an image") };
+    await libraryInput(page).setInputFiles([...(await makePhotos(page, 3)), broken]);
+    await expect(page.getByText(/Couldn't open private-name.jpg/)).toBeVisible();
+    await expect(page.getByRole("radiogroup", { name: "Layouts" })).toBeVisible({ timeout: 30_000 });
+
+    await page.getByRole("radiogroup", { name: "Layouts" }).getByRole("radio").nth(1).click();
+    await page.getByRole("tab", { name: "Style" }).click();
+    await page.getByRole("tab", { name: "Layouts" }).click();
+    await exportImage(page);
+    await exportImage(page);
+
+    const dialog = page.getByRole("dialog", { name: /of \d+ photos/ });
+    await page.getByRole("button", { name: "Edit this layout" }).click();
+    await dialog.getByRole("button", { name: "Done" }).click();
+    await page.getByLabel("Name").fill(layoutName);
+    await page.getByRole("button", { name: "Save layout" }).click();
+    await expect(dialog).toHaveCount(0);
+    await exportImage(page);
+    await page.getByRole("button", { name: "Start over" }).click();
+    await expect(libraryInput(page)).toBeAttached();
+
+    const sends = bodies.length;
+    await page.evaluate(() => window.dispatchEvent(new Event("pagehide")));
+    await expect.poll(() => bodies.length).toBeGreaterThan(sends);
+
+    // Every property is a fixed value, a true/false or a small number. The registry's own parser is tested in
+    // packages/client and apps/api: this build can't load it, because Playwright's Node can't import its JSON.
+    const events = bodies.flatMap((body) => {
+      const { platform, events, ...rest } = JSON.parse(body) as { platform: string; events: { name: string; props?: Record<string, unknown> }[] };
+      expect(platform).toBe("web");
+      expect(rest).toEqual({});
+      return events;
+    });
+    for (const { name, props, ...rest } of events) {
+      expect(rest).toEqual({});
+      expect(name).toMatch(/^[a-z]+(_[a-z]+)*$/);
+      for (const value of Object.values(props ?? {})) {
+        if (typeof value === "string") expect(value).toMatch(/^[a-z0-9]+([_-][a-z0-9]+)*$/);
+        else if (typeof value === "number") expect(value).toBeLessThanOrEqual(8);
+        else expect(typeof value).toBe("boolean");
+        expect(value).not.toBe("other");
+      }
+    }
+
+    const everything = bodies.join("\n");
+    for (const text of [email, layoutName, "private-name", "custom-", "http", "/"]) expect(everything).not.toContain(text);
+
+    const named = (name: string) => events.filter((e) => e.name === name).map((e) => e.props);
+    expect(named("signed_up")).toHaveLength(1);
+    expect(named("photos_picked")).toEqual([{ count: 3 }]);
+    expect(named("error_shown")).toEqual([{ code: "photo_unreadable" }]);
+    expect(named("layout_chosen")).toHaveLength(1);
+    expect(named("layout_saved")).toHaveLength(1);
+    const exported = named("collage_exported");
+    expect(exported.map((p) => p!.first)).toEqual([true, false, false]);
+    expect(exported.map((p) => p!.format)).toEqual(["jpeg", "jpeg", "jpeg"]);
+    expect(exported[2]!.layout).toBe("custom");
+    const shared = named("collage_shared");
+    expect(shared.map((p) => p!.first)).toEqual([true, false, false]);
+    expect(shared.map((p) => p!.method)).toEqual(["download", "download", "download"]);
+    expect(shared[2]!.layout).toBe("custom");
+    expect(named("control_pressed").map((p) => p!.control)).toEqual([
+      "tool_style",
+      "tool_layouts",
+      "share",
+      "share",
+      "edit_layout",
+      "share",
+      "start_over",
+    ]);
   });
 });
 

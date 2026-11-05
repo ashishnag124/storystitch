@@ -1,5 +1,7 @@
+import type { UsageControl } from "@storystitch/shared";
 import { Pressable, StyleSheet, Text } from "react-native";
 import { MIN_TARGET, colors, fontFamily } from "../theme";
+import { track } from "../usage";
 
 interface Props {
   label: string;
@@ -10,15 +12,20 @@ interface Props {
   primary?: boolean;
   big?: boolean;
   disabled?: boolean;
+  /** Counts presses in usage reports, under this name. Never the label: labels can hold what the user typed. */
+  trackAs?: UsageControl;
 }
 
-export function Button({ label, name, onPress, primary, big, disabled }: Props) {
+export function Button({ label, name, onPress, primary, big, disabled, trackAs }: Props) {
   return (
     <Pressable
       role="button"
       aria-label={name ?? label}
       disabled={disabled}
-      onPress={onPress}
+      onPress={() => {
+        if (trackAs) track("control_pressed", { control: trackAs });
+        onPress();
+      }}
       style={[styles.button, primary && styles.primary, big && styles.big, disabled && styles.disabled]}
     >
       <Text style={[styles.label, primary && styles.primaryLabel, big && styles.bigLabel]}>{label}</Text>
