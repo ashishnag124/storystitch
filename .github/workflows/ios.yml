@@ -1,9 +1,11 @@
 name: iOS
 
 # Grades the `ios` criteria on a simulator. It stays out of ci.yml, like mobile.yml, so a failed or slow iOS run
-# can't block a web or API release.
+# can't block a web or API release. This is the slow tier: pull requests into main, pushes to main, nightly on dev,
+# and pull requests labeled run-sim.
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
     paths: &app
       - "apps/app/**"
       - "packages/**"
@@ -13,13 +15,16 @@ on:
   push:
     branches: [main]
     paths: *app
+  schedule:
+    - cron: "0 10 * * *"
 
 concurrency:
-  group: ios-${{ github.ref }}
+  group: ios-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   simulator:
+    if: github.event_name != 'pull_request' || github.base_ref == 'main' || contains(github.event.pull_request.labels.*.name, 'run-sim')
     runs-on: macos-26
     timeout-minutes: 75
     env:
@@ -32,6 +37,9 @@ jobs:
       EXPO_NO_TELEMETRY: "1"
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Scheduled runs start on main, the default branch. Nightly is for what hasn't been promoted yet.
+          ref: ${{ github.event_name == 'schedule' && 'dev' || '' }}
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
