@@ -5,6 +5,8 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { fetchPopularity } from "./api";
 import { Editor } from "./Editor";
 import { PickScreen } from "./PickScreen";
+import { PERF_READOUT } from "./config";
+import { PerfReadout } from "./PerfReadout";
 import { Accounts } from "./platform/lazyScreens";
 import { ACCOUNT_PATHS, useLocation } from "./platform/route";
 import { UnsupportedPhotoError, analyzePhoto, closePhoto, loadPhoto, type PickedPhoto, type Photo } from "./platform/photos";
@@ -73,6 +75,7 @@ export default function App() {
             <Accounts />
           </Suspense>
         )}
+        {PERF_READOUT && <PerfReadout />}
       </Screen>
     </SafeAreaProvider>
   );

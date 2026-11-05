@@ -7,6 +7,7 @@ import { AccountLink } from "./AccountLink";
 import { deleteSaved, listSaved, recordExport } from "./api";
 import { LAYOUT_EDITOR_ENABLED } from "./config";
 import { LayoutStrip } from "./LayoutStrip";
+import { perfTimes, timeLayoutSwitch } from "./PerfReadout";
 import { canShareFiles, canWaitToShare, renderExport, shareOrDownload, type ExportFormat } from "./platform/exportImage";
 import { FormatSelect } from "./platform/FormatSelect";
 import { LayoutEditor } from "./platform/lazyScreens";
@@ -83,8 +84,15 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
   useEffect(() => {
     let current = true;
     const timer = setTimeout(() => {
+      const start = performance.now();
       renderExport(scene, photos, format)
-        .then((blob) => current && (setExported({ scene, format, blob }), setExportError(false)))
+        .then((blob) => {
+          perfTimes.exportMs = performance.now() - start;
+          if (current) {
+            setExported({ scene, format, blob });
+            setExportError(false);
+          }
+        })
         .catch((err) => {
           console.error(err);
           if (current) setExportError(true);
@@ -112,6 +120,7 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
   }, [shareWaiting, ready, exportError]);
 
   function chooseLayout(option: Scene) {
+    timeLayoutSwitch();
     stage.current?.crossfade();
     setScene(newScene(option.layout, photos, scene.style, option.order));
     setSelected(null);
