@@ -3,6 +3,8 @@ import { MIN_TARGET, colors, fontFamily } from "../theme";
 
 interface Props {
   label: string;
+  /** Said instead of the label, when the label is only a symbol. */
+  name?: string;
   onPress: () => void;
   /** Gold, for the one thing to tap. */
   primary?: boolean;
@@ -10,11 +12,11 @@ interface Props {
   disabled?: boolean;
 }
 
-export function Button({ label, onPress, primary, big, disabled }: Props) {
+export function Button({ label, name, onPress, primary, big, disabled }: Props) {
   return (
     <Pressable
       role="button"
-      aria-label={label}
+      aria-label={name ?? label}
       disabled={disabled}
       onPress={onPress}
       style={[styles.button, primary && styles.primary, big && styles.big, disabled && styles.disabled]}
