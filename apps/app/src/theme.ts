@@ -18,10 +18,10 @@ export const colors = {
   danger: "#ff8f8f",
 } as const;
 
-/** The variable font on web (public/index.html); iOS gets it in Stage 3 and uses the system font until then. */
+/** The variable font: loaded by public/index.html on web, and built into the app on iOS (app.config.ts). */
 export const fontFamily = Platform.select({
   web: '"Bricolage Grotesque Variable", system-ui, -apple-system, "Segoe UI", sans-serif',
-  default: undefined,
+  default: "Bricolage Grotesque",
 });
 
 export const type = {
