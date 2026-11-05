@@ -31,7 +31,7 @@ Web app on Cloudflare Pages, plus an API with Postgres on Railway (from v2). All
 | `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_FEATURE_ACCOUNTS`, `EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR` for iOS | `apps/app/eas.json`, read by EAS builds and by `mobile.yml` for updates | iOS builds and updates |
 | `EXPO_PUBLIC_TURNSTILE_SITE_KEY` for iOS | EAS environment variable, `preview` environment. GitHub secrets don't reach EAS builds | iOS builds and updates |
 | `EXPO_PUBLIC_PERF_READOUT` (optional) | Set by hand for a test build on a real phone; never in a hosted environment | shows timing numbers on screen |
-| EAS project ID, App Store Connect app ID | Placeholders in `apps/app/app.config.ts` and `apps/app/eas.json` (both public values) | EAS |
+| EAS project ID, App Store Connect app ID | `apps/app/app.config.ts`; `apps/app/eas.json`, a placeholder until the checklist below (both public values) | EAS |
 | `API_URL_STAGING`, `API_URL_PRODUCTION` | GitHub variables | web builds (`VITE_API_URL`) in `ci.yml` / `release.yml` |
 | `DATABASE_URL` (reference `${{Postgres.DATABASE_URL}}`), `CORS_ORIGIN`, `NODE_ENV` | Railway variables on `api`, per environment | the API |
 | `BETTER_AUTH_URL` (the API's own URL), `BETTER_AUTH_SECRET` (random, per environment), `EMAIL_TRANSPORT=resend`, `EMAIL_FROM`, `RESEND_API_KEY`, `TURNSTILE_SECRET_KEY` | Railway variables on `api`, per environment | accounts (B2) |

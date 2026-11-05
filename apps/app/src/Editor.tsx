@@ -21,8 +21,6 @@ import { Button } from "./ui/Button";
 import { Choice } from "./ui/Choice";
 import { upscaleWarnings } from "./upscale";
 
-/** How long the preview must be still before the export is rendered in the background. */
-
 type Tool = "layouts" | "style" | "export";
 const TOOLS: { id: Tool; label: string }[] = [
   { id: "layouts", label: "Layouts" },
@@ -91,6 +89,8 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
       if (started) return;
       started = true;
       clearTimeout(timer);
+      // An earlier failure says nothing about this export, and would end a wait for it.
+      setExportError(false);
       const start = performance.now();
       renderExport(scene, photos, format, job)
         .then((blob) => {
