@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text } from "react-native";
+import { Linking, Pressable, StyleSheet, Text } from "react-native";
 import { navigate } from "../platform/route";
 import { MIN_TARGET, colors, fontFamily } from "../theme";
 
@@ -14,6 +14,13 @@ export function NavLink({ to, label }: { to: string; label: string }) {
 /** A link inside a sentence. */
 export const TextLink = ({ to, children }: { to: string; children: string }) => (
   <Text role="link" {...{ tabIndex: 0 }} onPress={() => navigate(to)} style={styles.inline}>
+    {children}
+  </Text>
+);
+
+/** A link inside a sentence that leaves the app, to a page in the browser. */
+export const ExternalLink = ({ url, children }: { url: string; children: string }) => (
+  <Text role="link" {...{ tabIndex: 0 }} onPress={() => void Linking.openURL(url)} style={styles.inline}>
     {children}
   </Text>
 );

@@ -111,6 +111,17 @@ test("AC-AUTH-11 a lost connection says so, and the form can be tried again", as
   await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeEnabled();
 });
 
+test("AC-PRIV-03 the privacy and support pages are public, and the Account screen links to them", async ({ page }) => {
+  await page.goto("/account");
+  await expect(page.getByRole("link", { name: "Privacy policy" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Support" })).toBeVisible();
+
+  await page.goto("/privacy");
+  await expect(page.getByRole("heading", { level: 1, name: "StoryStitch privacy policy" })).toBeVisible();
+  await page.goto("/support");
+  await expect(page.getByRole("heading", { level: 1, name: "StoryStitch support" })).toBeVisible();
+});
+
 test("AC-AUTH-01 making and exporting a collage never asks you to sign in", async ({ page }) => {
   const authCalls: string[] = [];
   page.on("request", (r) => r.url().startsWith(`${API}/api/auth`) && authCalls.push(r.url()));
