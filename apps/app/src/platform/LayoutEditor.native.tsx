@@ -1,10 +1,10 @@
 // The layout editor on iOS: a full-screen view for making a layout or changing one, saved to the user's account.
 // useLayoutEditor does the work; this draws it with Skia and feeds it touches.
-import { Canvas, Picture, createPicture, type SkImage } from "@shopify/react-native-skia";
+import { Canvas, Fill, LinearGradient, Picture, createPicture, vec, type SkImage } from "@shopify/react-native-skia";
 import type { Point, SavedLayout } from "@storystitch/shared";
 import { STORY_CANVAS } from "@storystitch/shared";
 import type { Start, Style } from "@storystitch/client";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { KeyboardAvoidingView, PanResponder, StyleSheet, Text, TextInput, View, type GestureResponderEvent } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, fontFamily, type as typography } from "../theme";
@@ -20,6 +20,22 @@ interface Props {
   onCancel: () => void;
   onSaved: (saved: SavedLayout, order: number[]) => void;
 }
+
+/** One dark stripe and one light, 16 points across, at 45°. Keep in step with `.builder-band` in builder.css. */
+const STRIPE_END = vec(16 * Math.SQRT1_2, 16 * Math.SQRT1_2);
+const STRIPE_COLORS = ["rgba(43, 19, 64, 0.28)", "rgba(43, 19, 64, 0.28)", "rgba(43, 19, 64, 0.12)", "rgba(43, 19, 64, 0.12)"];
+const STRIPE_STOPS = [0, 0.5, 0.5, 1];
+
+/** Fills a band with diagonal stripes. It never changes, so dragging a handle doesn't redraw it. */
+const BandStripes = memo(function BandStripes() {
+  return (
+    <Canvas pointerEvents="none" style={StyleSheet.absoluteFill}>
+      <Fill>
+        <LinearGradient start={vec(0, 0)} end={STRIPE_END} mode="repeat" colors={STRIPE_COLORS} positions={STRIPE_STOPS} />
+      </Fill>
+    </Canvas>
+  );
+});
 
 /** Calls the latest `on` for every touch, whichever render the responder was made in. */
 function useFingers(on: { down: (e: GestureResponderEvent) => void; move: (e: GestureResponderEvent) => void; up: () => void }) {
@@ -141,10 +157,13 @@ export default function LayoutEditor({ photos, style, start, onCancel, onSaved }
               <Picture picture={picture} />
             </Canvas>
           </View>
-          <View pointerEvents="none" style={[styles.band, { top: 0, height: "14%" }]}>
+          <View pointerEvents="none" style={[styles.band, styles.bandTop, { height: "14%" }]}>
+            <BandStripes />
             <Text style={styles.bandLabel}>Instagram's buttons</Text>
           </View>
-          <View pointerEvents="none" style={[styles.band, { bottom: 0, height: "18%" }]} />
+          <View pointerEvents="none" style={[styles.band, styles.bandBottom, { height: "18%" }]}>
+            <BandStripes />
+          </View>
           {handles.map((h) => (
             <LineOrHandle key={h.key} handle={h} onGrab={grabHandle} onMove={editor.moveHandle} onEnd={finishDrag} />
           ))}
@@ -201,7 +220,9 @@ const styles = StyleSheet.create({
   count: { flex: 1, fontFamily, fontSize: 16, fontWeight: "700", color: colors.text, textAlign: "center" },
   stage: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 8 },
   preview: { borderRadius: 10, overflow: "hidden" },
-  band: { position: "absolute", left: 0, right: 0, backgroundColor: "rgba(43, 19, 64, 0.2)" },
+  band: { position: "absolute", left: 0, right: 0, overflow: "hidden" },
+  bandTop: { top: 0, borderTopLeftRadius: 10, borderTopRightRadius: 10 },
+  bandBottom: { bottom: 0, borderBottomLeftRadius: 10, borderBottomRightRadius: 10 },
   bandLabel: { position: "absolute", top: 6, left: 8, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 999, overflow: "hidden", backgroundColor: "rgba(43, 19, 64, 0.7)", color: colors.text, fontFamily, fontSize: 11 },
   handle: { position: "absolute", alignItems: "center", justifyContent: "center" },
   grip: { borderWidth: 3, borderColor: colors.bg, borderRadius: 999, backgroundColor: colors.accent },
