@@ -1,7 +1,9 @@
 # Usage tracking plan
 
-Status: proposal, November 4, 2026. Nothing here is built. Line numbers refer to the top of the stacked PRs
-(`expo/image-compare`), because that's where the code is heading.
+Status, November 5, 2026: rollout steps 1 to 6 are on `main`, switched off, so nothing is being collected. Step 7 is
+[draft PR 62](https://github.com/ashishnag124/storystitch/pull/62), waiting for the policy review. The rest of this
+document is the plan as approved. Where the build differs, [What changed during the build](#what-changed-during-the-build)
+is correct. Line numbers are from when the plan was written.
 
 ## In short
 
@@ -17,9 +19,10 @@ monthly cost, and needs no native module, so it adds no iOS build risk.
 The main cost is that the numbers are high-level on purpose. There's no retention, no cross-day unique count and no
 per-person journey. Decision 2 covers that.
 
-## Decisions for you
+## Decisions
 
-Everything below assumes the recommendations. You can reply "approve all", or change any by number.
+All eight recommendations were approved on November 4, 2026, and the build follows them. Decision 5 is still open for
+the policy reviewer.
 
 | # | Decision | Recommendation | What it costs |
 |---|---|---|---|
@@ -510,13 +513,32 @@ tests count for every target, so rows they prove can be `auto` right away. Rows 
 `docs/product-brief.md` should change in PR 7 too: the v2 "Admin analytics" section needs the new event list and a note
 that only daily counts are stored.
 
+## What changed during the build
+
+| Section | Change | Why |
+|---|---|---|
+| 2 | The app sends `custom` for anything that isn't a built-in layout, through `usageLayout` in `packages/client`. The server's `other` stays as a backstop | A saved layout's id never leaves the device, rather than being stripped on arrival |
+| 3 | iOS's `inactive` state is ignored. Only `background` counts as leaving the app | It's a passing moment, like a system dialog, and sending then would interrupt the user |
+| 4 | `screenFor` is in `packages/client`, not `apps/app/src/usage.ts` | It's pure, and `apps/app` can't resolve `.web` files under Vitest |
+| 4 | Coming back from the layout editor doesn't send another `editor` view | Only screen changes in `App.tsx` fire one, so `editor` counts can run slightly low |
+| 5 | The rate limit is per IP address, not per visitor hash | A request chooses its own user agent, so a hash could dodge the limit by changing it |
+| 5 | The API remembers at most 100,000 visitors and 100,000 senders. Past that, visitors stop being counted | Keeps memory bounded when requests spoof user agents |
+| 5 | A one-minute timer also replaces the salt | A quiet night can't keep yesterday's salt, which the policy says is thrown away |
+| 5 | Counters are written in a fixed order | Two batches updating the same rows can't deadlock |
+| 6 | `pnpm usage:report` is also in the API's build, as `dist/reportUsage.js`, and its versions table covers every native platform | It can run inside the hosted container, so the database needs no public address. The command in `PROJECT_SETUP.md` hasn't been tried on a hosted environment |
+| 8 | The policy text differs from section 8: it adds the one-minute value made from the IP address, and the image format and share or download details. It also says "some buttons" and "built-in layouts" | It has to match what the app does. Draft PR 62 has the current text |
+| 8 | The notice shows only in builds with usage on, until `POLICY_NOTICE_UNTIL` in `apps/app/src/config.ts` | Production's `apps/web` isn't tracking yet. The date in the draft is a placeholder, and has to be 30 days after usage reaches production |
+| 10 | Playwright states the request rules inline rather than using the registry's parser | Playwright's Node can't import `@storystitch/shared`. The parser is covered by the client and API tests and by simulator runs |
+
 ## What this plan hasn't checked
 
-- Nothing is prototyped. The effort figures are estimates.
+The build answered part of this list, and the rest stays open:
+
+- **Partly checked:** a `text/plain` `keepalive` send made while a page closes reaches the API on Chrome and WebKit
+  emulation, measured from the database. Real Safari is still unchecked. Playwright doesn't always show that request.
+- **Partly checked:** a backgrounded app finished its send on the simulator. A real phone is still unchecked.
+- The effort figures were estimates.
 - How far off the visitor count is on iOS is unknown until there's data.
-- `text/plain` with `keepalive` needs checking in real Safari during PR 4, as the simulator and emulation can't show
-  what happens when a page closes.
-- Whether a backgrounded iOS app finishes its send can only be checked on a real phone, and only roughly.
 - Events lost to the memory-only queue can't be measured, because they never arrive.
 - This isn't legal advice. Decision 5, the policy text and the App Store answers should go through the policy review
   that's already on the `PROJECT_SETUP.md` checklist.
