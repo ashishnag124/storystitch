@@ -12,7 +12,7 @@ Product requirements: `docs/product-brief.md`. Acceptance criteria (what QA chec
 | Cropping, assignment, ranking (pure functions) | `packages/layout-engine/src/` |
 | App logic with no UI or browser APIs (scene, layout editor drafts, API calls) | `packages/client/src/` |
 | Web app UI | `apps/web/src/` |
-| The Expo app, on staging now and replacing `apps/web` in production at the next stage (web and iOS) | `apps/app/src/`; anything browser-only goes in a `*.web.ts(x)` file (lint enforces it) |
+| The Expo app, on staging now and replacing `apps/web` in production once `PRODUCTION_WEB_APP` is set (web and iOS) | `apps/app/src/`; anything browser-only goes in a `*.web.ts(x)` file (lint enforces it) |
 | On-device subject detection (Web Worker, MediaPipe) | `apps/web/src/detect/`; models in `apps/web/public/models/` |
 | End-to-end tests (Playwright) | `apps/web/e2e/` |
 | iOS simulator tests (Maestro) | `apps/app/maestro/`: `core/` needs no API and is graded by `pnpm qa --target=ios` (a flow's `name:` starts with its `AC-IOS-*` ID); `local/` needs a signed-in account and the local API, and isn't graded |
@@ -27,12 +27,12 @@ A request that needs an app or service not in `project.json` (e.g. "add an iOS a
 
 - **Local** is the default for everything: `.env`, `pnpm dev`. Run, test and debug here.
 - **Staging** = whatever is on `main`, served by the Expo app (`apps/app`). You get there by promoting `dev` into `main` in a PR, nothing else.
-- **Production** = the `production` branch, moved only by `/release` after the user confirms. It serves `apps/web` until the Expo app replaces it.
+- **Production** = the `production` branch, moved only by `/release` after the user confirms. It serves `apps/web` until the user sets the `PRODUCTION_WEB_APP` variable to `app` (see "Move production web to the Expo app" in `PROJECT_SETUP.md`).
 - Never deploy to or change settings on staging or production yourself. If debugging needs hosted logs, ask the user to run the command and paste the output.
 
 ## Commands
 
-- `pnpm dev` (local Postgres in Docker, web :5173, Expo app :5174, API :3001; this Mac has an SSH tunnel on :3000) · `pnpm db:generate` / `pnpm db:migrate` · `pnpm usage:report --days 30` (usage counts as Markdown tables; read-only) · `pnpm check` (lint + typecheck + test, run before saying done) · `pnpm build` · `pnpm e2e` (Playwright, Android Chrome + iPhone WebKit emulation) · `pnpm qa` (everything above, graded against the acceptance criteria; CI and every release run it; `--target=app` grades the Expo app instead of `apps/web`; `--target=ios` grades only the `ios` criteria, in the iOS workflow and on a booted simulator with the app installed)
+- `pnpm dev` (local Postgres in Docker, web :5173, Expo app :5174, API :3001; this Mac has an SSH tunnel on :3000) · `pnpm db:generate` / `pnpm db:migrate` · `pnpm usage:report --days 30` (usage counts as Markdown tables; read-only) · `pnpm check` (lint + typecheck + test, run before saying done) · `pnpm build` · `pnpm e2e` (Playwright, Android Chrome + iPhone WebKit emulation) · `pnpm qa` (everything above, graded against the acceptance criteria for the Expo app; CI and every release run it; `--target=web` grades `apps/web` instead, while it's production's app or its rollback; `--target=ios` grades only the `ios` criteria, in the iOS workflow and on a booted simulator with the app installed)
 
 ## iOS simulator
 

@@ -481,10 +481,10 @@ The simplest path is to start PR 1 after the stack merges. None of the seven nee
 
 ## 10. Acceptance criteria
 
-`pnpm qa` defaults to `apps/web`, and only proves a criterion with the graded app's tests. `packages/*` and `apps/api`
-tests count for every target, so rows they prove can be `auto` right away. Rows that need the Expo app's wiring stay
-`planned` until production's default target becomes `apps/app`. Their Playwright tests carry the ID and run only with
-`E2E_TARGET=app`, so `pnpm qa --target=app` still exercises them.
+`pnpm qa` defaulted to `apps/web` during the build, and only proves a criterion with the graded app's tests.
+`packages/*` and `apps/api` tests count for every target, so rows they prove could be `auto` right away. Rows that
+needed the Expo app's wiring stayed `planned` until the default target became `apps/app`. Their Playwright tests carry
+the ID and run only with `E2E_TARGET=app`, and `pnpm qa --target=web` leaves those rows out.
 
 **New rows:**
 
@@ -496,7 +496,7 @@ tests count for every target, so rows they prove can be `auto` right away. Rows 
 | AC-USAGE-04 | Events go out in batches of up to 50, at 20 queued, every 30 seconds or on going to the background. Network and server failures retry with growing waits, and refused batches are dropped. | auto | `packages/client` |
 | AC-USAGE-05 | The API accepts events from every supported app version, skips unknown events without losing the rest of the batch, and counts what it skipped. | auto | `apps/api` |
 | AC-USAGE-06 | The API refuses oversized bodies and other web origins, limits batches per visitor, and writes nothing while `USAGE_INGEST_ENABLED` is off. | auto | `apps/api` |
-| AC-USAGE-07 | Page views use fixed screen names, cover the pick, editor, layout editor and account screens, and never send a path or query string. `/bot-check` isn't counted. | planned | Playwright, `E2E_TARGET=app` |
+| AC-USAGE-07 | Page views use fixed screen names, cover the pick, editor, layout editor and account screens, and never send a path or query string. `/bot-check` isn't counted. | auto, was planned until the default target changed | Playwright, `E2E_TARGET=app` |
 | AC-USAGE-08 | With tracking on, the iOS app sends usage events to a local API, and the whole core flow still works with the API unreachable. | manual | Simulator. `apps/app/maestro/core` needs no API, so it can't prove delivery |
 | AC-USAGE-09 | The privacy policy and App Store answers match what's tracked, and the app shows the policy notice for 30 days after the change. | manual | By hand before turning it on |
 
@@ -504,7 +504,7 @@ tests count for every target, so rows they prove can be `auto` right away. Rows 
 
 | ID | Change |
 |---|---|
-| AC-ADMIN-01 | Keep it, adding screen views and tagged button presses to the list. Stays `planned` until the cutover, since the Expo app proves it. |
+| AC-ADMIN-01 | Keep it, adding screen views and tagged button presses to the list. `auto` since the default target changed, since the Expo app proves it. Its "save" is `layout_saved` until `collage_saved` ships. |
 | AC-ADMIN-02 | New text: "Events and stored counts never contain image data, file names, layout names, emails, IP addresses, user agents or any account or device ID. Daily visitors are counted with a hash held in memory that changes daily and is never stored." Becomes `auto` in PR 2, with a column test like the one in `AC-RANK-05`. |
 | AC-PRIV-01 | New text: "Photos never leave the device: nothing is uploaded from page load through export. In builds with no API, no request goes to another origin." The "No analytics" sentence goes in PR 7. Its test already runs on the all-off `dist-e2e` build. |
 | AC-PRIV-02 | Text unchanged. Its tests look for "nothing is uploaded", so the wording in decision 6 changes `sources.spec.ts` and `apps/web/src/App.test.tsx`. |

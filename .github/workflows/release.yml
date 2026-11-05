@@ -1,6 +1,7 @@
 # Promote a commit that passed CI on main to production.
 # Railway's production environment autodeploys the API from the `production` branch (migrations run first);
 # web is deployed explicitly below because GITHUB_TOKEN pushes don't trigger workflows.
+# The PRODUCTION_WEB_APP variable picks the web app: apps/web until it's set to `app`, the switch to the Expo app.
 name: Release
 
 on:
@@ -25,6 +26,8 @@ jobs:
       actions: read
     outputs:
       sha: ${{ steps.resolve.outputs.sha }}
+      # Read once, so the app that's graded is the app that's deployed.
+      web_app: ${{ vars.PRODUCTION_WEB_APP || 'web' }}
     env:
       GH_TOKEN: ${{ github.token }}
       VERSION: ${{ inputs.version }}
@@ -81,7 +84,9 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @storystitch/web exec playwright install --with-deps chromium webkit
-      - run: pnpm qa
+      - run: pnpm qa --target="$WEB_APP"
+        env:
+          WEB_APP: ${{ needs.resolve.outputs.web_app }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -121,7 +126,7 @@ jobs:
       deployments: write
     uses: ./.github/workflows/_deploy-pages.yml
     with:
-      app: web
+      app: ${{ needs.resolve.outputs.web_app }}
       project: ${{ vars.PAGES_PROJECT }}
       ref: ${{ needs.resolve.outputs.sha }}
       branch: production

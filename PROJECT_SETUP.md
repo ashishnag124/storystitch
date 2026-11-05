@@ -13,8 +13,8 @@ Web app on Cloudflare Pages, plus an API with Postgres on Railway (from v2). All
 
 - GitHub: https://github.com/ashishnag124/storystitch (private)
 - Cloudflare Pages projects (classic Pages, Direct Upload):
-  - `storystitch-web`: production, deploys the `production` branch (via `/release`).
-  - `storystitch-web-staging`: staging, deploys the Expo app (`apps/app`) from `main` as its own production. Production still deploys `apps/web` until Stage 4 of the move to Expo. It's a separate project because Pages routes a custom domain to a branch only through Cloudflare-proxied DNS, and ashishnag.com's DNS was at Squarespace when staging was set up (it moved to Cloudflare on 2026-11-02). The old staging alias `main.storystitch-web.pages.dev` no longer updates.
+  - `storystitch-web`: production, deploys the `production` branch (via `/release`). It deploys `apps/web` until `PRODUCTION_WEB_APP` is `app`, then the Expo app (`apps/app`).
+  - `storystitch-web-staging`: staging, deploys the Expo app from `main` as its own production. It's a separate project because Pages routes a custom domain to a branch only through Cloudflare-proxied DNS, and ashishnag.com's DNS was at Squarespace when staging was set up (it moved to Cloudflare on 2026-11-02). The old staging alias `main.storystitch-web.pages.dev` no longer updates.
 - Railway project: `storystitch`, services `api` and `Postgres`, environments `staging` (deploys `main`) and `production` (deploys the `production` branch, so only `/release` moves it). The API applies pending migrations itself at startup, before it serves requests (`apps/api/src/db/migrate.ts`; Railway never ran the `railway.json` pre-deploy command for this service), and Railway only switches traffic once `/health` answers.
 
 ## Where config lives
@@ -34,6 +34,7 @@ Web app on Cloudflare Pages, plus an API with Postgres on Railway (from v2). All
 | `EXPO_PUBLIC_PERF_READOUT` (optional) | Set by hand for a test build on a real phone; never in a hosted environment | shows timing numbers on screen |
 | EAS project ID, App Store Connect app ID | `apps/app/app.config.ts`; `apps/app/eas.json`, a placeholder until the checklist below (both public values) | EAS |
 | `API_URL_STAGING`, `API_URL_PRODUCTION` | GitHub variables | web builds (`VITE_API_URL`) in `ci.yml` / `release.yml` |
+| `PRODUCTION_WEB_APP` = `app` | GitHub variable, not set yet. Unset means `apps/web`. Remove it when `apps/web` is removed | `release.yml`: which web app is graded and deployed |
 | `DATABASE_URL` (reference `${{Postgres.DATABASE_URL}}`), `CORS_ORIGIN`, `NODE_ENV` | Railway variables on `api`, per environment | the API |
 | `BETTER_AUTH_URL` (the API's own URL), `BETTER_AUTH_SECRET` (random, per environment), `EMAIL_TRANSPORT=resend`, `EMAIL_FROM`, `RESEND_API_KEY`, `TURNSTILE_SECRET_KEY` | Railway variables on `api`, per environment | accounts (B2) |
 | `APP_SCHEME` (optional, default `storystitch://`; `storystitch-staging://` on staging), `MIN_IOS_APP_VERSION` (optional, default `1.0.0`) | Railway variables on `api`, per environment | iOS app sign-in; `GET /app/minimum-version`, raised when old app versions must update |
@@ -231,8 +232,9 @@ The API side also needs `APP_SCHEME=storystitch-staging://` on staging.
 Connect. It only runs when started by hand, and nothing reaches the App Store until you submit the build for review.
 No production build has run yet, so expect to fix things on the first one. Run commands from `apps/app`.
 
-- [ ] 1. **Move production web to the Expo app first.** iOS sign-in loads the bot check from `/bot-check` on the
-  production site, and `apps/web` doesn't have that page. Until this ships, sign-in fails in the production iOS app.
+- [ ] 1. **Move production web to the Expo app first**, as in "Move production web to the Expo app" below. iOS sign-in
+  loads the bot check from `/bot-check` on the production site, and `apps/web` doesn't have that page. Until this ships,
+  sign-in fails in the production iOS app.
 - [ ] 2. **Production app in App Store Connect**: add an app with the bundle ID `com.ashishnag.storystitch`, named
   StoryStitch. Copy its numeric Apple ID into `submit.production.ios.ascAppId` in `apps/app/eas.json`, and merge that.
 - [ ] 3. **Turnstile site key for production builds**: the same public key, on the `production` environment:
@@ -259,7 +261,47 @@ The production API already defaults to `APP_SCHEME=storystitch://`, which matche
 
 ## Release
 
-Run `/release` in Claude Code from this repo. It checks CI on `main`, shows what's shipping and the manual acceptance checks, asks for confirmation, then runs the Release workflow. That workflow re-runs `pnpm qa` (every criterion in `docs/acceptance-criteria.md`) on the exact commit, and only if it passes fast-forwards `production`, tags `vX.Y.Z` and deploys the web app to production. The QA report is attached to the run as the `qa-results-vX.Y.Z` artifact.
+Run `/release` in Claude Code from this repo. It checks CI on `main`, shows what's shipping and the manual acceptance checks, asks for confirmation, then runs the Release workflow. That workflow re-runs `pnpm qa` for the web app production serves (every criterion in `docs/acceptance-criteria.md`) on the exact commit, and only if it passes fast-forwards `production`, tags `vX.Y.Z` and deploys that web app to production. The QA report is attached to the run as the `qa-results-vX.Y.Z` artifact.
+
+## Move production web to the Expo app
+
+Merging this change ships nothing. `release.yml` keeps grading and deploying `apps/web`, so `main` stays releasable, until you set `PRODUCTION_WEB_APP`. Don't set it until the Expo web app and the iOS app on TestFlight have both been reviewed.
+
+### Before the release (yours)
+
+1. Pass the TestFlight gate, and check the `manual` rows of `docs/acceptance-criteria.md` on staging.
+2. Cloudflare dashboard → Turnstile → the StoryStitch widget → Hostnames: confirm `storystitch.ashishnag.com` and `staging.storystitch.ashishnag.com` are listed. Add `storystitch.ashishnag.com` if it isn't. The bot check can't be proved from here. `storystitch-web.pages.dev` isn't on the list, so account forms don't work at that address: add it only if you want them to.
+3. Turn the switch on:
+   ```bash
+   gh variable set PRODUCTION_WEB_APP --body app
+   ```
+4. Run `/release`. It says which web app it's about to ship, and it checks `/privacy` and `/support` afterwards.
+
+To split the risk, you can first run `/release` with the variable unset. That ships the API, migration `0004` and the real `/privacy` and `/support` pages with `apps/web`, then steps 3 and 4 move only the web app.
+
+### What differs from staging
+
+| Setting | Staging | Production | Change needed |
+|---|---|---|---|
+| Pages project and domain | `storystitch-web-staging`, staging.storystitch.ashishnag.com | `storystitch-web` (`PAGES_PROJECT`), storystitch.ashishnag.com | None |
+| `EXPO_PUBLIC_API_URL` | `API_URL_STAGING` | `API_URL_PRODUCTION`, https://api.storystitch.ashishnag.com | None |
+| Accounts and layout editor flags | On in `ci.yml` | On in `release.yml` | None |
+| `EXPO_PUBLIC_FEATURE_USAGE`, `USAGE_INGEST_ENABLED` | Off | Off | None: leave both off until #62's policy review |
+| `EXPO_PUBLIC_TURNSTILE_SITE_KEY` | `TURNSTILE_SITE_KEY` secret | The same secret | None. Its hostnames need the check above |
+| `EXPO_PUBLIC_WEB_URL` | Not set for web | Not set for web | None: only iOS uses it, from `eas.json`. Web uses the page's own address |
+| `CORS_ORIGIN` | Railway | `https://storystitch.ashishnag.com,https://storystitch-web.pages.dev`, confirmed from the API's responses on November 5, 2026 | None |
+| `APP_SCHEME` | `storystitch-staging://` | Unset, which means `storystitch://` and matches the production app | None. If it's set, it must be `storystitch://` |
+| `MIN_IOS_APP_VERSION` | Default | Default, `1.0.0` | None |
+
+Saved sign-ins carry over, because the session cookie belongs to the API's address. Neither web app keeps anything in browser storage or uses a service worker.
+
+### What to test on staging
+
+Staging runs the same build with different settings, so these checks hold for production, except that `release.yml`'s new setting only runs for real at the first release.
+
+- The `manual` rows, on iPhone Safari and Android Chrome, including real emails (`AC-AUTH-10`).
+- The real bot check at `/bot-check`, through sign-up and sign-in in the TestFlight build. Automated tests use Cloudflare's test key.
+- Save a layout, then sign in with the same account on another device.
 
 ## Add an app or service
 
@@ -269,3 +311,22 @@ Run `/add-app` (e.g. an iOS app, API + database, accounts). It updates `project.
 
 - Web: Cloudflare dashboard → Workers & Pages → `storystitch-web` → Deployments → roll back to a previous production deployment. Then fix forward on `main` and `/release` again.
 - API: Railway dashboard → `api` → Deployments → redeploy the previous one. Migrations aren't rolled back: they're written to work with the previous API version (add first, remove later), so the older API keeps working against the newer schema.
+
+### Rolling back from the Expo app to `apps/web`
+
+`apps/web` stays for one release after the switch. Roll back the web app first, and the API only if the API is the problem.
+
+1. **Fastest, about a minute:** use the Cloudflare rollback above, choosing the last deployment built from `apps/web`. Its files are at `/assets/`, and the Expo app's are at `/_expo/`:
+   ```bash
+   curl -s https://storystitch.ashishnag.com/ | grep -o '/assets/index\|/_expo/static' | head -1
+   ```
+2. **Stop the next release from bringing it back.** Do this straight after step 1:
+   ```bash
+   gh variable delete PRODUCTION_WEB_APP
+   ```
+3. **To rebuild `apps/web` from the same commit**, run `/release` with a new patch version once the variable is gone. Use this when the deployment from step 1 is too old, for example v0.6.0, which has no real `/privacy` or `/support` pages. It re-runs `pnpm qa --target=web` first, and needs no API change.
+4. **API:** only if it's also at fault, redeploy the previous version in Railway. Leave migration `0004` in place. There's no down migration, and `usage_daily` is unused while `USAGE_INGEST_ENABLED` is off.
+
+Don't move or force-push the `production` branch. It stays where it is, and the next `/release` fast-forwards it.
+
+**Once a production iOS app is live**, rolling web back removes `/bot-check`, so sign-in and sign-up fail in that app until the Expo web app is back. Prefer fixing forward then. Rolling back the API is safe for the app until the app depends on something newer.

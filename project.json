@@ -12,6 +12,7 @@
       "path": "apps/app",
       "stack": "expo",
       "host": "cloudflare-pages",
+      "pagesProject": "storystitch-web",
       "pagesProjectStaging": "storystitch-web-staging",
       "replaces": "web"
     },

@@ -171,6 +171,8 @@ test.describe("a whole session", () => {
     for (const text of [email, layoutName, "private-name", "custom-", "http", "/"]) expect(everything).not.toContain(text);
 
     const named = (name: string) => events.filter((e) => e.name === name).map((e) => e.props);
+    expect(named("visit_started").length).toBeGreaterThan(0);
+    expect(named("screen_viewed")).toEqual(expect.arrayContaining([{ screen: "sign_up" }, { screen: "account" }, { screen: "pick" }, { screen: "editor" }]));
     expect(named("signed_up")).toHaveLength(1);
     expect(named("photos_picked")).toEqual([{ count: 3 }]);
     expect(named("error_shown")).toEqual([{ code: "photo_unreadable" }]);
