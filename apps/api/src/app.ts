@@ -6,6 +6,7 @@ import type pg from "pg";
 import type { Auth } from "./auth";
 import type { Email } from "./email";
 import { savedLayoutRoutes } from "./savedLayouts";
+import { usageRoutes } from "./usage";
 
 interface AppOptions {
   pool: pg.Pool;
@@ -14,12 +15,14 @@ interface AppOptions {
   version: string;
   /** The oldest iOS app version still supported. */
   minimumIosVersion: string;
+  /** Whether usage events are counted. When off, they're accepted and ignored. */
+  usageIngestEnabled?: boolean;
   /** Emails captured by the memory mailer, readable at /test/emails. Only passed outside staging and production. */
   testEmails?: Email[];
 }
 
 /** The HTTP API, separate from the server so tests can call it directly with `app.request()`. */
-export function createApp({ pool, auth, corsOrigins, version, minimumIosVersion, testEmails }: AppOptions) {
+export function createApp({ pool, auth, corsOrigins, version, minimumIosVersion, usageIngestEnabled = false, testEmails }: AppOptions) {
   const app = new Hono();
   app.use(secureHeaders());
   // Only StoryStitch's own web origins may call the API, with cookies (the sign-in session).
@@ -60,6 +63,7 @@ export function createApp({ pool, auth, corsOrigins, version, minimumIosVersion,
   });
 
   savedLayoutRoutes(app, { pool, auth, corsOrigins });
+  usageRoutes(app, { pool, corsOrigins, enabled: usageIngestEnabled });
 
   // Accounts: sign-up, email verification, sign-in, password reset, sessions, deletion.
   app.on(["GET", "POST"], "/api/auth/*", (c) => auth.handler(c.req.raw));

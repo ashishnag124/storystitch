@@ -1,6 +1,6 @@
 // Drizzle table definitions. The four auth tables and rateLimit are Better Auth's (v1.7 core schema: keys and
 // fields must match its model and field names); columns use snake_case in SQL.
-import { bigint, boolean, index, integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { bigint, boolean, date, index, integer, jsonb, pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
 
 const createdAt = () => timestamp("created_at", { withTimezone: true }).notNull().defaultNow();
 const updatedAt = () =>
@@ -104,4 +104,26 @@ export const savedLayout = pgTable(
     updatedAt: updatedAt(),
   },
   (t) => [index("saved_layout_user_id_idx").on(t.userId)],
+);
+
+/**
+ * Daily usage counts. Each event adds 1 to its total (empty prop_key) and 1 to a row per property, so properties can be
+ * counted alone but not against each other. Nothing here says who did anything, so rows are kept like layout_exports.
+ */
+export const usageDaily = pgTable(
+  "usage_daily",
+  {
+    /** The UTC day the API received the event. */
+    day: date("day").notNull(),
+    event: text("event").notNull(),
+    platform: text("platform").notNull(),
+    appVersion: text("app_version").notNull().default(""),
+    propKey: text("prop_key").notNull().default(""),
+    propValue: text("prop_value").notNull().default(""),
+    count: bigint("count", { mode: "number" }).notNull().default(0),
+  },
+  (t) => [
+    primaryKey({ columns: [t.day, t.event, t.platform, t.appVersion, t.propKey, t.propValue] }),
+    index("usage_daily_event_day_idx").on(t.event, t.day),
+  ],
 );

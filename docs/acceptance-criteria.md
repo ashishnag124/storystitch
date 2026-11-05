@@ -229,13 +229,15 @@ Behind `VITE_FEATURE_LAYOUT_EDITOR` (needs accounts): on in staging and producti
 | ID | Criterion | Check |
 |---|---|---|
 | AC-USAGE-02 | Every event comes from the shared registry, and every property is a fixed list, a true/false value or a bounded number, so free text can't be sent. | auto |
+| AC-USAGE-05 | The API accepts events from every supported app version, skips unknown events without losing the rest of the batch, and counts what it skipped. | auto |
+| AC-USAGE-06 | The API refuses oversized bodies and other web origins, limits batches per visitor, and writes nothing while `USAGE_INGEST_ENABLED` is off. | auto |
 
 ## Admin analytics
 
 | ID | Criterion | Check |
 |---|---|---|
 | AC-ADMIN-01 | The app records first-party events: visit, photos picked (count), layout chosen, export, share, save, sign-up and error. | planned |
-| AC-ADMIN-02 | Events never contain image data, emails or IP addresses; visitors are counted with a hash that changes daily. | planned |
+| AC-ADMIN-02 | Events and stored counts never contain image data, file names, layout names, emails, IP addresses, user agents or any account or device ID. Daily visitors are counted with a hash held in memory that changes daily and is never stored. | auto |
 | AC-ADMIN-03 | `/admin` opens only for admin accounts signed in with email, password and an authenticator code; everyone else is refused. | planned |
 | AC-ADMIN-04 | The dashboard shows daily totals, the picked → exported → saved funnel, most-used layouts and errors. | planned |
 | AC-ADMIN-05 | At phone width, `/admin` says to open it on a desktop. | planned |
