@@ -24,6 +24,8 @@ jobs:
   check:
     if: github.event_name != 'pull_request' || github.base_ref == 'main' || contains(github.event.pull_request.labels.*.name, 'run-sim')
     runs-on: ubuntu-24.04
+    # Usually 5 to 9 minutes, but a slow `playwright install` has passed at 31. A stuck one sat for over 45.
+    timeout-minutes: 35
     # Real Postgres for the API's tests and migrations.
     services: &postgres
       postgres:
@@ -65,6 +67,8 @@ jobs:
   fast:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
+    # Usually about 2 minutes.
+    timeout-minutes: 10
     services: *postgres
     env: *db
     steps:
