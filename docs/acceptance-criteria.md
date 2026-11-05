@@ -228,7 +228,10 @@ Behind `VITE_FEATURE_LAYOUT_EDITOR` (needs accounts): on in staging and producti
 
 | ID | Criterion | Check |
 |---|---|---|
+| AC-USAGE-01 | With the usage flag off or no API URL, the app sends no usage requests and starts no timers. | auto |
 | AC-USAGE-02 | Every event comes from the shared registry, and every property is a fixed list, a true/false value or a bounded number, so free text can't be sent. | auto |
+| AC-USAGE-03 | Tracking can't slow or break the app: `track` returns at once and never throws, and a failed, slow or offline send changes nothing the user sees. The queue holds at most 100 events. | auto |
+| AC-USAGE-04 | Events go out in batches of up to 50, at 20 queued, every 30 seconds or on going to the background. Network and server failures retry with growing waits, and refused batches are dropped. | auto |
 | AC-USAGE-05 | The API accepts events from every supported app version, skips unknown events without losing the rest of the batch, and counts what it skipped. | auto |
 | AC-USAGE-06 | The API refuses oversized bodies and other web origins, limits batches per visitor, and writes nothing while `USAGE_INGEST_ENABLED` is off. | auto |
 
