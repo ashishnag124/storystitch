@@ -180,6 +180,35 @@ test.describe("a whole session", () => {
   });
 });
 
+test.describe("policy notice", () => {
+  const notice = (page: Page) => page.getByText(/We now count how the app is used/);
+
+  test.describe("usage on", () => {
+    test.use({ baseURL: `http://localhost:${ACCOUNTS_PORT}` });
+
+    test("AC-USAGE-09 shows the notice with a link to the policy, then stops on its date", async ({ page, context }) => {
+      await page.clock.setFixedTime(new Date("2026-11-05T12:00:00Z"));
+      await page.goto("/");
+      await expect(notice(page)).toBeVisible();
+      const [policy] = await Promise.all([context.waitForEvent("page"), page.getByRole("link", { name: "privacy policy" }).click()]);
+      await expect(policy).toHaveURL(/\/privacy$/);
+      await expect(policy.getByRole("heading", { level: 1, name: "StoryStitch privacy policy" })).toBeVisible();
+
+      await page.clock.setFixedTime(new Date("2100-01-01T12:00:00Z"));
+      await page.reload();
+      await expect(libraryInput(page)).toBeAttached();
+      await expect(notice(page)).toHaveCount(0);
+    });
+  });
+
+  test("AC-USAGE-09 doesn't show the notice in a build with usage off", async ({ page }) => {
+    await page.clock.setFixedTime(new Date("2026-11-05T12:00:00Z"));
+    await page.goto("/");
+    await expect(libraryInput(page)).toBeAttached();
+    await expect(notice(page)).toHaveCount(0);
+  });
+});
+
 test("AC-USAGE-01 sends nothing in a build with the flag off", async ({ page, baseURL }) => {
   expect(baseURL).toBe(`http://localhost:${PORT}`);
   const sends: Request[] = [];

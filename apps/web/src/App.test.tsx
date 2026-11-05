@@ -9,6 +9,6 @@ describe("App", () => {
     expect(input.type).toBe("file");
     expect(input.multiple).toBe(true);
     expect(input.accept).toContain(".heic");
-    expect(screen.getByText(/nothing is uploaded/i)).toBeTruthy();
+    expect(screen.getByText(/never uploaded/i)).toBeTruthy();
   });
 });

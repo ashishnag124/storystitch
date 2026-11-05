@@ -133,7 +133,7 @@ reuse IDs.
 
 | ID | Criterion | Check |
 |---|---|---|
-| AC-PRIV-01 | Photos never leave the device: no request goes to another origin and nothing is uploaded, from page load through export. No analytics. | auto |
+| AC-PRIV-01 | Photos never leave the device: nothing is uploaded from page load through export. In builds with no API, no request goes to another origin. | auto |
 | AC-PRIV-02 | The UI says photos stay on the device. | auto |
 | AC-PRIV-03 | The privacy policy and support pages are public at /privacy and /support, with no account needed, and the Account screen links to both. | auto |
 
@@ -239,6 +239,7 @@ Behind `VITE_FEATURE_LAYOUT_EDITOR` (needs accounts): on in staging and producti
 | AC-USAGE-06 | The API refuses oversized bodies and other web origins, limits batches per visitor, and writes nothing while `USAGE_INGEST_ENABLED` is off. | auto |
 | AC-USAGE-07 | Page views use fixed screen names, cover the pick, editor, layout editor and account screens, and never send a path or query string. `/bot-check` isn't counted. | planned |
 | AC-USAGE-08 | With tracking on, the iOS app sends usage events to a local API, and the whole core flow still works with the API unreachable. | manual |
+| AC-USAGE-09 | The privacy policy and App Store answers match what's tracked, and the app shows the policy notice for 30 days after the change. | manual |
 
 ## Admin analytics
 

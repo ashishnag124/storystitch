@@ -96,6 +96,11 @@ Claude never reads that file; it loads values from it into Railway and GitHub wh
 - [ ] **Legal pages**: have the policy reviewed. `apps/web/public/privacy.html` and `support.html` are the pages at
   /privacy and /support, and the Expo app copies them when it builds. Terms are postponed: `docs/legal/terms.md` is a
   draft, and the app has no terms page.
+- [ ] **Usage tracking**, before turning it on: have the policy's usage text reviewed, then in App Store Connect → App
+  Privacy, for the staging and production apps, add Usage Data → Product Interaction (Analytics) and Diagnostics → Other
+  Diagnostic Data (Analytics), both not linked and not used for tracking. Check that Product Interaction also lists App
+  Functionality, for the count that ranks layouts. The tracking answer stays No. On Android, the matching Play Console
+  answers are App interactions and Diagnostics, collected, not shared.
 
 ### B1 checklist (yours)
 

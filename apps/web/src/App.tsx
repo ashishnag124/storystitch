@@ -9,7 +9,7 @@ import { PhotoSources } from "./PhotoSources";
 import { ANALYSIS_LONG_SIDE, MAX_PHOTOS, UnsupportedPhotoError, downscale, loadPhoto, type Photo } from "./photos";
 import { detectPlatform } from "./platform";
 
-const PRIVACY = "Your photos stay on this device. Nothing is uploaded.";
+const PRIVACY = "Your photos stay on this device. They're never uploaded.";
 
 // Created on first use, so the detection models only download after photos are picked.
 let detector: Detector | undefined;
