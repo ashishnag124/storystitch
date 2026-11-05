@@ -101,6 +101,16 @@ test("AC-AUTH-08 delete the account with its password", async ({ page }) => {
   await expect(page.getByText("That email and password don't match.")).toBeVisible();
 });
 
+test("AC-AUTH-11 a lost connection says so, and the form can be tried again", async ({ page }) => {
+  await page.goto("/account");
+  await page.getByLabel("Email").fill("someone@example.com");
+  await page.getByLabel("Password").fill(PASSWORD);
+  await page.route("**/api/auth/sign-in/email", (route) => route.abort());
+  await submit(page, "Sign in");
+  await expect(page.getByRole("alert").filter({ hasText: "Couldn't reach StoryStitch" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeEnabled();
+});
+
 test("AC-AUTH-01 making and exporting a collage never asks you to sign in", async ({ page }) => {
   const authCalls: string[] = [];
   page.on("request", (r) => r.url().startsWith(`${API}/api/auth`) && authCalls.push(r.url()));

@@ -13,6 +13,25 @@ import {
 /** How long to wait for an answer the app can do without: the counts for ranking, or the minimum version. */
 const FETCH_TIMEOUT_MS = 2000;
 
+/** How long an account request can take before it counts as lost. */
+const AUTH_TIMEOUT_MS = 20_000;
+
+/**
+ * `fetch` for the auth client. A lost connection, or no answer at all, comes back as a 503, so every account form gets
+ * an error it can show rather than waiting forever.
+ */
+export async function authFetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
+  const timeout = new AbortController();
+  const timer = setTimeout(() => timeout.abort(), AUTH_TIMEOUT_MS);
+  try {
+    return await fetch(input as Parameters<typeof fetch>[0], { ...init, signal: timeout.signal });
+  } catch {
+    return new Response(null, { status: 503 });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /** Why a save didn't go through, in words for the user. */
 export class SaveError extends Error {}
 

@@ -183,6 +183,7 @@ Maestro reads the accessibility tree, so `ios` rows prove what a person can reac
 | AC-IOS-08 | Save Image in the share sheet adds a 1080×1920 image to Photos without asking for access to the whole library. | manual |
 | AC-IOS-09 | With an account signed in on a simulator, `apps/app/maestro/local` passes: every layout editor tool for grids and free cells works and can be undone, and VoiceOver can't reach the screen behind the editor. | manual |
 | AC-IOS-10 | On a real iPhone, a double-tap zooms a photo in and back out, and a flicked photo keeps gliding, and Fit undoes a full zoom on a Polaroid. The simulator's tools can't tap fast enough to count as a double-tap, and Maestro's tap on Fit has no effect there though a direct tap works. | manual |
+| AC-IOS-11 | On a simulator with the local API: sign-up, confirming the email, a wrong password, resetting a password, the save error messages and deleting an account (it needs the password, and removes the user, sessions and saved layouts) all work, and VoiceOver can't reach the screen behind an account screen. | manual |
 
 ## Accounts
 
@@ -195,6 +196,7 @@ Maestro reads the accessibility tree, so `ios` rows prove what a person can reac
 | AC-AUTH-07 | Users can sign out, and sign out of every device. | auto |
 | AC-AUTH-08 | Deleting an account needs the account's password and removes the user and their sessions, saved layouts (and, once saving ships, their saved collages and files). | auto |
 | AC-AUTH-10 | On staging, a real verification email and password-reset email arrive, and sign-up and sign-in work on iPhone Safari and Android Chrome. | manual |
+| AC-AUTH-11 | When StoryStitch can't be reached, account forms say so and can be tried again, instead of waiting forever. | auto |
 
 ## Layout editor
 

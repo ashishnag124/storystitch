@@ -18,7 +18,7 @@ function Screen({ title, children }: { title: string; children: ReactNode }) {
   useEffect(() => heading.current?.focus?.(), [title]);
   return (
     <SafeAreaView role="main" style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.inner}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.inner}>
         <View style={styles.header}>
           <Text ref={heading} role="heading" aria-level={1} {...{ tabIndex: -1 }} style={styles.title}>
             {title}
