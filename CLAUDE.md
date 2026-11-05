@@ -55,6 +55,10 @@ Every PR that changes shared screens gets this check. The simulator can't prove 
 - **Slow tier:** `check` in `ci.yml` (`pnpm qa --target=app`) and `ios.yml` (the simulator, 30+ minutes) on PRs into `main`, pushes to `main`, nightly on `dev`, and PRs labeled `run-sim`.
 - **Before pushing:** run the affected tests locally. For simulator changes, run only the affected flows, e.g. `maestro test apps/app/maestro/core/06-share.yaml`. After pushing, move on: don't watch or poll CI.
 - **Promoting:** one PR from `dev` into `main`, once or twice a session. It needs 30+ minutes plus fix time, so remind the user and start well before the session ends.
+  1. On the latest `dev`, run `pnpm qa --target=app` locally, because PRs into `dev` skip Playwright and acceptance grading. Don't open the PR until it passes.
+  2. Read its exit code and check that the end-to-end step ran, then put the commit and result in the PR.
+  3. Stop the simulator and local servers first. Only one session can run it at a time, and a worktree needs `.env` and `COMPOSE_PROJECT_NAME=storystitch`.
+  4. Skip the local simulator run: a pass here says nothing about iOS, which the promotion PR's simulator run covers.
 - **Merging:** `main` has no required checks, so read them first. `release.yml` only looks at `ci.yml`, so a failed simulator run doesn't block a release.
 
 ## Rules
