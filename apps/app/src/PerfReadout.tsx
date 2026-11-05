@@ -8,6 +8,12 @@ const WINDOW_MS = 5000;
 /** The last times measured by the app, in ms. */
 export const perfTimes = { exportMs: 0, switchMs: 0 };
 
+let peakMs = 0;
+/** Clears the peak. Waits a moment, so the editor's own first frames don't count. */
+export function resetPerfPeak() {
+  if (PERF_READOUT) setTimeout(() => (peakMs = 0), 1000);
+}
+
 /** Records how long a layout switch held the app up: from the tap until the next frames are drawn. */
 export function timeLayoutSwitch() {
   if (!PERF_READOUT) return;
@@ -24,9 +30,10 @@ export function PerfReadout() {
     let windowStart = last;
     let id = requestAnimationFrame(function step(now) {
       worst = Math.max(worst, now - last);
+      peakMs = Math.max(peakMs, now - last);
       last = now;
       if (now - windowStart >= WINDOW_MS) {
-        setText(`Worst freeze ${Math.round(worst)} ms · Export ${Math.round(perfTimes.exportMs)} ms · Switch ${Math.round(perfTimes.switchMs)} ms`);
+        setText(`Peak ${Math.round(peakMs)} · Last 5 s ${Math.round(worst)} ms · Export ${Math.round(perfTimes.exportMs)} ms · Switch ${Math.round(perfTimes.switchMs)} ms`);
         worst = 0;
         windowStart = now;
       }
