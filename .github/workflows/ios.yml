@@ -1,20 +1,18 @@
 name: iOS
 
 # Grades the `ios` criteria on a simulator. It stays out of ci.yml, like mobile.yml, so a failed or slow iOS run
-# can't block a web or API release. This is the slow tier: pull requests into main, pushes to main, nightly on dev,
-# and pull requests labeled run-sim.
+# can't block a web or API release. This is the slow tier: pull requests into main, nightly on dev, and pull requests
+# labeled run-sim. Pushes to main don't run it: the promotion PR already tested that code, and nothing depends on a
+# run on the merge commit. ci.yml still runs on those pushes, because releases and deploys do depend on that.
 on:
   pull_request:
     types: [opened, synchronize, reopened, labeled]
-    paths: &app
+    paths:
       - "apps/app/**"
       - "packages/**"
       - "pnpm-lock.yaml"
       - "scripts/qa.mjs"
       - ".github/workflows/ios.yml"
-  push:
-    branches: [main]
-    paths: *app
   schedule:
     - cron: "0 10 * * *"
 
