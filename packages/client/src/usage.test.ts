@@ -1,6 +1,6 @@
 import { NATIVE_APP_HEADER, UsageBatchSchema, parseUsageEvent } from "@storystitch/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createUsage } from "./usage";
+import { createUsage, screenFor } from "./usage";
 
 const options = { apiUrl: "https://api.example", enabled: true, platform: "ios", appVersion: "1.2.0" } as const;
 const ok = () => new Response(null, { status: 204 });
@@ -234,6 +234,20 @@ describe("what a batch looks like", () => {
     usage.track("screen_viewed", { screen: "editor", path: "/account" });
     // @ts-expect-error the tracker adds `first` itself
     usage.track("collage_shared", { layout: "custom", method: "share", first: true });
+  });
+});
+
+describe("AC-USAGE-07 screen names", () => {
+  it.each([
+    ["/", false, "pick"],
+    ["/", true, "editor"],
+    ["/account", true, "account"],
+    ["/sign-up", false, "sign_up"],
+    ["/reset-password", false, "reset_password"],
+    ["/bot-check", false, "other"],
+    ["/anything/else", false, "other"],
+  ])("AC-USAGE-07 calls %s, with photos %s, %s", (pathname, hasPhotos, screen) => {
+    expect(screenFor(pathname, hasPhotos)).toBe(screen);
   });
 });
 

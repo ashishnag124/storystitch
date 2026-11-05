@@ -20,6 +20,7 @@ import { MIN_TARGET, colors, fontFamily, shadows, type as typography } from "./t
 import { Button } from "./ui/Button";
 import { Choice } from "./ui/Choice";
 import { upscaleWarnings } from "./upscale";
+import { track } from "./usage";
 
 type Tool = "layouts" | "style" | "export";
 const TOOLS: { id: Tool; label: string }[] = [
@@ -141,6 +142,7 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
     setConfirmDelete(false);
     setSelected(null);
     setBuilding({ layout: scene.layout, order: scene.order, saved: mine.find((s) => s.id === scene.layout.id) });
+    track("screen_viewed", { screen: "layout_editor" });
   }
   function requestEditor() {
     if (Array.isArray(saved)) return openEditor();

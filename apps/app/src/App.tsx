@@ -1,5 +1,5 @@
-import { describeSubjects } from "@storystitch/client";
-import { Suspense, useState } from "react";
+import { describeSubjects, screenFor } from "@storystitch/client";
+import { Suspense, useEffect, useState } from "react";
 import { View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { fetchPopularity } from "./api";
@@ -11,6 +11,7 @@ import { Accounts } from "./platform/lazyScreens";
 import { ACCOUNT_PATHS, useLocation } from "./platform/route";
 import { UnsupportedPhotoError, analyzePhoto, closePhoto, loadPhoto, type PickedPhoto, type Photo } from "./platform/photos";
 import { Screen } from "./ui/Screen";
+import { track } from "./usage";
 
 const MAX_PHOTOS = 8;
 const PRIVACY = "Your photos stay on this device. Nothing is uploaded.";
@@ -59,6 +60,9 @@ export default function App() {
   // VoiceOver stays on an open account screen, which covers this one. The bot check's page also holds only the check.
   const { pathname } = useLocation();
   const covered = Boolean(Accounts) && (pathname === "/bot-check" || ACCOUNT_PATHS.some((p) => p === pathname));
+
+  const screen = screenFor(pathname, photos.length > 0);
+  useEffect(() => track("screen_viewed", { screen }), [screen]);
 
   return (
     <SafeAreaProvider>

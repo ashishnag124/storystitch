@@ -237,6 +237,8 @@ Behind `VITE_FEATURE_LAYOUT_EDITOR` (needs accounts): on in staging and producti
 | AC-USAGE-04 | Events go out in batches of up to 50, at 20 queued, every 30 seconds or on going to the background. Network and server failures retry with growing waits, and refused batches are dropped. | auto |
 | AC-USAGE-05 | The API accepts events from every supported app version, skips unknown events without losing the rest of the batch, and counts what it skipped. | auto |
 | AC-USAGE-06 | The API refuses oversized bodies and other web origins, limits batches per visitor, and writes nothing while `USAGE_INGEST_ENABLED` is off. | auto |
+| AC-USAGE-07 | Page views use fixed screen names, cover the pick, editor, layout editor and account screens, and never send a path or query string. `/bot-check` isn't counted. | planned |
+| AC-USAGE-08 | With tracking on, the iOS app sends usage events to a local API, and the whole core flow still works with the API unreachable. | manual |
 
 ## Admin analytics
 

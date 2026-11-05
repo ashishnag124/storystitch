@@ -44,6 +44,15 @@ export interface Usage {
 
 const off: Usage = { track() {}, foreground() {}, background() {} };
 
+/** The fixed name for where the user is. The only thing that reads paths, so a query string or token can't be sent. */
+export function screenFor(pathname: string, hasPhotos: boolean): UsageProps<"screen_viewed">["screen"] {
+  if (pathname === "/account") return "account";
+  if (pathname === "/sign-up") return "sign_up";
+  if (pathname === "/reset-password") return "reset_password";
+  if (pathname === "/") return hasPhotos ? "editor" : "pick";
+  return "other";
+}
+
 /**
  * Usage counts, batched to the API. Nothing is written to the device, so events are lost if the app closes while
  * offline. Requests carry no cookies or session, so events can't be tied to an account even when someone's signed in.
