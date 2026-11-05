@@ -161,6 +161,37 @@ export function drawScene(canvas: SkCanvas, size: Size, scene: Scene, imageFor: 
   if (marks.target !== marks.selected) stroke(marks.target, [line * 4, line * 3]);
 }
 
+/** Draws a layout being edited: cells without a photo as empty slots, cells with a problem dashed, the selected one outlined. */
+export function drawDraft(
+  canvas: SkCanvas,
+  size: Size,
+  scene: Scene,
+  crops: (Crop | null)[],
+  order: number[],
+  imageFor: (photo: number) => Drawable,
+  blurred: SkImage | null,
+  selected: number | null,
+  problems: number[],
+) {
+  const shapes = cellShapes(scene.layout, scene.style, size);
+  const { radius, border } = styleScale(scene.layout, scene.style, size);
+  fillBackground(canvas, size, scene);
+  if (blurred) drawBlurredBackground(canvas, size, blurred);
+  for (const i of drawOrder(scene.layout.cells)) {
+    const crop = crops[i];
+    if (crop) drawCell(canvas, shapes[i]!, imageFor(order[i]!), crop, radius, border, scene.style.borderColor);
+    else canvas.drawPath(outlinePath(shapes[i]!.photo ?? shapes[i]!.outline, radius), paintOf("rgba(43, 19, 64, 0.5)"));
+  }
+  const outline = (cell: number, color: string, dash: number[]) => {
+    if (!shapes[cell]) return;
+    const paint = paintOf(color, PaintStyle.Stroke, 10);
+    if (dash.length) paint.setPathEffect(Skia.PathEffect.MakeDash(dash, 0));
+    canvas.drawPath(outlinePath(shapes[cell].outline, radius), paint);
+  };
+  for (const cell of problems) outline(cell, "#ff8f8f", [28, 18]);
+  if (selected !== null) outline(selected, "#ffc24b", []);
+}
+
 /** Draws one cell of `scene` moved from its own place into `to`, for animating it over the scene. */
 export function drawCellAt(canvas: SkCanvas, size: Size, scene: Scene, cell: number, imageFor: (photo: number) => Drawable, to: Box, opts: { turn?: number; shadow?: number } = {}) {
   const shape = cellShapes(scene.layout, scene.style, size)[cell]!;
