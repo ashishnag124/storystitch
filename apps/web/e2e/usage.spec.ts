@@ -8,19 +8,35 @@ test.skip(process.env.E2E_TARGET !== "app", "Only the Expo app tracks usage");
 
 const isUsage = (req: Request) => req.url().endsWith("/usage/events");
 
-/** Leaves the page, which sends what's waiting, and comes back. Returns the screens in that send. */
-async function sentScreens(page: Page) {
-  const sent = page.waitForRequest(isUsage);
-  await page.evaluate(() => {
+/** Leaves the page, which sends what's waiting, and comes back. */
+const leave = (page: Page) =>
+  page.evaluate(() => {
     window.dispatchEvent(new Event("pagehide"));
     window.dispatchEvent(new Event("pageshow"));
   });
-  const req = await sent;
-  const { events } = req.postDataJSON() as { events: { name: string; props?: { screen?: string } }[] };
+
+/**
+ * Leaves and comes back until a screen has been sent, and returns everything sent on the way. It may take more than one
+ * try: a screen is counted in an effect, which runs after what the test can see is on the page.
+ */
+async function sentScreens(page: Page) {
+  const sends: Request[] = [];
+  const record = (req: Request) => {
+    if (isUsage(req)) sends.push(req);
+  };
+  const sentEvents = () => sends.flatMap((req) => (req.postDataJSON() as { events: { name: string; props?: { screen?: string } }[] }).events);
+  page.on("request", record);
+  await expect
+    .poll(async () => {
+      await leave(page);
+      return sentEvents().some((e) => e.name === "screen_viewed");
+    })
+    .toBe(true);
+  page.off("request", record);
   return {
-    body: req.postData()!,
-    events: events.map((e) => e.name),
-    screens: events.flatMap((e) => (e.name === "screen_viewed" ? [e.props!.screen] : [])),
+    body: sends.map((req) => req.postData()!).join("\n"),
+    events: sentEvents().map((e) => e.name),
+    screens: sentEvents().flatMap((e) => (e.name === "screen_viewed" ? [e.props!.screen] : [])),
   };
 }
 
@@ -100,10 +116,10 @@ test.describe("a whole session", () => {
     await submit(page, "Create account");
     await expect(page.getByText(/Check your email/)).toBeVisible();
     // Sent before leaving: a send made while a page closes arrives, but Playwright doesn't always see it.
-    await sentScreens(page);
+    await Promise.all([page.waitForRequest(isUsage), leave(page)]);
     await page.goto(await emailedLink(page, email));
     await expect(page.getByText(`Signed in as ${email}`)).toBeVisible();
-    await sentScreens(page);
+    await Promise.all([page.waitForRequest(isUsage), leave(page)]);
     await page.goto("/");
 
     // A file that can't open, so the session shows an error that names a file.

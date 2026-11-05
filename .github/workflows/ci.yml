@@ -1,19 +1,31 @@
 name: CI
 
+# Fast tier (`fast`): every pull request. Slow tier (`check`, the full acceptance suite): pull requests into main,
+# pushes to main, nightly on dev, and pull requests labeled run-sim. Promote dev to main to reach the slow tier.
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
+    # docs/acceptance-criteria.md stays in: `pnpm qa` grades it.
+    paths:
+      - "**"
+      - "!**.md"
+      - "!docs/**"
+      - "docs/acceptance-criteria.md"
   push:
     branches: [main]
+  schedule:
+    - cron: "0 10 * * *"
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   check:
+    if: github.event_name != 'pull_request' || github.base_ref == 'main' || contains(github.event.pull_request.labels.*.name, 'run-sim')
     runs-on: ubuntu-24.04
     # Real Postgres for the API's tests and migrations.
-    services:
+    services: &postgres
       postgres:
         image: postgres:17
         env:
@@ -24,11 +36,14 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U app -d app"
           --health-interval 2s --health-timeout 3s --health-retries 20
-    env:
+    env: &db
       DATABASE_URL: postgres://app:app@localhost:5432/app
       CORS_ORIGIN: http://localhost:5173
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Scheduled runs start on main, the default branch. Nightly is for what hasn't been promoted yet.
+          ref: ${{ github.event_name == 'schedule' && 'dev' || '' }}
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -46,6 +61,24 @@ jobs:
         with:
           name: qa-results
           path: qa-results/
+
+  fast:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    services: *postgres
+    env: *db
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:migrate
+      - run: pnpm check
+      - run: pnpm build
+      - run: pnpm --filter @storystitch/app run build:ios
 
   deploy-web-staging:
     needs: check

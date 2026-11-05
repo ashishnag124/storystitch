@@ -39,7 +39,7 @@ export interface Usage {
   track<K extends UsageEvent>(name: K, ...props: keyof (typeof USAGE_EVENTS)[K] extends never ? [] : [UsageProps<K>]): void;
   /** The app is on screen: starts a visit if the gap was long enough, and starts the timer. */
   foreground(): void;
-  /** The app has left the screen: sends what's waiting and stops the timer. */
+  /** The app has left the screen: sends what's waiting, after any send in progress, and stops the timer. */
   background(): void;
 }
 
@@ -125,6 +125,8 @@ export function createUsage({ apiUrl, enabled, platform, appVersion }: UsageOpti
       wait = Math.min(wait * 2, MAX_WAIT_MS);
     }
     if (active) armTimer(delivered && queue.length >= SEND_AT ? SEND_SOON_MS : wait);
+    // No timer runs in the background, so nothing else would send this. After a failure it waits for the app to return.
+    else if (delivered && queue.length) void send();
   }
 
   return {
