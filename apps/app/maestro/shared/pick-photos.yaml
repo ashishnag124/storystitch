@@ -2,31 +2,35 @@
 # include a HEIC, so getting all 4 through proves HEIC opens. Later flows don't save to the library.
 appId: com.ashishnag.storystitch.staging
 ---
-- launchApp:
-    clearState: true
-- tapOn: Choose photos
-# The picker runs in its own iOS process, and CI's simulator can take a while to show it.
-- extendedWaitUntil:
-    visible:
-      id: PXGGridLayout-Info
-    timeout: 60000
-- tapOn:
-    text: Close
-    optional: true
-- tapOn:
-    id: PXGGridLayout-Info
-    index: 0
-- tapOn:
-    id: PXGGridLayout-Info
-    index: 1
-- tapOn:
-    id: PXGGridLayout-Info
-    index: 2
-- tapOn:
-    id: PXGGridLayout-Info
-    index: 3
-- tapOn: Done
-# The first pick after a fresh start is the slowest: iOS hands over the photos, then detection loads.
-- extendedWaitUntil:
-    visible: "Story preview: .*, 4 photos"
-    timeout: 120000
+# iOS's picker sometimes hangs on "Loading..." on CI's simulator, and only starting again clears it.
+- retry:
+    maxRetries: 2
+    commands:
+      - launchApp:
+          clearState: true
+      - tapOn: Choose photos
+      # The picker runs in its own iOS process, and CI's simulator can take a while to show it.
+      - extendedWaitUntil:
+          visible:
+            id: PXGGridLayout-Info
+          timeout: 60000
+      - tapOn:
+          text: Close
+          optional: true
+      - tapOn:
+          id: PXGGridLayout-Info
+          index: 0
+      - tapOn:
+          id: PXGGridLayout-Info
+          index: 1
+      - tapOn:
+          id: PXGGridLayout-Info
+          index: 2
+      - tapOn:
+          id: PXGGridLayout-Info
+          index: 3
+      - tapOn: Done
+      # The first pick after a fresh start is the slowest: iOS hands over the photos, then detection loads.
+      - extendedWaitUntil:
+          visible: "Story preview: .*, 4 photos"
+          timeout: 120000
