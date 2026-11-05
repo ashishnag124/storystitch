@@ -227,6 +227,12 @@ Behind `VITE_FEATURE_LAYOUT_EDITOR` (needs accounts): on in staging and producti
 | AC-SAVE-06 | An account holds up to 200 saved collages and says clearly when it's full. | planned |
 | AC-SAVE-07 | The UI says original photos stay on the device and saved collages are stored privately in the account. | planned |
 
+## Usage tracking
+
+| ID | Criterion | Check |
+|---|---|---|
+| AC-USAGE-02 | Every event comes from the shared registry, and every property is a fixed list, a true/false value or a bounded number, so free text can't be sent. | auto |
+
 ## Admin analytics
 
 | ID | Criterion | Check |
