@@ -90,8 +90,8 @@ function shrink(image: SkImage, src: { x: number; y: number; width: number; heig
   return surface.makeImageSnapshot();
 }
 
-/** Cubic scaling: linear leaves square steps when a few pixels are stretched across the screen. */
-const SMOOTH = [1 / 3, 1 / 3] as const;
+/** Cubic scaling, the softest kind: linear leaves square steps when a few pixels are stretched across the screen. */
+const SMOOTH = [1, 0] as const;
 
 /** A heavily blurred copy of the photo: shrunk to a few pixels, as on web, so both platforms blur the same. */
 export function blurredImage(size: Size, img: Drawable): SkImage {

@@ -5,6 +5,6 @@ export * from "@shopify/react-native-skia/lib/module/skia/types/index";
 
 export let Skia: ReturnType<typeof JsiSkApi>;
 
-export function useCanvasKit(canvasKit: Parameters<typeof JsiSkApi>[0]) {
+export function loadCanvasKit(canvasKit: Parameters<typeof JsiSkApi>[0]) {
   Skia = JsiSkApi(canvasKit);
 }

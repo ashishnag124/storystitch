@@ -4,7 +4,7 @@ import { layouts } from "@storystitch/shared";
 import CanvasKitInit from "canvaskit-wasm";
 import * as onCanvas from "../../../app/src/platform/render.web";
 import * as onSkia from "../../../app/src/platform/render.native";
-import { Skia, useCanvasKit } from "./skia";
+import { Skia, loadCanvasKit } from "./skia";
 
 const WIDTH = 270;
 const SIZE = { width: WIDTH, height: 480 };
@@ -101,7 +101,7 @@ declare global {
 }
 
 window.compareRenderers = async (styles) => {
-  useCanvasKit((await CanvasKitInit({ locateFile: () => "/canvaskit.wasm" })) as never);
+  loadCanvasKit((await CanvasKitInit({ locateFile: () => "/canvaskit.wasm" })) as never);
   const photos = await loadPhotos();
   const sources = photos.map((p) => p.source);
   const results = [];

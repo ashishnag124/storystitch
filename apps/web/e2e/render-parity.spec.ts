@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
-import { readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
 const here = import.meta.dirname;
 const fromApp = createRequire(join(here, "../../app/package.json"));
@@ -9,9 +9,19 @@ const fromSkia = createRequire(fromApp.resolve("@shopify/react-native-skia/packa
 const skiaDir = dirname(fromApp.resolve("@shopify/react-native-skia/package.json"));
 const canvasKitDir = dirname(fromSkia.resolve("canvaskit-wasm/package.json"));
 
+interface ParityPage {
+  compareRenderers(styles: object[]): Promise<{ id: string; styled: number; differentPct: number; meanDiff: number; canvas: string; skia: string }[]>;
+}
+
+/** The part of esbuild's plugin API used here. esbuild is a dependency of apps/app, so its types aren't available. */
+interface Build {
+  onResolve(options: { filter: RegExp }, resolve: (args: { path: string }) => { path: string; namespace?: string }): void;
+  onLoad(options: { filter: RegExp; namespace: string }, load: () => { contents: string }): void;
+}
+
 /** Bundles both of the app's renderers for the browser. Neither runs in the app here: only their drawing is compared. */
 async function bundle() {
-  const { build } = fromApp("esbuild") as typeof import("esbuild");
+  const { build } = fromApp("esbuild");
   const result = await build({
     entryPoints: [join(here, "parity/entry.ts")],
     bundle: true,
@@ -22,11 +32,11 @@ async function bundle() {
     plugins: [
       {
         name: "parity",
-        setup(b) {
+        setup(b: Build) {
           b.onResolve({ filter: /^@shopify\/react-native-skia$/ }, () => ({ path: join(here, "parity/skia.ts") }));
-          b.onResolve({ filter: /^@shopify\/react-native-skia\/lib\// }, (a) => ({ path: `${skiaDir}/${a.path.split("/").slice(2).join("/")}.js` }));
+          b.onResolve({ filter: /^@shopify\/react-native-skia\/lib\// }, (a: { path: string }) => ({ path: `${skiaDir}/${a.path.split("/").slice(2).join("/")}.js` }));
           b.onResolve({ filter: /^canvaskit-wasm$/ }, () => ({ path: join(canvasKitDir, "bin/full/canvaskit.js") }));
-          b.onResolve({ filter: /^(fs|path)$/ }, (a) => ({ path: a.path, namespace: "empty" }));
+          b.onResolve({ filter: /^(fs|path)$/ }, (a: { path: string }) => ({ path: a.path, namespace: "empty" }));
           b.onLoad({ filter: /.*/, namespace: "empty" }, () => ({ contents: "export default {}" }));
           b.onResolve({ filter: /^\.\.?\/photos(\.native)?$/ }, () => ({ path: "photos", namespace: "empty" }));
         },
@@ -35,6 +45,9 @@ async function bundle() {
   });
   return result.outputFiles[0]!.text;
 }
+
+/** Styles from this one on have blurred backgrounds. */
+const BLURRED_FROM = 3;
 
 test("AC-IOS-12 every layout draws the same on Canvas and Skia", async ({ page }, info) => {
   test.skip(info.project.name !== "android-chrome", "Only needs one browser");
@@ -49,14 +62,15 @@ test("AC-IOS-12 every layout draws the same on Canvas and Skia", async ({ page }
   await page.goto("http://parity.test/");
 
   const styles = [
-    {},
+    { background: { kind: "color", color: "#ffffff" } },
     { background: { kind: "color", color: "#000000" }, gap: 0, margin: 0, radius: 0, border: 0 },
+    { background: { kind: "color", color: "#203040" }, gap: 40, margin: 60, radius: 60, border: 12, borderColor: "#ff4f8b" },
     { background: { kind: "blur" }, gap: 40, margin: 60, radius: 60, border: 12, borderColor: "#ff4f8b" },
+    {},
   ];
-  const results = await page.evaluate((s) => window.compareRenderers(s), styles);
+  const results = await page.evaluate((s) => (window as unknown as ParityPage).compareRenderers(s), styles);
   const worst = [...results].sort((a, b) => b.differentPct - a.differentPct);
   const out = resolve(here, "../test-results/parity");
-  const { mkdirSync } = await import("node:fs");
   mkdirSync(out, { recursive: true });
   for (const r of worst.slice(0, 6)) {
     writeFileSync(join(out, `${r.id}-canvas.png`), Buffer.from(r.canvas, "base64"));
@@ -65,6 +79,9 @@ test("AC-IOS-12 every layout draws the same on Canvas and Skia", async ({ page }
   writeFileSync(join(out, "report.json"), JSON.stringify(worst.map(({ id, styled, differentPct, meanDiff }) => ({ id, styled, differentPct, meanDiff })), null, 1));
   console.log(worst.slice(0, 12).map((r) => `${r.id}: ${r.differentPct.toFixed(2)}% / ${r.meanDiff.toFixed(2)}`).join("\n"));
   expect(results.length).toBeGreaterThan(70);
-  // The worst measured is 7.6% of pixels, from the blurred background, which still isn't an exact match.
-  expect(worst[0]!.differentPct).toBeLessThan(10);
+  // Solid backgrounds show geometry: the real code reaches 2.4% of pixels from edge smoothing, and a photo left unrotated
+  // reaches 3.7%. The two blurred styles only guard the blur, which is close but not exact, at 5.7%.
+  const worstOf = (blurred: boolean) => Math.max(...results.filter((r) => r.styled >= BLURRED_FROM === blurred).map((r) => r.differentPct));
+  expect(worstOf(false)).toBeLessThan(3);
+  expect(worstOf(true)).toBeLessThan(7);
 });
