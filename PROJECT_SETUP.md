@@ -78,8 +78,9 @@ Claude never reads that file; it loads values from it into Railway and GitHub wh
   the free tier (10 GB free). Claude creates the buckets in B3.
 - [x] **Production web domain**: Cloudflare dashboard → Workers & Pages → `storystitch-web` → Custom domains → add
   `storystitch.ashishnag.com`, then add the DNS record below in Cloudflare. The current v1 site goes live there.
-- [ ] **Legal drafts** (postponed: the app has no privacy or terms pages for now): fill in the `[TODO]`s in
-  `docs/legal/privacy-policy.md` and `docs/legal/terms.md` and have them reviewed, then add the pages back.
+- [ ] **Legal pages**: have the policy reviewed. `apps/web/public/privacy.html` and `support.html` are the pages at
+  /privacy and /support, and the Expo app copies them when it builds. Terms are postponed: `docs/legal/terms.md` is a
+  draft, and the app has no terms page.
 
 ### B1 checklist (yours)
 
