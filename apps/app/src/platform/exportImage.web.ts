@@ -97,6 +97,9 @@ export async function renderExport(scene: Scene, photos: Photo[], format: Export
   return blob;
 }
 
+/** A browser only opens its share sheet during the tap itself, so the image has to be ready first. */
+export const canWaitToShare: boolean = false;
+
 /** Whether this browser can hand image files to the native share sheet. */
 export function canShareFiles(): boolean {
   try {

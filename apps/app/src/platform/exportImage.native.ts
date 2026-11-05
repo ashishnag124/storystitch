@@ -38,6 +38,9 @@ export async function renderExport(scene: Scene, photos: Photo[], format: Export
 
 export const canShareFiles = () => true;
 
+/** The share sheet can open whenever the image is ready, so Share stays available while it's made. */
+export const canWaitToShare: boolean = true;
+
 /** Opens the share sheet, where the user picks Instagram or Save Image. */
 export async function shareOrDownload(base64: string, filename: string): Promise<boolean> {
   if (!(await isAvailableAsync())) return false;

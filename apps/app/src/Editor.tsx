@@ -7,7 +7,7 @@ import { AccountLink } from "./AccountLink";
 import { deleteSaved, listSaved, recordExport } from "./api";
 import { LAYOUT_EDITOR_ENABLED } from "./config";
 import { LayoutStrip } from "./LayoutStrip";
-import { canShareFiles, renderExport, shareOrDownload, type ExportFormat } from "./platform/exportImage";
+import { canShareFiles, canWaitToShare, renderExport, shareOrDownload, type ExportFormat } from "./platform/exportImage";
 import { FormatSelect } from "./platform/FormatSelect";
 import { LayoutEditor } from "./platform/lazyScreens";
 import type { Photo } from "./platform/photos";
@@ -65,6 +65,8 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
   const [format, setFormat] = useState<ExportFormat>("image/jpeg");
   const [exported, setExported] = useState<{ scene: Scene; format: ExportFormat; blob: Blob } | null>(null);
   const [exportError, setExportError] = useState(false);
+  /** Share was tapped before the image was ready, and opens once it is. */
+  const [shareWaiting, setShareWaiting] = useState(false);
   const stage = useRef<StageHandle>(null);
   const shareable = useMemo(() => canShareFiles(), []);
   const warnings = useMemo(() => upscaleWarnings(scene, photos), [scene, photos]);
@@ -95,6 +97,19 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
   }, [scene, photos, format]);
   const ready = exported && exported.scene === scene && exported.format === format ? exported.blob : null;
   const extension = format === "image/png" ? "png" : "jpg";
+
+  async function share(file: NonNullable<typeof ready>) {
+    // Only built-in layouts are counted: saved layouts are the user's own.
+    if ((await shareOrDownload(file, `storystitch.${extension}`)) && !mineIds.has(scene.layout.id)) recordExport(scene.layout.id);
+  }
+
+  useEffect(() => {
+    if (!shareWaiting || (!ready && !exportError)) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- the wait ends when the export finishes, which is outside React.
+    setShareWaiting(false);
+    if (ready) void share(ready);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs when the wait ends, not whenever `share` changes.
+  }, [shareWaiting, ready, exportError]);
 
   function chooseLayout(option: Scene) {
     stage.current?.crossfade();
@@ -187,15 +202,10 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
         <View style={styles.barActions}>
           <AccountLink />
           <Button
-            label={ready ? (shareable ? "Share" : "Download") : "Preparing…"}
+            label={(canWaitToShare ? !shareWaiting : ready) ? (shareable ? "Share" : "Download") : "Preparing…"}
             primary
-            disabled={!ready}
-            onPress={async () => {
-              // Only built-in layouts are counted: saved layouts are the user's own.
-              if (ready && (await shareOrDownload(ready, `storystitch.${extension}`)) && !mineIds.has(scene.layout.id)) {
-                recordExport(scene.layout.id);
-              }
-            }}
+            disabled={canWaitToShare ? shareWaiting : !ready}
+            onPress={() => (ready ? void share(ready) : setShareWaiting(true))}
           />
         </View>
       </View>
@@ -397,7 +407,7 @@ const styles = StyleSheet.create({
   tabLabel: { fontFamily, fontSize: 16, fontWeight: "600", color: colors.muted },
   tabCurrent: { fontWeight: "800", color: colors.accent },
   badge: { position: "absolute", top: 10, right: "30%", width: 8, height: 8, borderRadius: 4, backgroundColor: "#d97706" },
-  exportTool: { gap: 8 },
+  exportTool: { flexGrow: 1, justifyContent: "center", gap: 8 },
   exportError: { fontFamily, padding: 12, borderRadius: 14, fontSize: 14, backgroundColor: colors.warnBg, color: colors.warnText },
   warnings: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, backgroundColor: colors.warnBg },
   warning: { fontFamily, fontSize: 13, color: colors.warnText },
