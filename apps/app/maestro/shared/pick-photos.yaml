@@ -26,6 +26,7 @@ appId: com.ashishnag.storystitch.staging
     id: PXGGridLayout-Info
     index: 3
 - tapOn: Done
+# The first pick after a fresh start is the slowest: iOS hands over the photos, then detection loads.
 - extendedWaitUntil:
     visible: "Story preview: .*, 4 photos"
-    timeout: 30000
+    timeout: 120000
