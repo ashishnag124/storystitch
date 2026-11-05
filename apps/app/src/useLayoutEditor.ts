@@ -32,6 +32,7 @@ import { STORY_CANVAS, cellBounds, hitTest, layoutProblems, type Point, type Sav
 import { SaveError, autoCrop, explain, styleScale, withOrigin, type CropSource, type Draft, type Start, type Style } from "@storystitch/client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { saveLayout } from "./api";
+import { track } from "./usage";
 
 const { width: W, height: H } = STORY_CANVAS;
 /** Touch targets for lines and handles: at least the 44px a thumb needs, a bit more for comfort. */
@@ -423,6 +424,7 @@ export function useLayoutEditor({ photos, style, start, onSaved, frameOrigin }: 
       onSaved(await saveLayout(name, layout, start.saved?.id), order);
     } catch (err) {
       setSaving({ ...saving, busy: false, error: err instanceof SaveError ? err.message : "Couldn't save. Please try again." });
+      track("error_shown", { code: "layout_save_failed" });
     }
   }
 

@@ -33,6 +33,7 @@ export const USAGE_EVENTS = {
 
 export type UsageEvent = keyof typeof USAGE_EVENTS;
 export type UsagePlatform = (typeof USAGE_PLATFORMS)[number];
+export type UsageControl = (typeof CONTROLS)[number];
 
 /** An event's properties. `first` is added by the tracker, so the funnel counts each set of photos once. */
 export type UsageProps<K extends UsageEvent> = Omit<z.output<z.ZodObject<(typeof USAGE_EVENTS)[K]>>, "first">;

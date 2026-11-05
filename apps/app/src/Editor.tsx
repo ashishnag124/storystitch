@@ -1,4 +1,4 @@
-import { assignedScene, cellShapes, newScene, rankedScenes, withCrop, withStyle, type Scene, type Start } from "@storystitch/client";
+import { assignedScene, cellShapes, newScene, rankedScenes, usageLayout, withCrop, withStyle, type Scene, type Start } from "@storystitch/client";
 import { MAX_ZOOM, MIN_ZOOM, clampCrop } from "@storystitch/layout-engine";
 import { STORY_CANVAS, type SavedLayout } from "@storystitch/shared";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -102,7 +102,9 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
         })
         .catch((err) => {
           console.error(err);
-          if (!job.cancelled) setExportError(true);
+          if (job.cancelled) return;
+          setExportError(true);
+          track("error_shown", { code: "export_failed" });
         });
     };
     const timer = setTimeout(run, EXPORT_PAUSE_MS);
@@ -116,8 +118,10 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
   const extension = format === "image/png" ? "png" : "jpg";
 
   async function share(file: NonNullable<typeof ready>) {
+    if (!(await shareOrDownload(file, `storystitch.${extension}`))) return;
+    track("collage_shared", { layout: usageLayout(scene.layout.id), method: shareable ? "share" : "download" });
     // Only built-in layouts are counted: saved layouts are the user's own.
-    if ((await shareOrDownload(file, `storystitch.${extension}`)) && !mineIds.has(scene.layout.id)) recordExport(scene.layout.id);
+    if (!mineIds.has(scene.layout.id)) recordExport(scene.layout.id);
   }
 
   useEffect(() => {
@@ -183,6 +187,7 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
     setBuilding(null);
     setScene(newScene(layout.layout, photos, scene.style, order));
     setStatus(`Saved ${layout.name}.`);
+    track("layout_saved");
   }
 
   async function deleteCurrent() {
@@ -191,6 +196,7 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
       await deleteSaved(id);
     } catch {
       setStatus("Couldn't delete that layout. Please try again.");
+      track("error_shown", { code: "layout_delete_failed" });
       return;
     }
     setSaved((list) => (Array.isArray(list) ? list.filter((s) => s.id !== id) : list));
@@ -217,14 +223,16 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
         <Text role="heading" aria-level={1} style={styles.hidden}>
           StoryStitch editor
         </Text>
-        <Button label="Start over" onPress={onStartOver} />
+        <Button label="Start over" trackAs="start_over" onPress={onStartOver} />
         <View style={styles.barActions}>
           <AccountLink />
           <Button
             label={(canWaitToShare ? !shareWaiting : ready) ? (shareable ? "Share" : "Download") : "Preparing…"}
             primary
             disabled={canWaitToShare ? shareWaiting : !ready}
+            trackAs="share"
             onPress={() => {
+              track("collage_exported", { layout: usageLayout(scene.layout.id), format: extension === "png" ? "png" : "jpeg" });
               if (ready) return void share(ready);
               setShareWaiting(true);
               startExport.current();
@@ -266,10 +274,18 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
           </View>
         ) : tool === "layouts" ? (
           <View style={styles.layoutsTool}>
-            <LayoutStrip options={styledOptions} current={scene} onSelect={chooseLayout} mine={mineIds} />
+            <LayoutStrip
+              options={styledOptions}
+              current={scene}
+              onSelect={(option) => {
+                track("layout_chosen", { layout: usageLayout(option.layout.id) });
+                chooseLayout(option);
+              }}
+              mine={mineIds}
+            />
             {LAYOUT_EDITOR_ENABLED && (
               <View style={styles.layoutActions}>
-                <Button label="Edit this layout" primary onPress={requestEditor} />
+                <Button label="Edit this layout" primary trackAs="edit_layout" onPress={requestEditor} />
                 {mineIds.has(scene.layout.id) &&
                   (confirmDelete ? (
                     <>
@@ -310,6 +326,7 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
               key={t.id}
               role="tab"
               aria-selected={current}
+              trackAs={`tool_${t.id}`}
               onPress={() => {
                 setTool(t.id);
                 setSelected(null);
