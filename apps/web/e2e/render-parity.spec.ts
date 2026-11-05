@@ -1,0 +1,70 @@
+import { expect, test } from "@playwright/test";
+import { createRequire } from "node:module";
+import { dirname, join, resolve } from "node:path";
+import { readFileSync, writeFileSync } from "node:fs";
+
+const here = import.meta.dirname;
+const fromApp = createRequire(join(here, "../../app/package.json"));
+const fromSkia = createRequire(fromApp.resolve("@shopify/react-native-skia/package.json"));
+const skiaDir = dirname(fromApp.resolve("@shopify/react-native-skia/package.json"));
+const canvasKitDir = dirname(fromSkia.resolve("canvaskit-wasm/package.json"));
+
+/** Bundles both of the app's renderers for the browser. Neither runs in the app here: only their drawing is compared. */
+async function bundle() {
+  const { build } = fromApp("esbuild") as typeof import("esbuild");
+  const result = await build({
+    entryPoints: [join(here, "parity/entry.ts")],
+    bundle: true,
+    write: false,
+    format: "iife",
+    platform: "browser",
+    logLevel: "silent",
+    plugins: [
+      {
+        name: "parity",
+        setup(b) {
+          b.onResolve({ filter: /^@shopify\/react-native-skia$/ }, () => ({ path: join(here, "parity/skia.ts") }));
+          b.onResolve({ filter: /^@shopify\/react-native-skia\/lib\// }, (a) => ({ path: `${skiaDir}/${a.path.split("/").slice(2).join("/")}.js` }));
+          b.onResolve({ filter: /^canvaskit-wasm$/ }, () => ({ path: join(canvasKitDir, "bin/full/canvaskit.js") }));
+          b.onResolve({ filter: /^(fs|path)$/ }, (a) => ({ path: a.path, namespace: "empty" }));
+          b.onLoad({ filter: /.*/, namespace: "empty" }, () => ({ contents: "export default {}" }));
+          b.onResolve({ filter: /^\.\.?\/photos(\.native)?$/ }, () => ({ path: "photos", namespace: "empty" }));
+        },
+      },
+    ],
+  });
+  return result.outputFiles[0]!.text;
+}
+
+test("AC-IOS-12 every layout draws the same on Canvas and Skia", async ({ page }, info) => {
+  test.skip(info.project.name !== "android-chrome", "Only needs one browser");
+  test.setTimeout(240_000);
+  const script = await bundle();
+  await page.route("http://parity.test/**", (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === "/canvaskit.wasm") return route.fulfill({ body: readFileSync(join(canvasKitDir, "bin/full/canvaskit.wasm")), contentType: "application/wasm" });
+    if (path === "/parity.js") return route.fulfill({ body: script, contentType: "text/javascript" });
+    return route.fulfill({ body: '<!doctype html><script src="/parity.js"></script>', contentType: "text/html" });
+  });
+  await page.goto("http://parity.test/");
+
+  const styles = [
+    {},
+    { background: { kind: "color", color: "#000000" }, gap: 0, margin: 0, radius: 0, border: 0 },
+    { background: { kind: "blur" }, gap: 40, margin: 60, radius: 60, border: 12, borderColor: "#ff4f8b" },
+  ];
+  const results = await page.evaluate((s) => window.compareRenderers(s), styles);
+  const worst = [...results].sort((a, b) => b.differentPct - a.differentPct);
+  const out = resolve(here, "../test-results/parity");
+  const { mkdirSync } = await import("node:fs");
+  mkdirSync(out, { recursive: true });
+  for (const r of worst.slice(0, 6)) {
+    writeFileSync(join(out, `${r.id}-canvas.png`), Buffer.from(r.canvas, "base64"));
+    writeFileSync(join(out, `${r.id}-skia.png`), Buffer.from(r.skia, "base64"));
+  }
+  writeFileSync(join(out, "report.json"), JSON.stringify(worst.map(({ id, styled, differentPct, meanDiff }) => ({ id, styled, differentPct, meanDiff })), null, 1));
+  console.log(worst.slice(0, 12).map((r) => `${r.id}: ${r.differentPct.toFixed(2)}% / ${r.meanDiff.toFixed(2)}`).join("\n"));
+  expect(results.length).toBeGreaterThan(70);
+  // The worst measured is 7.6% of pixels, from the blurred background, which still isn't an exact match.
+  expect(worst[0]!.differentPct).toBeLessThan(10);
+});

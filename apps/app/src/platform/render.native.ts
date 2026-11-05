@@ -90,22 +90,23 @@ function shrink(image: SkImage, src: { x: number; y: number; width: number; heig
   return surface.makeImageSnapshot();
 }
 
+/** Cubic scaling: linear leaves square steps when a few pixels are stretched across the screen. */
+const SMOOTH = [1 / 3, 1 / 3] as const;
+
 /** A heavily blurred copy of the photo: shrunk to a few pixels, as on web, so both platforms blur the same. */
 export function blurredImage(size: Size, img: Drawable): SkImage {
   const src = sourceRect(img, size, CENTER_CROP);
   const tiny = shrink(img.image, src, 18, Math.round((18 * size.height) / size.width));
-  const h = Math.round((72 * size.height) / size.width);
-  return shrink(tiny, { x: 0, y: 0, width: tiny.width(), height: tiny.height() }, 72, h);
+  const [width, height] = [72, Math.round((72 * size.height) / size.width)];
+  const surface = Skia.Surface.Make(width, height);
+  if (!surface) throw new Error("Couldn't make a surface");
+  surface.getCanvas().drawImageRectCubic(tiny, Skia.XYWHRect(0, 0, tiny.width(), tiny.height()), Skia.XYWHRect(0, 0, width, height), ...SMOOTH);
+  surface.flush();
+  return surface.makeImageSnapshot();
 }
 
 export function drawBlurredBackground(canvas: SkCanvas, size: Size, blurred: SkImage) {
-  canvas.drawImageRectOptions(
-    blurred,
-    Skia.XYWHRect(0, 0, blurred.width(), blurred.height()),
-    Skia.XYWHRect(0, 0, size.width, size.height),
-    FilterMode.Linear,
-    MipmapMode.None,
-  );
+  canvas.drawImageRectCubic(blurred, Skia.XYWHRect(0, 0, blurred.width(), blurred.height()), Skia.XYWHRect(0, 0, size.width, size.height), ...SMOOTH);
   canvas.drawRect(Skia.XYWHRect(0, 0, size.width, size.height), paintOf("rgba(0, 0, 0, 0.12)"));
 }
 
