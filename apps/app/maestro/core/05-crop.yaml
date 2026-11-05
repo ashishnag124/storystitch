@@ -1,0 +1,17 @@
+appId: com.ashishnag.storystitch.staging
+name: AC-IOS-05 Tapping a photo offers zoom, and Fit undoes it
+---
+- runFlow: ../shared/pick-photos.yaml
+- tapOn:
+    text: "Story preview.*"
+    point: "30%,30%"
+- assertVisible: "Tap another photo to swap them.*"
+- swipe:
+    start: "60%,84%"
+    end: "85%,84%"
+    duration: 600
+- assertVisible: "4.0×"
+- tapOn: Fit
+- assertNotVisible: "4.0×"
+- tapOn: Done
+- assertNotVisible: "Tap another photo to swap them.*"

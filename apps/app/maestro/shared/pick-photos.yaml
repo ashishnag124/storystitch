@@ -1,0 +1,30 @@
+# Starts the app fresh and picks 4 photos in the iOS picker. The newest photos come first, and the test photos
+# include a HEIC, so getting all 4 through proves HEIC opens. Later flows don't save to the library.
+appId: com.ashishnag.storystitch.staging
+---
+- launchApp:
+    clearState: true
+- tapOn: Choose photos
+- extendedWaitUntil:
+    visible:
+      id: PXGGridLayout-Info
+    timeout: 20000
+- tapOn:
+    text: Close
+    optional: true
+- tapOn:
+    id: PXGGridLayout-Info
+    index: 0
+- tapOn:
+    id: PXGGridLayout-Info
+    index: 1
+- tapOn:
+    id: PXGGridLayout-Info
+    index: 2
+- tapOn:
+    id: PXGGridLayout-Info
+    index: 3
+- tapOn: Done
+- extendedWaitUntil:
+    visible: "Story preview: .*, 4 photos"
+    timeout: 30000

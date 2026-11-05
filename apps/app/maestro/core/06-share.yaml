@@ -1,0 +1,23 @@
+appId: com.ashishnag.storystitch.staging
+name: AC-IOS-06 Share opens the share sheet with a JPEG or a PNG
+---
+- runFlow: ../shared/pick-photos.yaml
+- tapOn: Export
+- extendedWaitUntil:
+    visible: Share
+    timeout: 20000
+- tapOn: Share
+- extendedWaitUntil:
+    visible: "JPEG Image.*"
+    timeout: 20000
+# Tapping outside the sheet closes it, and the tap also reaches the app, so use the empty part of the header.
+- tapOn:
+    point: "40%,10%"
+- tapOn: PNG
+- extendedWaitUntil:
+    visible: Share
+    timeout: 20000
+- tapOn: Share
+- extendedWaitUntil:
+    visible: "PNG Image.*"
+    timeout: 20000

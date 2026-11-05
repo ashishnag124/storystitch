@@ -1,0 +1,6 @@
+appId: com.ashishnag.storystitch.staging
+name: AC-IOS-02 Picking photos, including a HEIC, opens the editor
+---
+- runFlow: ../shared/pick-photos.yaml
+- assertVisible: Edit this layout
+- assertVisible: "Four .*"
