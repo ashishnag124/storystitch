@@ -38,8 +38,8 @@ Web app on Cloudflare Pages, plus an API with Postgres on Railway (from v2). All
 | `DATABASE_URL` (reference `${{Postgres.DATABASE_URL}}`), `CORS_ORIGIN`, `NODE_ENV` | Railway variables on `api`, per environment | the API |
 | `BETTER_AUTH_URL` (the API's own URL), `BETTER_AUTH_SECRET` (random, per environment), `EMAIL_TRANSPORT=resend`, `EMAIL_FROM`, `RESEND_API_KEY`, `TURNSTILE_SECRET_KEY` | Railway variables on `api`, per environment | accounts (B2) |
 | `APP_SCHEME` (optional, default `storystitch://`; `storystitch-staging://` on staging), `MIN_IOS_APP_VERSION` (optional, default `1.0.0`) | Railway variables on `api`, per environment | iOS app sign-in; `GET /app/minimum-version`, raised when old app versions must update |
-| `EXPO_PUBLIC_FEATURE_USAGE` (optional, default `false`; needs an API URL) | `usage:` input to `_deploy-pages.yml` for web, not on anywhere yet; `apps/app/eas.json` for iOS, not set yet; locally from `.env` | Expo app builds and updates |
-| `USAGE_INGEST_ENABLED` (optional, default `false`) | Railway variable on `api`, per environment, not set yet. Also the emergency off switch | `POST /usage/events` counts events only when `true` |
+| `EXPO_PUBLIC_FEATURE_USAGE` (optional, default `false`; needs an API URL) | `usage:` input to `_deploy-pages.yml` for web, `true` in `ci.yml` and `release.yml`; `apps/app/eas.json` for iOS, `true`; locally from `.env` | Expo app builds and updates |
+| `USAGE_INGEST_ENABLED` (optional, default `false`) | Railway variable on `api`, per environment, `true` on staging and production. Also the emergency off switch | `POST /usage/events` counts events only when `true` |
 | `TURNSTILE_SITE_KEY` (public), plus the Cloudflare and Resend keys | GitHub secrets, synced with `gh secret set -f ~/.config/new-project/secrets.env` | web builds (`VITE_TURNSTILE_SITE_KEY`) |
 | Accounts flag (`VITE_FEATURE_ACCOUNTS`) | `accounts:` input to `_deploy-pages.yml`: `true` in `ci.yml` (staging) and `release.yml` (production) | web builds |
 | Layout editor flag (`VITE_FEATURE_LAYOUT_EDITOR`, needs accounts) | `layout_editor:` input to `_deploy-pages.yml`: `true` in `ci.yml` (staging) and `release.yml` (production) | web builds |
@@ -221,12 +221,12 @@ first one. Claude can't do these: they need your Apple and Expo accounts. Run co
   ```bash
   npx eas-cli@27.2.0 env:set preview --name EXPO_PUBLIC_TURNSTILE_SITE_KEY --value YOUR_SITE_KEY --visibility plaintext --scope project
   ```
-- [ ] 6. **First build and upload, by hand**: CI can't answer Apple's prompts, so run the `testflight` profile once
+- [x] 6. **First build and upload, by hand**: CI can't answer Apple's prompts, so run the `testflight` profile once
   with `npx eas-cli@27.2.0 build` and `--platform ios --profile testflight --auto-submit`, signing in to Apple when
   asked. Accept when it offers to create the signing credentials and the App Store Connect API key.
 - [x] 7. **`EXPO_TOKEN`**: expo.dev → Account settings → Access tokens → create one, then `gh secret set EXPO_TOKEN` and
   paste it.
-- [ ] 8. **Turn it on**, last of all: `gh variable set MOBILE_DELIVERY_ENABLED --body true`. The next merge to `main`
+- [x] 8. **Turn it on**, last of all: `gh variable set MOBILE_DELIVERY_ENABLED --body true`. The next merge to `main`
   that passes CI runs it. To turn it off, delete the variable.
 
 The API side also needs `APP_SCHEME=storystitch-staging://` on staging.
@@ -295,7 +295,7 @@ To split the risk, you can first run `/release` with the variable unset. That sh
 | Pages project and domain | `storystitch-web-staging`, staging.storystitch.ashishnag.com | `storystitch-web` (`PAGES_PROJECT`), storystitch.ashishnag.com | None |
 | `EXPO_PUBLIC_API_URL` | `API_URL_STAGING` | `API_URL_PRODUCTION`, https://api.storystitch.ashishnag.com | None |
 | Accounts and layout editor flags | On in `ci.yml` | On in `release.yml` | None |
-| `EXPO_PUBLIC_FEATURE_USAGE`, `USAGE_INGEST_ENABLED` | Off | Off | None: leave both off until #62's policy review |
+| `EXPO_PUBLIC_FEATURE_USAGE`, `USAGE_INGEST_ENABLED` | On | On | Set `USAGE_INGEST_ENABLED=true` on each Railway environment before a release sends counts to it |
 | `EXPO_PUBLIC_TURNSTILE_SITE_KEY` | `TURNSTILE_SITE_KEY` secret | The same secret | None. Its hostnames need the check above |
 | `EXPO_PUBLIC_WEB_URL` | Not set for web | Not set for web | None: only iOS uses it, from `eas.json`. Web uses the page's own address |
 | `CORS_ORIGIN` | Railway | `https://storystitch.ashishnag.com,https://storystitch-web.pages.dev`, confirmed from the API's responses on November 5, 2026 | None |

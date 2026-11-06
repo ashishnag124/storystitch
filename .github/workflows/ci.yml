@@ -103,4 +103,5 @@ jobs:
       # Accounts are on in staging only until they're switched on for production.
       accounts: true
       layout_editor: true
+      usage: true
     secrets: inherit
