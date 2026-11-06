@@ -49,10 +49,10 @@ export function PickScreen({ privacy, progress, notices, onPicked }: Props) {
         ))}
         <Text style={styles.privacy}>{privacy}</Text>
         {POLICY_NOTICE && (
-          <Text style={styles.privacy}>
-            We've updated our <ExternalLink url={PRIVACY_URL}>privacy policy</ExternalLink>. We now count how the app is used,
-            anonymously.
-          </Text>
+          <>
+            <Text style={styles.privacy}>We've updated our privacy policy. We now count how the app is used, anonymously.</Text>
+            <ExternalLink url={PRIVACY_URL} label="Read the privacy policy" />
+          </>
         )}
       </View>
     </ScrollView>

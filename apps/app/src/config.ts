@@ -14,8 +14,8 @@ export const TURNSTILE_SITE_KEY: string = process.env.EXPO_PUBLIC_TURNSTILE_SITE
 export const USAGE_ENABLED = process.env.EXPO_PUBLIC_FEATURE_USAGE === "true" && API_URL !== "";
 /**
  * The policy promises a notice when it changes in a way that matters. It shows until this date, wherever usage counts
- * are on. It has to be 30 days after they reach production, so set it in the PR that turns them on there.
+ * are on. It has to be at least 30 days after they reach production, so this allows for a release by November 15, 2026.
  */
-export const POLICY_NOTICE_UNTIL = "2027-02-01";
+export const POLICY_NOTICE_UNTIL = "2026-12-15";
 /** The layout editor saves to accounts, so it needs them too. */
 export const LAYOUT_EDITOR_ENABLED = ACCOUNTS_ENABLED && process.env.EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR === "true";
