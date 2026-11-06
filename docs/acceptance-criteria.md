@@ -187,6 +187,7 @@ Maestro reads the accessibility tree, so `ios` rows prove what a person can reac
 | AC-IOS-10 | On a real iPhone, a double-tap zooms a photo in and back out, and a flicked photo keeps gliding, and Fit undoes a full zoom on a Polaroid. The simulator's tools can't tap fast enough to count as a double-tap, and Maestro's tap on Fit has no effect there though a direct tap works. | manual |
 | AC-IOS-11 | On a simulator with the local API: sign-up, confirming the email, a wrong password, resetting a password, the save error messages and deleting an account (it needs the password, and removes the user, sessions and saved layouts) all work, and VoiceOver can't reach the screen behind an account screen. | manual |
 | AC-IOS-12 | Every layout draws the same with the iOS and web drawing code, from the same photos and crops, in several styles. | auto |
+| AC-IOS-14 | On a real iPhone with VoiceOver on (the simulator doesn't have it), swiping up or down on a slider, such as Spacing or a photo's zoom, changes its value and says the new one. | manual |
 
 ## Accounts
 
