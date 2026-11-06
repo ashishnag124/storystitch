@@ -15,6 +15,9 @@ name: Layout editor tools
 - tapOn:
     text: "Layout being edited.*"
     point: "30%,45%"
+# VoiceOver hears which photo is chosen and where each line is.
+- assertVisible: "Photo . chosen"
+- assertVisible: ".*% from the top"
 - tapOn: Split across
 - assertVisible: "5 of 4 photos"
 - tapOn: Undo
@@ -38,6 +41,11 @@ name: Layout editor tools
 - tapOn:
     text: "Layout being edited.*"
     point: "35%,35%"
+- assertVisible: ".*% of the width"
+- assertVisible: ".* degrees"
+# VoiceOver finds the chosen photo's Move actions apart from the preview, and hears where it is.
+- assertVisible: "Move photo .*"
+- assertVisible: ".*% from the left, .*% from the top"
 - tapOn: Smaller
 - tapOn: Bigger
 - tapOn: Turn left

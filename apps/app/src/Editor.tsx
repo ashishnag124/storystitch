@@ -1,8 +1,8 @@
 import { assignedScene, cellShapes, newScene, rankedScenes, usageLayout, withCrop, withStyle, type Scene, type Start } from "@storystitch/client";
 import { MAX_ZOOM, MIN_ZOOM, clampCrop } from "@storystitch/layout-engine";
-import { STORY_CANVAS, type SavedLayout } from "@storystitch/shared";
+import { STORY_CANVAS, type Layout, type SavedLayout } from "@storystitch/shared";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AppState, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { AppState, ScrollView, StyleSheet, Text, View } from "react-native";
 import { AccountLink } from "./AccountLink";
 import { deleteSaved, listSaved, recordExport } from "./api";
 import { LAYOUT_EDITOR_ENABLED } from "./config";
@@ -12,17 +12,21 @@ import { EXPORT_PAUSE_MS, canShareFiles, canWaitToShare, renderExport, shareOrDo
 import { FormatSelect } from "./platform/FormatSelect";
 import { LayoutEditor } from "./platform/lazyScreens";
 import type { Photo } from "./platform/photos";
-import { ACCOUNT_PATHS, navigate, useLocation } from "./platform/route";
+import { ACCOUNT_PATHS, useLocation } from "./platform/route";
 import { Slider } from "./platform/Slider";
 import { Stage, type StageHandle } from "./platform/Stage";
 import { StylePanel } from "./StylePanel";
-import { MIN_TARGET, colors, fontFamily, shadows, type as typography } from "./theme";
+import { colors, fontFamily, type as typography } from "./theme";
 import { Button } from "./ui/Button";
 import { Choice } from "./ui/Choice";
+import { Toast } from "./ui/Toast";
 import { upscaleWarnings } from "./upscale";
 import { track } from "./usage";
 
 type Tool = "layouts" | "style" | "export";
+/** The id of a layout edited and used without saving. No saved or built-in layout has it. */
+const UNSAVED_LAYOUT_ID = "edited";
+
 const TOOLS: { id: Tool; label: string }[] = [
   { id: "layouts", label: "Layouts" },
   { id: "style", label: "Style" },
@@ -47,12 +51,11 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
   // The user's saved layouts (layout editor): a list, "signed-out", or null until known (or when the API is down).
   const [saved, setSaved] = useState<SavedLayout[] | "signed-out" | null>(null);
   const [building, setBuilding] = useState<Start | null>(null);
-  const [askToSignIn, setAskToSignIn] = useState(false);
+  /** A layout edited and used without saving. It stays in the strip for as long as these photos are open. */
+  const [unsaved, setUnsaved] = useState<{ layout: Layout; order: number[] } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  /** Whether to open the layout editor once the user has signed in (they were asked to). */
-  const pendingEdit = useRef(false);
-  const { pathname } = useLocation();
-  const onAccountScreen = (ACCOUNT_PATHS as readonly string[]).includes(pathname);
+  const location = useLocation();
+  const onAccountScreen = (ACCOUNT_PATHS as readonly string[]).includes(location.pathname);
   const [selected, setSelected] = useState<number | null>(null);
   const [status, setStatus] = useState("");
   const [tool, setTool] = useState<Tool>("layouts");
@@ -75,9 +78,14 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
   // The user's own layouts for this many photos go first, marked "Yours".
   const mine = useMemo(() => (Array.isArray(saved) ? saved.filter((s) => s.layout.cells.length === photos.length) : []), [saved, photos.length]);
   const mineIds = useMemo(() => new Set(mine.map((s) => s.id)), [mine]);
+  const yours = useMemo(() => new Set([...mineIds, UNSAVED_LAYOUT_ID]), [mineIds]);
   const styledOptions = useMemo(
-    () => [...mine.map((s) => assignedScene(s.layout, photos, scene.style)), ...options.map((o) => ({ ...o, style: scene.style }))],
-    [mine, options, photos, scene.style],
+    () => [
+      ...(unsaved ? [newScene(unsaved.layout, photos, scene.style, unsaved.order)] : []),
+      ...mine.map((s) => assignedScene(s.layout, photos, scene.style)),
+      ...options.map((o) => ({ ...o, style: scene.style })),
+    ],
+    [unsaved, mine, options, photos, scene.style],
   );
 
   useEffect(resetPerfPeak, []);
@@ -120,8 +128,8 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
   async function share(file: NonNullable<typeof ready>) {
     if (!(await shareOrDownload(file, `storystitch.${extension}`))) return;
     track("collage_shared", { layout: usageLayout(scene.layout.id), method: shareable ? "share" : "download" });
-    // Only built-in layouts are counted: saved layouts are the user's own.
-    if (!mineIds.has(scene.layout.id)) recordExport(scene.layout.id);
+    // Only built-in layouts are counted: edited and saved layouts are the user's own.
+    if (usageLayout(scene.layout.id) !== "custom") recordExport(scene.layout.id);
   }
 
   useEffect(() => {
@@ -140,7 +148,7 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
     setConfirmDelete(false);
   }
 
-  // --- Layout editor: edit the current layout. Layouts save to the account, so it needs a sign-in.
+  // --- Layout editor: edit the current layout. Anyone can use the result; saving it needs an account.
 
   function openEditor() {
     setConfirmDelete(false);
@@ -148,42 +156,36 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
     setBuilding({ layout: scene.layout, order: scene.order, saved: mine.find((s) => s.id === scene.layout.id) });
     track("screen_viewed", { screen: "layout_editor" });
   }
-  function requestEditor() {
-    if (Array.isArray(saved)) return openEditor();
-    pendingEdit.current = true;
-    setAskToSignIn(true);
-  }
-  const openEditorRef = useRef(openEditor);
-  useEffect(() => {
-    openEditorRef.current = openEditor;
-  });
 
-  // Load saved layouts, and again when the user is back from the account screens or another tab (they may have
-  // signed in, or confirmed their email): then open the editor they asked for.
+  // Load saved layouts, and again after any navigation or, mid-edit, on coming back from another tab: they may have
+  // signed in, or confirmed their email.
+  const editing = building !== null;
   useEffect(() => {
     if (!LAYOUT_EDITOR_ENABLED || onAccountScreen) return;
     let current = true;
     const load = () =>
       listSaved()
-        .then((list) => {
-          if (!current) return;
-          setSaved(list);
-          if (list !== "signed-out" && pendingEdit.current) {
-            pendingEdit.current = false;
-            openEditorRef.current();
-          }
-        })
+        .then((list) => current && setSaved(list))
         .catch(() => current && setSaved(null));
     void load();
-    const subscription = AppState.addEventListener("change", (state) => state === "active" && pendingEdit.current && void load());
+    const subscription = AppState.addEventListener("change", (state) => state === "active" && editing && void load());
     return () => {
       current = false;
       subscription.remove();
     };
-  }, [onAccountScreen]);
+  }, [onAccountScreen, editing, location]);
+
+  function onLayoutUsed(layout: Layout, order: number[]) {
+    const edited = { ...layout, id: UNSAVED_LAYOUT_ID, name: "Edited layout" };
+    setUnsaved({ layout: edited, order });
+    setBuilding(null);
+    setScene(newScene(edited, photos, scene.style, order));
+    setStatus("Your edited layout is in your collage.");
+  }
 
   function onLayoutSaved(layout: SavedLayout, order: number[]) {
     setSaved((list) => [layout, ...(Array.isArray(list) ? list.filter((s) => s.id !== layout.id) : [])]);
+    setUnsaved(null);
     setBuilding(null);
     setScene(newScene(layout.layout, photos, scene.style, order));
     setStatus(`Saved ${layout.name}.`);
@@ -215,7 +217,7 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
   const panelTitle = selected !== null ? `Photo ${selected + 1}` : TOOLS.find((t) => t.id === tool)!.label;
 
   // VoiceOver stays inside an open dialog.
-  const covered = Boolean((building && LayoutEditor) || askToSignIn);
+  const covered = Boolean(building && LayoutEditor);
 
   return (
     <View role="main" style={styles.editor}>
@@ -223,7 +225,7 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
         <Text role="heading" aria-level={1} style={styles.hidden}>
           StoryStitch editor
         </Text>
-        <Button label="Start over" trackAs="start_over" onPress={onStartOver} />
+        <Button label="Start over" quiet trackAs="start_over" onPress={onStartOver} />
         <View style={styles.barActions}>
           <AccountLink />
           <Button
@@ -281,21 +283,26 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
                 track("layout_chosen", { layout: usageLayout(option.layout.id) });
                 chooseLayout(option);
               }}
-              mine={mineIds}
+              mine={yours}
             />
             {LAYOUT_EDITOR_ENABLED && (
               <View style={styles.layoutActions}>
-                <Button label="Edit this layout" primary trackAs="edit_layout" onPress={requestEditor} />
-                {mineIds.has(scene.layout.id) &&
-                  (confirmDelete ? (
-                    <>
-                      <Text style={typography.body}>Delete {scene.layout.name}?</Text>
-                      <Button label="Delete" onPress={() => void deleteCurrent()} />
-                      <Button label="Keep" onPress={() => setConfirmDelete(false)} />
-                    </>
-                  ) : (
-                    <Button label="Delete" onPress={() => setConfirmDelete(true)} />
-                  ))}
+                {confirmDelete ? (
+                  <>
+                    <Text numberOfLines={1} style={[typography.body, styles.layoutAction]}>
+                      Delete {scene.layout.name}?
+                    </Text>
+                    <Button label="Keep" quiet onPress={() => setConfirmDelete(false)} />
+                    <Button label="Delete" primary danger onPress={() => void deleteCurrent()} />
+                  </>
+                ) : (
+                  <>
+                    <View style={styles.layoutAction}>
+                      <Button label="Edit this layout" primary trackAs="edit_layout" onPress={openEditor} />
+                    </View>
+                    {mineIds.has(scene.layout.id) && <Button label="Delete" quiet danger onPress={() => setConfirmDelete(true)} />}
+                  </>
+                )}
               </View>
             )}
           </View>
@@ -342,70 +349,17 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
 
       {building && LayoutEditor && (
         <Suspense fallback={null}>
-          <LayoutEditor photos={photos} style={scene.style} start={building} onCancel={() => setBuilding(null)} onSaved={onLayoutSaved} />
+          <LayoutEditor
+            photos={photos}
+            style={scene.style}
+            start={building}
+            signedIn={Array.isArray(saved)}
+            onCancel={() => setBuilding(null)}
+            onUse={onLayoutUsed}
+            onSaved={onLayoutSaved}
+          />
         </Suspense>
       )}
-      {askToSignIn && (
-        <View style={styles.backdrop}>
-          <View role="dialog" aria-modal aria-label="Save your own layouts" style={styles.sheet}>
-            <Text role="heading" aria-level={2} style={typography.title}>
-              Save your own layouts
-            </Text>
-            <Text style={typography.body}>
-              Make and edit layouts with a free account. They're saved in your account (up to 20), ready for your next
-              collage. Your photos still stay on this device.
-            </Text>
-            <View style={styles.sheetActions}>
-              <Button
-                label="Create account"
-                primary
-                onPress={() => {
-                  setAskToSignIn(false);
-                  navigate("/sign-up");
-                }}
-              />
-              <Button
-                label="Sign in"
-                onPress={() => {
-                  setAskToSignIn(false);
-                  navigate("/account");
-                }}
-              />
-              <Button
-                label="Not now"
-                onPress={() => {
-                  setAskToSignIn(false);
-                  pendingEdit.current = false;
-                }}
-              />
-            </View>
-          </View>
-        </View>
-      )}
-    </View>
-  );
-}
-
-/** How long an informational toast stays up. */
-const TOAST_MS = 6000;
-
-/** A message over the preview. Informational ones fade on their own; alerts stay until closed. */
-function Toast({ text, alert, onClose }: { text: string; alert: boolean; onClose: () => void }) {
-  const close = useRef(onClose);
-  useEffect(() => {
-    close.current = onClose;
-  });
-  useEffect(() => {
-    if (alert) return;
-    const timer = setTimeout(() => close.current(), TOAST_MS);
-    return () => clearTimeout(timer);
-  }, [alert]);
-  return (
-    <View role={alert ? "alert" : undefined} style={[styles.toast, alert && styles.notice]}>
-      <Text style={[styles.toastText, alert && styles.noticeText]}>{text}</Text>
-      <Pressable role="button" aria-label="Dismiss" onPress={onClose} style={styles.toastClose}>
-        <Text style={[styles.toastClosing, alert && styles.noticeText]}>×</Text>
-      </Pressable>
     </View>
   );
 }
@@ -416,30 +370,14 @@ const styles = StyleSheet.create({
   barActions: { flexDirection: "row", gap: 8 },
   panelActions: { height: "auto", minHeight: 132, paddingVertical: 8 },
   layoutsTool: { gap: 6 },
-  layoutActions: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "center", gap: 8 },
+  layoutActions: { flexDirection: "row", alignItems: "center", gap: 8 },
+  layoutAction: { flex: 1 },
   backdrop: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0, zIndex: 20, justifyContent: "flex-end", backgroundColor: "rgba(0, 0, 0, 0.5)" },
   sheet: { gap: 12, padding: 20, borderTopLeftRadius: 20, borderTopRightRadius: 20, backgroundColor: colors.surface },
   sheetActions: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   hidden: { position: "absolute", width: 1, height: 1, overflow: "hidden", opacity: 0 },
   stage: { flex: 1, minHeight: 0 },
   toasts: { position: "absolute", top: 8, left: 12, right: 12, zIndex: 3, alignItems: "center", gap: 6 },
-  toast: {
-    maxWidth: "100%",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingLeft: 14,
-    paddingVertical: 4,
-    paddingRight: 4,
-    borderRadius: 14,
-    backgroundColor: "rgba(28, 25, 23, 0.88)",
-    ...shadows.soft,
-  },
-  notice: { backgroundColor: colors.warnBg },
-  toastText: { fontFamily, flexShrink: 1, fontSize: 14, color: "#fff" },
-  noticeText: { color: colors.warnText },
-  toastClose: { width: MIN_TARGET, height: MIN_TARGET, alignItems: "center", justifyContent: "center" },
-  toastClosing: { fontFamily, fontSize: 20, color: "#fff" },
   panel: { height: 132, flexShrink: 0, justifyContent: "center", paddingHorizontal: 12, borderTopLeftRadius: 20, borderTopRightRadius: 20, backgroundColor: colors.surface },
   photoTool: { gap: 4 },
   tabbar: { flexDirection: "row", flexShrink: 0, backgroundColor: colors.surface },

@@ -3,10 +3,12 @@
 // layout (editModeOf): lines in grids, shared corners and lines in slanted layouts, and whole cells otherwise.
 import {
   GRID_SHAPES,
+  MOVE_STEPS,
   bringToFront,
   canRotate,
   cornerLines,
   cornersLayout,
+  cornerSteps,
   cornersOf,
   duplicateCell,
   editModeOf,
@@ -28,7 +30,7 @@ import {
   type Edited,
   type Grid,
 } from "@storystitch/layout-engine";
-import { STORY_CANVAS, cellBounds, hitTest, layoutProblems, type Point, type SavedLayout } from "@storystitch/shared";
+import { STORY_CANVAS, cellBounds, editedLayoutProblems, hitTest, type Layout, type Point, type SavedLayout } from "@storystitch/shared";
 import { SaveError, autoCrop, explain, styleScale, withOrigin, type CropSource, type Draft, type Start, type Style } from "@storystitch/client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { saveLayout } from "./api";
@@ -43,6 +45,9 @@ const SNAP_FRACTIONS = [0.25, 1 / 3, 0.5, 2 / 3, 0.75];
 /** Button steps: how much Bigger/Smaller resize and Turn rotates. */
 const SCALE_STEP = 1.08;
 const TURN_STEP = 4;
+/** How far one VoiceOver step moves a line or corner (canvas px): enough to change the percent it says. */
+const VOICEOVER_STEP_PX = 40;
+const NO_ROOM = "There's no room to move it that way.";
 /** How long after the last change the overlay check runs (it samples the whole canvas). */
 const CHECK_DELAY_MS = 150;
 
@@ -66,6 +71,18 @@ type Drag =
   | { kind: "rotate"; cell: number; center: Point; angle: number; rotate: number; base: Draft }
   | { kind: "pinch"; cell: number; distance: number; angle: number; rotate: number; base: Draft };
 
+/** What VoiceOver does in place of a drag. `run` returns what to say when the move can't be made. */
+export interface Move {
+  /** "increment" and "decrement" are the up and down swipes; anything else is a named action. */
+  name: string;
+  run: () => string | undefined;
+}
+
+const swipes = (step: (direction: 1 | -1) => string | undefined): Move[] => [
+  { name: "increment", run: () => step(1) },
+  { name: "decrement", run: () => step(-1) },
+];
+
 /** A line or handle over the preview. Its box is in screen px from the frame's top left. */
 export interface Handle {
   key: string;
@@ -78,7 +95,13 @@ export interface Handle {
   nudge?: (dx: number, dy: number) => void;
   /** A line's range and place, in percent. */
   range?: { min: number; max: number; now: number };
+  moves: Move[];
+  /** Where it is now, for VoiceOver. */
+  value: string;
 }
+
+/** How VoiceOver moves the chosen photo, which a finger drags on the preview. */
+export type CellMover = Pick<Handle, "label" | "box" | "moves" | "value">;
 
 /** A button under the preview. */
 export interface Tool {
@@ -92,12 +115,13 @@ interface Options {
   photos: CropSource[];
   style: Style;
   start: Start;
+  onUse: (layout: Layout, order: number[]) => void;
   onSaved: (saved: SavedLayout, order: number[]) => void;
   /** Where the preview's top left corner is on screen. */
   frameOrigin: () => Point;
 }
 
-export function useLayoutEditor({ photos, style, start, onSaved, frameOrigin }: Options) {
+export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOrigin }: Options) {
   const mode = useMemo(() => editModeOf(start.layout), [start.layout]);
   const [draft, setDraft] = useState<Draft>({ layout: start.layout, order: start.order });
   const [history, setHistory] = useState<Draft[]>([]);
@@ -131,10 +155,10 @@ export function useLayoutEditor({ photos, style, start, onSaved, frameOrigin }: 
     [layout, order, style, photos],
   );
 
-  // Check for cells under Instagram's buttons, overlaps and the like once the layout stops changing.
+  // Check for overlaps and the like once the layout stops changing.
   useEffect(() => {
     if (dragging) return;
-    const timer = setTimeout(() => setProblems(explain(layoutProblems(layout, 20))), CHECK_DELAY_MS);
+    const timer = setTimeout(() => setProblems(explain(editedLayoutProblems(layout, 20))), CHECK_DELAY_MS);
     return () => clearTimeout(timer);
   }, [layout, dragging]);
 
@@ -164,6 +188,10 @@ export function useLayoutEditor({ photos, style, start, onSaved, frameOrigin }: 
     setDragging(false);
     if (d && d.base.layout !== draft.layout) setHistory((h) => [...h, d.base]);
   }
+  const refuse = (text: string) => {
+    setMessage(text);
+    return text;
+  };
   const apply = (edited: Edited | null, refusal: string) => {
     if (!edited) return setMessage(refusal);
     commit(withOrigin(draft, edited, photos.length));
@@ -272,6 +300,7 @@ export function useLayoutEditor({ photos, style, start, onSaved, frameOrigin }: 
 
   const screen = (p: Point) => ({ x: toCanvas(p).x * k, y: toCanvas(p).y * k });
   const square = (x: number, y: number) => ({ left: x - HANDLE_PX / 2, top: y - HANDLE_PX / 2, width: HANDLE_PX, height: HANDLE_PX });
+  const percent = (p: Point) => ({ left: Math.round((p.x / W) * 100), top: Math.round((p.y / H) * 100) });
   const handles: Handle[] = [];
 
   for (const d of dividers) {
@@ -281,6 +310,10 @@ export function useLayoutEditor({ photos, style, start, onSaved, frameOrigin }: 
     // Stop short of the ends, so where lines meet, one line's touch area doesn't cover the other's.
     const trim = (length: number) => Math.min(HANDLE_PX / 2, Math.max(0, (length - HANDLE_PX) / 2));
     const [ta, tb] = [trim(b.x - a.x), trim(b.y - a.y)];
+    const nudge = (dx: number, dy: number) => {
+      const step = across ? dy / areaH : dx / areaW;
+      if (step) commit(withOrigin(draft, gridLayout(layout, moveDivider(grid!, d.path, d.at + step)), photos.length));
+    };
     handles.push({
       key: d.path,
       kind: d.dir,
@@ -290,18 +323,24 @@ export function useLayoutEditor({ photos, style, start, onSaved, frameOrigin }: 
         : { left: a.x - HANDLE_PX / 2, top: a.y + tb, width: HANDLE_PX, height: b.y - a.y - 2 * tb },
       range: { min: Math.round(d.min * 100), max: Math.round(d.max * 100), now: Math.round(d.at * 100) },
       target: { kind: "divider", path: d.path, grid: grid!, startAt: d.at, dir: d.dir },
-      nudge: (dx, dy) => {
-        const step = across ? dy / areaH : dx / areaW;
-        if (step) commit(withOrigin(draft, gridLayout(layout, moveDivider(grid!, d.path, d.at + step)), photos.length));
-      },
+      nudge,
+      moves: swipes((direction) => {
+        if (Math.abs(d.at - (direction > 0 ? d.max : d.min)) < 0.001) return refuse(NO_ROOM);
+        nudge(direction * VOICEOVER_STEP_PX, direction * VOICEOVER_STEP_PX);
+      }),
+      value: `${Math.round(d.at * 100)}% from the ${across ? "top" : "left"}`,
     });
   }
 
   if (corners) {
     const keep = (next: Corners | null) => next && commit({ ...draft, layout: cornersLayout(layout, next) });
+    const keepOrRefuse = (next: Corners | null) => (next ? void keep(next) : refuse(NO_ROOM));
     lines.forEach((line, li) => {
       const [a, b] = [corners.points[line.members[0]!]!, corners.points[line.members.at(-1)!]!];
-      const mid = screen({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+      const middle = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      const mid = screen(middle);
+      // A line that runs more up and down than across moves sideways, and the other way about.
+      const sideways = Math.abs(b.y - a.y) > Math.abs(b.x - a.x);
       handles.push({
         key: `line-${li}`,
         kind: "line",
@@ -309,6 +348,11 @@ export function useLayoutEditor({ photos, style, start, onSaved, frameOrigin }: 
         box: square(mid.x, mid.y),
         target: { kind: "line", line: li, corners },
         nudge: (dx, dy) => keep(moveLine(layout, corners, line, { x: dx, y: dy })),
+        moves: swipes((direction) => {
+          const by = direction * VOICEOVER_STEP_PX;
+          return keepOrRefuse(moveLine(layout, corners, line, sideways ? { x: by, y: 0 } : { x: 0, y: by }));
+        }),
+        value: sideways ? `${percent(middle).left}% from the left` : `${percent(middle).top}% from the top`,
       });
     });
     corners.points.forEach((p, i) => {
@@ -321,20 +365,36 @@ export function useLayoutEditor({ photos, style, start, onSaved, frameOrigin }: 
         box: square(at.x, at.y),
         target: { kind: "corner", index: i, corners, last: corners },
         nudge: (dx, dy) => keep(moveCorner(layout, corners, i, { x: p.x + dx, y: p.y + dy })),
+        moves: cornerSteps(corners.locks[i]!).map(({ name, by }) => ({
+          name,
+          run: () => keepOrRefuse(moveCorner(layout, corners, i, { x: p.x + by.x * VOICEOVER_STEP_PX, y: p.y + by.y * VOICEOVER_STEP_PX })),
+        })),
+        value: `${percent(p).left}% from the left, ${percent(p).top}% from the top`,
       });
     });
   }
 
   const selBox = sel !== null && mode === "free" ? cellBounds(layout.cells[sel]!) : null;
+  let cellMover: CellMover | null = null;
   if (selBox && sel !== null) {
     const center = { x: selBox.x + selBox.w / 2, y: selBox.y + selBox.h / 2 };
     const corner = screen({ x: selBox.x + selBox.w, y: selBox.y + selBox.h });
+    const start = screen(selBox);
+    const { left, top } = percent(selBox);
+    cellMover = {
+      label: `Move photo ${sel + 1}`,
+      box: { left: start.x, top: start.y, width: corner.x - start.x, height: corner.y - start.y },
+      moves: MOVE_STEPS.map(({ name, by }) => ({ name, run: () => stepCell(by) })),
+      value: `${left}% from the left, ${top}% from the top`,
+    };
     handles.push({
       key: "resize",
       kind: "resize",
       label: `Resize photo ${sel + 1}`,
       box: square(corner.x, corner.y),
       target: { kind: "resize", cell: sel, center },
+      moves: swipes((direction) => scaleBy(direction > 0 ? SCALE_STEP : 1 / SCALE_STEP)),
+      value: `${Math.round((selBox.w / W) * 100)}% of the width`,
     });
     if (selCell?.shape === "rect") {
       const top = screen({ x: center.x, y: selBox.y });
@@ -344,6 +404,8 @@ export function useLayoutEditor({ photos, style, start, onSaved, frameOrigin }: 
         label: `Turn photo ${sel + 1}`,
         box: { ...square(top.x, 0), top: Math.max(0, top.y - HANDLE_PX * 1.25) },
         target: { kind: "rotate", cell: sel, center, rotate: selCell.rotate },
+        moves: swipes((direction) => turnBy(direction * TURN_STEP)),
+        value: `${Math.round(selCell.rotate)} degrees`,
       });
     }
   }
@@ -363,15 +425,31 @@ export function useLayoutEditor({ photos, style, start, onSaved, frameOrigin }: 
   const scaleBy = (f: number) => {
     if (sel === null) return;
     const next = scaleCell(layout, sel, f);
-    if (next) commit({ ...draft, layout: next });
-    else setMessage(f > 1 ? "There's no room to make it bigger." : "That's as small as it goes.");
+    if (!next) return refuse(f > 1 ? "There's no room to make it bigger." : "That's as small as it goes.");
+    commit({ ...draft, layout: next });
   };
   const turnBy = (deg: number) => {
     if (sel === null || selCell?.shape !== "rect") return;
     const next = rotateCell(layout, sel, selCell.rotate + deg);
-    if (next) commit({ ...draft, layout: next });
-    else setMessage("There's no room to turn it further.");
+    if (!next) return refuse("There's no room to turn it further.");
+    commit({ ...draft, layout: next });
   };
+
+  /** Moves the chosen photo as a drag would, which brings it to the top where photos can overlap. */
+  const stepCell = (by: Point) => {
+    if (sel === null) return;
+    const base = layout.allowOverlap ? bringToFront(layout, sel) : layout;
+    const moved = moveCell(base, sel, (by.x * VOICEOVER_STEP_PX) / W, (by.y * VOICEOVER_STEP_PX) / H);
+    if (!moved) return refuse(NO_ROOM);
+    commit({ ...draft, layout: moved });
+  };
+
+  /** VoiceOver can't tap a photo, so it steps through them. */
+  const pickMoves = swipes((direction) => {
+    const count = layout.cells.length;
+    const from = sel ?? (direction > 0 ? -1 : 0);
+    setSelected((from + direction + count) % count);
+  });
 
   const tools: Tool[] = [];
   if (sel !== null && mode === "grid") {
@@ -383,17 +461,19 @@ export function useLayoutEditor({ photos, style, start, onSaved, frameOrigin }: 
     );
   }
   if (sel !== null && mode === "free") {
-    tools.push({ label: "Smaller", onPress: () => scaleBy(1 / SCALE_STEP) }, { label: "Bigger", onPress: () => scaleBy(SCALE_STEP) });
+    tools.push(
+      { label: "Smaller", onPress: () => scaleBy(1 / SCALE_STEP) },
+      { label: "Bigger", onPress: () => scaleBy(SCALE_STEP) },
+      { label: "Add copy", onPress: () => apply(duplicateCell(layout, sel), "There's no room for another photo.") },
+    );
+    // Before Remove, so the two turns share a row of the grid.
     if (selCell?.shape === "rect") {
       tools.push({ label: "⟲", name: "Turn left", onPress: () => turnBy(-TURN_STEP) }, { label: "⟳", name: "Turn right", onPress: () => turnBy(TURN_STEP) });
     }
-    tools.push(
-      { label: "Add copy", onPress: () => apply(duplicateCell(layout, sel), "There's no room for another photo.") },
-      { label: "Remove", onPress: () => (setSelected(null), apply(removeCell(layout, sel), "A layout needs at least one cell.")) },
-    );
+    tools.push({ label: "Remove", onPress: () => (setSelected(null), apply(removeCell(layout, sel), "A layout needs at least one cell.")) });
   }
 
-  // --- Done: check the layout, then name it and save it.
+  // --- Done: check the layout, then use it as it is, or name it and save it.
 
   const cells = layout.cells.length;
   const missing = photos.length - cells;
@@ -409,7 +489,7 @@ export function useLayoutEditor({ photos, style, start, onSaved, frameOrigin }: 
 
   function done() {
     if (missing) return setMessage(countHint);
-    const found = explain(layoutProblems(layout));
+    const found = explain(editedLayoutProblems(layout));
     setProblems(found);
     if (found.length) return setMessage(found[0]!.text);
     setSaving({ name: start.saved?.name ?? `My ${start.layout.name.toLowerCase()}`.slice(0, 40), busy: false, error: "" });
@@ -433,10 +513,13 @@ export function useLayoutEditor({ photos, style, start, onSaved, frameOrigin }: 
     order,
     crops,
     selected: sel,
+    pickMoves,
+    pickValue: sel === null ? "No photo chosen" : `Photo ${sel + 1} chosen`,
     problems,
     view,
     fit,
     handles,
+    cellMover,
     tools,
     pressPreview,
     movePreview,
@@ -446,6 +529,7 @@ export function useLayoutEditor({ photos, style, start, onSaved, frameOrigin }: 
     canUndo: history.length > 0,
     undo,
     done,
+    use: () => onUse(layout, order),
     countText,
     status: message || countHint || problems[0]?.text || HINTS[mode](sel !== null),
     saving,

@@ -7,9 +7,10 @@ name: AC-IOS-06 Share opens the share sheet with a JPEG or a PNG
     visible: Share
     timeout: 20000
 - tapOn: Share
-# iOS fills in the sheet from another process, which can take a while on CI's simulator.
+# iOS fills in the sheet from another process. Until then it shows "storystitch.jpg", then "storystitch" and
+# "JPEG Image · 286 KB", and on CI that can take over a minute, so either one counts.
 - extendedWaitUntil:
-    visible: "JPEG Image.*"
+    visible: "(storystitch\\.jpg|JPEG Image.*)"
     timeout: 60000
 # Tapping outside the sheet closes it, and the tap also reaches the app, so use the empty part of the header.
 - tapOn:
@@ -18,5 +19,5 @@ name: AC-IOS-06 Share opens the share sheet with a JPEG or a PNG
 - tapOn: PNG
 - tapOn: Share
 - extendedWaitUntil:
-    visible: "PNG Image.*"
+    visible: "(storystitch\\.png|PNG Image.*)"
     timeout: 60000

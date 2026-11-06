@@ -1,16 +1,18 @@
 import { describeSubjects, screenFor } from "@storystitch/client";
 import { Suspense, useEffect, useState } from "react";
-import { View } from "react-native";
-import { SafeAreaProvider } from "react-native-safe-area-context";
+import { StyleSheet, View } from "react-native";
+import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import { fetchPopularity } from "./api";
 import { Editor } from "./Editor";
 import { PickScreen } from "./PickScreen";
 import { PERF_READOUT } from "./config";
 import { PerfReadout } from "./PerfReadout";
 import { Accounts } from "./platform/lazyScreens";
+import { useEmailLinks } from "./platform/emailLinks";
 import { ACCOUNT_PATHS, useLocation } from "./platform/route";
 import { UnsupportedPhotoError, analyzePhoto, closePhoto, loadPhoto, type PickedPhoto, type Photo } from "./platform/photos";
 import { Screen } from "./ui/Screen";
+import { Toast, type ToastMessage } from "./ui/Toast";
 import { track } from "./usage";
 
 const MAX_PHOTOS = 8;
@@ -22,6 +24,8 @@ export default function App() {
   const [summary, setSummary] = useState<string | null>(null);
   const [notices, setNotices] = useState<string[]>([]);
   const [popularity, setPopularity] = useState<Record<string, number>>({});
+  const [linkResult, setLinkResult] = useState<ToastMessage | null>(null);
+  useEmailLinks(setLinkResult);
 
   async function openPhotos(picked: PickedPhoto[]) {
     const notes: string[] = [];
@@ -81,8 +85,23 @@ export default function App() {
             <Accounts />
           </Suspense>
         )}
+        {linkResult && <LinkResult {...linkResult} onClose={() => setLinkResult(null)} />}
         {PERF_READOUT && <PerfReadout />}
       </Screen>
     </SafeAreaProvider>
   );
 }
+
+/** What happened to a link from an email, over the editor's sheets and the account screens, and clear of the notch. */
+function LinkResult(props: ToastMessage & { onClose: () => void }) {
+  const { top } = useSafeAreaInsets();
+  return (
+    <View aria-live="polite" pointerEvents="box-none" style={[styles.linkResult, { top: top + 8 }]}>
+      <Toast {...props} />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  linkResult: { position: "absolute", left: 12, right: 12, zIndex: 30, alignItems: "center" },
+});

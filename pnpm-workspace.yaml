@@ -4,3 +4,10 @@ packages:
 allowBuilds:
   esbuild: true
   workerd: true
+overrides:
+  # esbuild 0.18 has a dev server flaw (GHSA-67mh-4wv8-2f99). drizzle-kit installs this copy through @esbuild-kit but never loads it.
+  "@esbuild-kit/core-utils>esbuild": ^0.28.2
+  # The fixes for GHSA-3g3m-2fjr-6pw4 and GHSA-g3hv-75wg-m249 exist only in these majors. Expo still asks for glob 13 and
+  # minimatch 10, and ESLint for minimatch 10, so remove these two once they move.
+  glob: ^14.0.3
+  minimatch: ^11.0.4

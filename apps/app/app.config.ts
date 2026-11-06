@@ -5,15 +5,20 @@ const EAS_PROJECT_ID = "a20aeea2-ff98-407f-bfb3-40a0dd40d7af";
 
 // Two app IDs so both can sit on one phone. The schemes must match the API's APP_SCHEME for that environment.
 const variants = {
-  production: { name: "StoryStitch", bundleIdentifier: "com.ashishnag.storystitch", scheme: "storystitch" },
-  staging: { name: "StoryStitch Staging", bundleIdentifier: "com.ashishnag.storystitch.staging", scheme: "storystitch-staging" },
+  production: { name: "StoryStitch", bundleIdentifier: "com.ashishnag.storystitch", scheme: "storystitch", apiHost: "api.storystitch.ashishnag.com" },
+  staging: {
+    name: "StoryStitch Staging",
+    bundleIdentifier: "com.ashishnag.storystitch.staging",
+    scheme: "storystitch-staging",
+    apiHost: "api-staging.storystitch.ashishnag.com",
+  },
 };
 
 const selected = process.env.APP_VARIANT ?? "production";
 if (selected !== "production" && selected !== "staging") throw new Error(`Unknown APP_VARIANT: ${selected}`);
 
 export default ({ config }: ConfigContext): ExpoConfig => {
-  const { name, bundleIdentifier, scheme } = variants[selected];
+  const { name, bundleIdentifier, scheme, apiHost } = variants[selected];
   return {
     ...config,
     name,
@@ -22,6 +27,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ios: {
       ...config.ios,
       bundleIdentifier,
+      // The API's addresses in emails open the app. The API lists which paths, in its apple-app-site-association.
+      associatedDomains: [`applinks:${apiHost}`],
+      // The app only uses HTTPS and Apple's keychain. This stops App Store Connect asking on every build.
+      config: { ...config.ios?.config, usesNonExemptEncryption: false },
       infoPlist: {
         ...config.ios?.infoPlist,
         // Without this, Save Image in the share sheet asks for the whole library.

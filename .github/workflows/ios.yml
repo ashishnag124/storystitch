@@ -1,25 +1,28 @@
 name: iOS
 
 # Grades the `ios` criteria on a simulator. It stays out of ci.yml, like mobile.yml, so a failed or slow iOS run
-# can't block a web or API release.
+# can't block a web or API release. This is the slow tier: pull requests into main, nightly on dev, and pull requests
+# labeled run-sim. Pushes to main don't run it: the promotion PR already tested that code, and nothing depends on a
+# run on the merge commit. ci.yml still runs on those pushes, because releases and deploys do depend on that.
 on:
   pull_request:
-    paths: &app
+    types: [opened, synchronize, reopened, labeled]
+    paths:
       - "apps/app/**"
       - "packages/**"
       - "pnpm-lock.yaml"
       - "scripts/qa.mjs"
       - ".github/workflows/ios.yml"
-  push:
-    branches: [main]
-    paths: *app
+  schedule:
+    - cron: "0 10 * * *"
 
 concurrency:
-  group: ios-${{ github.ref }}
+  group: ios-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   simulator:
+    if: github.event_name != 'pull_request' || github.base_ref == 'main' || contains(github.event.pull_request.labels.*.name, 'run-sim')
     runs-on: macos-26
     timeout-minutes: 75
     env:
@@ -32,6 +35,9 @@ jobs:
       EXPO_NO_TELEMETRY: "1"
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Scheduled runs start on main, the default branch. Nightly is for what hasn't been promoted yet.
+          ref: ${{ github.event_name == 'schedule' && 'dev' || '' }}
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:

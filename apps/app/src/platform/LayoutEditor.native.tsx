@@ -1,15 +1,17 @@
-// The layout editor on iOS: a full-screen view for making a layout or changing one, saved to the user's account.
+// The layout editor on iOS: a full-screen view for changing a layout, to use in the collage or save to an account.
 // useLayoutEditor does the work; this draws it with Skia and feeds it touches.
 import { Canvas, Picture, createPicture, type SkImage } from "@shopify/react-native-skia";
-import type { Point, SavedLayout } from "@storystitch/shared";
+import type { Layout, Point, SavedLayout } from "@storystitch/shared";
 import { STORY_CANVAS } from "@storystitch/shared";
 import type { Start, Style } from "@storystitch/client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { KeyboardAvoidingView, PanResponder, StyleSheet, Text, TextInput, View, type GestureResponderEvent } from "react-native";
+import { AccessibilityInfo, KeyboardAvoidingView, PanResponder, StyleSheet, Text, TextInput, View, type AccessibilityActionEvent, type GestureResponderEvent } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, fontFamily, type as typography } from "../theme";
+import { SaveActions, UseActions } from "../LayoutSheetActions";
+import { ToolGrid } from "../ui/Actions";
 import { Button } from "../ui/Button";
-import { useLayoutEditor, type Handle } from "../useLayoutEditor";
+import { useLayoutEditor, type CellMover, type Handle, type Move } from "../useLayoutEditor";
 import type { Photo } from "./photos.native";
 import { blurredImage, drawDraft, hasBlurredBackground, previewOf } from "./render.native";
 
@@ -17,7 +19,9 @@ interface Props {
   photos: Photo[];
   style: Style;
   start: Start;
+  signedIn: boolean;
   onCancel: () => void;
+  onUse: (layout: Layout, order: number[]) => void;
   onSaved: (saved: SavedLayout, order: number[]) => void;
 }
 
@@ -45,6 +49,28 @@ function useFingers(on: { down: (e: GestureResponderEvent) => void; move: (e: Ge
 
 const fingersOf = (e: GestureResponderEvent): Point[] => e.nativeEvent.touches.map((t) => ({ x: t.pageX, y: t.pageY }));
 
+/** Lets VoiceOver move something that a finger would drag, and says where it ended up. */
+function useVoiceOverMoves(moves: Move[], value: string) {
+  const moved = useRef(false);
+  useEffect(() => {
+    if (moved.current) AccessibilityInfo.announceForAccessibility(value);
+    moved.current = false;
+  }, [value]);
+  // Swipes need the adjustable trait, which only accessibilityRole sets, and aren't listed as actions too.
+  const adjustable = moves[0]?.name === "increment";
+  return {
+    accessible: true,
+    accessibilityRole: adjustable ? ("adjustable" as const) : undefined,
+    accessibilityValue: { text: value },
+    accessibilityActions: adjustable ? undefined : moves.map(({ name }) => ({ name })),
+    onAccessibilityAction: (e: AccessibilityActionEvent) => {
+      const refusal = moves.find((m) => m.name === e.nativeEvent.actionName)?.run();
+      if (refusal) AccessibilityInfo.announceForAccessibility(refusal);
+      else moved.current = true;
+    },
+  };
+}
+
 function Grip({ handle }: { handle: Handle }) {
   if (handle.kind === "across") return <View style={[styles.grip, { width: 44, height: 14 }]} />;
   if (handle.kind === "down") return <View style={[styles.grip, { width: 14, height: 44 }]} />;
@@ -65,17 +91,27 @@ function LineOrHandle({ handle, onGrab, onMove, onEnd }: HandleProps) {
     move: (e) => onMove(e.nativeEvent.pageX, e.nativeEvent.pageY),
     up: onEnd,
   });
+  const voiceOver = useVoiceOverMoves(handle.moves, handle.value);
   return (
-    <View testID="builder-handle" aria-label={handle.label} accessible pointerEvents="box-only" style={[styles.handle, handle.box]} {...fingers.panHandlers}>
+    <View testID="builder-handle" aria-label={handle.label} pointerEvents="box-only" style={[styles.handle, handle.box]} {...voiceOver} {...fingers.panHandlers}>
       <Grip handle={handle} />
     </View>
   );
 }
 
-export default function LayoutEditor({ photos, style, start, onCancel, onSaved }: Props) {
+/**
+ * VoiceOver's way to move the chosen photo. It can't share the preview: there, swiping up and down chooses a photo,
+ * and on an element with named actions the same swipes step through those. Fingers pass through to the preview.
+ */
+function MoveCell({ mover }: { mover: CellMover }) {
+  const voiceOver = useVoiceOverMoves(mover.moves, mover.value);
+  return <View aria-label={mover.label} pointerEvents="none" style={[styles.handle, mover.box]} {...voiceOver} />;
+}
+
+export default function LayoutEditor({ photos, style, start, signedIn, onCancel, onUse, onSaved }: Props) {
   const insets = useSafeAreaInsets();
   const origin = useRef<Point>({ x: 0, y: 0 });
-  const editor = useLayoutEditor({ photos, style, start, onSaved, frameOrigin: () => origin.current });
+  const editor = useLayoutEditor({ photos, style, start, onUse, onSaved, frameOrigin: () => origin.current });
   const { layout, order, crops, selected, problems, view, fit, handles, tools, finishDrag, countText, saving, setSaving } = editor;
   const [fingerCount, setFingerCount] = useState(0);
 
@@ -123,28 +159,27 @@ export default function LayoutEditor({ photos, style, start, onCancel, onSaved }
     },
   });
 
+  const picking = useVoiceOverMoves(editor.pickMoves, editor.pickValue);
+
   return (
     <View role="dialog" aria-modal aria-label="Layout editor" style={[StyleSheet.absoluteFill, styles.editor]}>
       <View style={styles.bar}>
-        <Button label="Cancel" onPress={onCancel} />
+        <Button label="Cancel" quiet onPress={onCancel} />
         <Text role="heading" aria-level={2} style={styles.count}>
           {countText}
         </Text>
-        <Button label="Undo" onPress={editor.undo} disabled={!editor.canUndo} />
+        <Button label="Undo" quiet onPress={editor.undo} disabled={!editor.canUndo} />
         <Button label="Done" primary onPress={editor.done} />
       </View>
 
       <View style={styles.stage} onLayout={(e) => fit(e.nativeEvent.layout.width, e.nativeEvent.layout.height)}>
         <View style={{ width: view.width, height: view.height }}>
-          <View aria-label={`Layout being edited: ${countText}`} style={styles.preview} {...preview.panHandlers}>
+          <View aria-label={`Layout being edited: ${countText}`} style={styles.preview} {...picking} {...preview.panHandlers}>
             <Canvas pointerEvents="none" style={{ width: view.width, height: view.height }}>
               <Picture picture={picture} />
             </Canvas>
           </View>
-          <View pointerEvents="none" style={[styles.band, { top: 0, height: "14%" }]}>
-            <Text style={styles.bandLabel}>Instagram's buttons</Text>
-          </View>
-          <View pointerEvents="none" style={[styles.band, { bottom: 0, height: "18%" }]} />
+          {editor.cellMover && <MoveCell mover={editor.cellMover} />}
           {handles.map((h) => (
             <LineOrHandle key={h.key} handle={h} onGrab={grabHandle} onMove={editor.moveHandle} onEnd={finishDrag} />
           ))}
@@ -155,40 +190,43 @@ export default function LayoutEditor({ photos, style, start, onCancel, onSaved }
         <Text role="status" style={styles.status}>
           {editor.status}
         </Text>
-        {tools.length > 0 && (
-          <View style={styles.actions}>
-            {tools.map((t) => (
-              <Button key={t.label} label={t.label} name={t.name} onPress={t.onPress} />
-            ))}
-          </View>
-        )}
+        {tools.length > 0 && <ToolGrid tools={tools} />}
       </View>
 
       {saving && (
         // The editor starts below the status bar, so the keyboard needs that much more room.
         <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={insets.top} style={styles.backdrop}>
-          <View aria-label="Save layout" style={styles.sheet}>
-            <View style={{ gap: 4 }}>
-              <Text style={typography.hint}>Name</Text>
-              <TextInput
-                aria-label="Name"
-                value={saving.name}
-                maxLength={40}
-                autoFocus
-                onChangeText={(name) => setSaving({ ...saving, name, error: "" })}
-                style={styles.input}
-              />
+          {signedIn ? (
+            <View aria-label="Save layout" style={styles.sheet}>
+              <View style={{ gap: 4 }}>
+                <Text style={typography.hint}>Name</Text>
+                <TextInput
+                  aria-label="Name"
+                  value={saving.name}
+                  maxLength={40}
+                  autoFocus
+                  onChangeText={(name) => setSaving({ ...saving, name, error: "" })}
+                  style={styles.input}
+                />
+              </View>
+              {saving.error !== "" && (
+                <Text role="alert" style={styles.notice}>
+                  {saving.error}
+                </Text>
+              )}
+              <SaveActions editor={editor} />
             </View>
-            {saving.error !== "" && (
-              <Text role="alert" style={styles.notice}>
-                {saving.error}
+          ) : (
+            <View aria-label="Use your layout" style={styles.sheet}>
+              <Text role="heading" aria-level={2} style={typography.title}>
+                Your layout is ready
               </Text>
-            )}
-            <View style={styles.actions}>
-              <Button label="Keep editing" onPress={() => setSaving(null)} />
-              <Button label={saving.busy ? "Saving…" : editor.saveLabel} primary disabled={saving.busy} onPress={() => void editor.save()} />
+              <Text style={typography.body}>
+                Use it in your collage now, no account needed. To keep it for your next collage, you can save it with a free account.
+              </Text>
+              <UseActions editor={editor} />
             </View>
-          </View>
+          )}
         </KeyboardAvoidingView>
       )}
     </View>
@@ -201,13 +239,10 @@ const styles = StyleSheet.create({
   count: { flex: 1, fontFamily, fontSize: 16, fontWeight: "700", color: colors.text, textAlign: "center" },
   stage: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 8 },
   preview: { borderRadius: 10, overflow: "hidden" },
-  band: { position: "absolute", left: 0, right: 0, backgroundColor: "rgba(43, 19, 64, 0.2)" },
-  bandLabel: { position: "absolute", top: 6, left: 8, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 999, overflow: "hidden", backgroundColor: "rgba(43, 19, 64, 0.7)", color: colors.text, fontFamily, fontSize: 11 },
   handle: { position: "absolute", alignItems: "center", justifyContent: "center" },
   grip: { borderWidth: 3, borderColor: colors.bg, borderRadius: 999, backgroundColor: colors.accent },
   tools: { minHeight: 128, justifyContent: "center", gap: 8, paddingTop: 10, paddingBottom: 14, paddingHorizontal: 12, borderTopLeftRadius: 20, borderTopRightRadius: 20, backgroundColor: colors.surface },
   status: { fontFamily, fontSize: 15, color: colors.muted, textAlign: "center" },
-  actions: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 8 },
   backdrop: { ...StyleSheet.absoluteFill, justifyContent: "flex-end", backgroundColor: "rgba(0, 0, 0, 0.5)" },
   sheet: { gap: 12, paddingTop: 20, paddingBottom: 28, paddingHorizontal: 16, borderTopLeftRadius: 20, borderTopRightRadius: 20, backgroundColor: colors.surface },
   input: { minHeight: 44, paddingHorizontal: 12, borderWidth: 1, borderColor: colors.border, borderRadius: 10, backgroundColor: colors.bg, color: colors.text, fontSize: 16 },

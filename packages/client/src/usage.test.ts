@@ -153,6 +153,56 @@ describe("AC-USAGE-04 batches and failures", () => {
     expect(batches()[1]!.events).toHaveLength(20);
   });
 
+  it("AC-USAGE-04 sends what was tracked during a send once that send finishes, even after going to the background", async () => {
+    let finish!: (res: Response) => void;
+    const usage = await running();
+    fetchMock.mockImplementationOnce(() => new Promise((resolve) => (finish = resolve)));
+    usage.track("signed_up");
+    await vi.advanceTimersByTimeAsync(30_000);
+    usage.track("screen_viewed", { screen: "editor" });
+    usage.background();
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(fetchMock).toHaveBeenCalledOnce();
+    finish(ok());
+    await vi.advanceTimersByTimeAsync(10 * 60_000);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(sentNames(1)).toEqual(["screen_viewed"]);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("AC-USAGE-04 sends everything waiting on going to the background, one batch at a time", async () => {
+    const finish: ((res: Response) => void)[] = [];
+    const usage = await running();
+    fetchMock.mockImplementation(() => new Promise((resolve) => finish.push(resolve)));
+    for (let i = 0; i < 70; i++) usage.track("signed_up");
+    usage.background();
+    await settle();
+    expect(fetchMock).toHaveBeenCalledOnce();
+    finish[0]!(ok());
+    await settle();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(batches().map((b) => b.events.length)).toEqual([50, 20]);
+    finish[1]!(ok());
+    await vi.advanceTimersByTimeAsync(10 * 60_000);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("AC-USAGE-04 sends nothing more in the background after a failed send, and keeps it all for later", async () => {
+    let finish!: (res: Response) => void;
+    const usage = await running();
+    fetchMock.mockImplementationOnce(() => new Promise((resolve) => (finish = resolve)));
+    usage.track("signed_up");
+    await vi.advanceTimersByTimeAsync(30_000);
+    usage.track("layout_saved");
+    usage.background();
+    finish(new Response(null, { status: 503 }));
+    await vi.advanceTimersByTimeAsync(10 * 60_000);
+    expect(fetchMock).toHaveBeenCalledOnce();
+    usage.foreground();
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(sentNames(1)).toEqual(["signed_up", "layout_saved"]);
+  });
+
   it("AC-USAGE-04 keeps a batch after a network or server failure, waiting twice as long each time, up to 5 minutes", async () => {
     const usage = await running();
     fetchMock.mockImplementation(async () => new Response(null, { status: 503 }));

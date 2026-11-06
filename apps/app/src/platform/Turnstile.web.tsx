@@ -61,10 +61,7 @@ export function Turnstile({ onToken, resetKey }: { onToken: (token: string | nul
   }, []);
 
   useEffect(() => {
-    if (resetKey && id.current) {
-      callback.current(null);
-      window.turnstile?.reset(id.current);
-    }
+    if (resetKey && id.current) window.turnstile?.reset(id.current);
   }, [resetKey]);
 
   return <div ref={el} style={{ minHeight: 65 }} />;

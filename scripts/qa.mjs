@@ -6,7 +6,8 @@
 // one actually ran. Writes qa-results/report.md (also to the GitHub Actions job summary) and exits non-zero on
 // any failure, missing test, unknown ID or failed step.
 //
-// `pnpm qa --target=app` runs the end-to-end tests against apps/app, the Expo app that's replacing apps/web.
+// By default the end-to-end tests run against apps/app, the Expo app. `pnpm qa --target=web` runs them against apps/web,
+// which stays as production's rollback for one release. A criterion only the Expo app can prove counts as another target's.
 // `pnpm qa --target=ios` runs only the Maestro flows in apps/app/maestro/core and grades only the `ios` criteria.
 // It needs a booted simulator with the app installed, so the other two targets leave those criteria out.
 import { spawnSync } from "node:child_process";
@@ -17,7 +18,7 @@ const root = join(import.meta.dirname, "..");
 const out = join(root, "qa-results");
 const CRITERIA_FILE = join(root, "docs/acceptance-criteria.md");
 const ID = /\bAC-[A-Z0-9]+-\d{2}\b/g;
-const target = process.argv.find((a) => a.startsWith("--target="))?.slice("--target=".length) ?? "web";
+const target = process.argv.find((a) => a.startsWith("--target="))?.slice("--target=".length) ?? "app";
 const ROW = /^\|\s*(AC-[A-Z0-9]+-\d{2})\s*\|\s*(.+?)\s*\|\s*(auto|ios|manual|planned)\s*\|\s*$/;
 const ios = target === "ios";
 const automated = ios ? "ios" : "auto";
@@ -61,7 +62,7 @@ if (workspaces.some((w) => w.scripts["db:migrate"])) {
   if (!process.env.CI) run("Start local Postgres", "docker", ["compose", "up", "-d", "--wait"]);
   run("Database migrations", "pnpm", ["db:migrate"]);
 }
-// A criterion must be proved by the app being graded, so apps/web's own unit tests don't count for --target=app.
+// A criterion must be proved by the app being graded, so each app's own unit tests count only for that app.
 for (const ws of workspaces.filter((w) => w.scripts.test && (target === "web" ? w.name !== "app" : w.name !== "web"))) {
   run(
     `Unit tests: ${ws.name}`,
@@ -157,7 +158,7 @@ const graded = criteria.map((c) => {
   else if (c.check === "planned") result = "PLANNED";
   else if (!tests.length) result = "NO TEST";
   else if (failed) result = "FAIL";
-  else if (!passed) result = "SKIPPED";
+  else if (!passed) result = target === "web" ? "NOT THIS TARGET" : "SKIPPED";
   else result = "PASS";
   return {
     ...c,
