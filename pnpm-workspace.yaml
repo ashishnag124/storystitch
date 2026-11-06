@@ -4,3 +4,6 @@ packages:
 allowBuilds:
   esbuild: true
   workerd: true
+overrides:
+  # esbuild 0.18 has a dev server flaw (GHSA-67mh-4wv8-2f99). drizzle-kit installs this copy through @esbuild-kit but never loads it.
+  "@esbuild-kit/core-utils>esbuild": ^0.28.2
