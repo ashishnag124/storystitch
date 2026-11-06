@@ -43,7 +43,11 @@ function useBotCheck() {
     token,
     widget: <Turnstile onToken={setToken} resetKey={resetKey} />,
     headers: () => ({ "x-captcha-response": token ?? "" }),
-    reset: () => setResetKey((k) => k + 1),
+    // A token works once, so the form has to wait for the next one.
+    reset: () => {
+      setToken(null);
+      setResetKey((k) => k + 1);
+    },
   };
 }
 
