@@ -13,17 +13,6 @@
   --danger: #ff8f8f;
 }
 
-.button.ghost {
-  border-color: transparent;
-  background: none;
-  padding: 0 10px;
-}
-
-.button:disabled {
-  opacity: 0.55;
-  cursor: default;
-}
-
 .notice {
   padding: 10px 14px;
   border-radius: 10px;
@@ -194,18 +183,6 @@
   color: var(--muted);
   font-size: 0.9375rem;
   text-align: center;
-}
-
-.builder-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
-}
-
-.builder-actions .button {
-  min-height: 48px;
-  min-width: 48px;
 }
 
 .builder-sheet-backdrop {

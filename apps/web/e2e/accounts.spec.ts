@@ -48,6 +48,16 @@ test("AC-AUTH-05 AC-AUTH-06 sign up, confirm by email, stay signed in across rel
   await signedInAs(page, email);
 });
 
+test("AC-A11Y-03 the account screens' links are at least 44 px tall", async ({ page }) => {
+  for (const [path, names] of [
+    ["/account", ["Back to StoryStitch", "Forgot your password?", "Create an account", "Privacy policy", "Support"]],
+    ["/sign-up", ["Sign in"]],
+  ] as const) {
+    await page.goto(path);
+    for (const name of names) expect((await page.getByRole("link", { name, exact: true }).boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  }
+});
+
 test("AC-AUTH-05 reset a forgotten password by email", async ({ page }) => {
   const email = await signUp(page);
   await page.goto(await emailedLink(page, email));

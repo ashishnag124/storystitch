@@ -65,5 +65,6 @@ Every PR that changes shared screens gets this check. The simulator can't prove 
 
 - Branch from `dev` and open a PR into it with `gh pr create --base dev`. Never open a PR into `main` unless the user says so.
 - Gate unfinished user-facing features behind a flag so `main` stays releasable.
+- Grouped buttons in `apps/app` follow the hierarchy in `apps/app/src/ui/Actions.tsx`: one primary, one secondary, the rest quiet.
 - Changing user-facing behavior → add or edit its row in `docs/acceptance-criteria.md` and start a test's title with its ID (`it("AC-CROP-02 …")`). `pnpm qa` fails on untested criteria and on IDs that aren't listed.
 - New config value → add to `.env.example` and the "where config lives" table in `PROJECT_SETUP.md`; tell the user which hosted environments need it.

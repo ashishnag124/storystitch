@@ -3,11 +3,12 @@
 import { STORY_CANVAS, drawOrder, type Layout, type Point, type SavedLayout } from "@storystitch/shared";
 import { useCallback, useEffect, useLayoutEffect, useRef, type KeyboardEvent, type PointerEvent } from "react";
 import type { Photo } from "./photos";
-import { navigate } from "./route";
 import { drawBlurredBackground, drawCell, fillBackground, hasBlurredBackground, outlinePath, previewOf } from "./render";
 import { cellShapes, styleScale, type Scene, type Start, type Style } from "@storystitch/client";
+import { SaveActions, UseActions } from "../LayoutSheetActions";
+import { ToolGrid } from "../ui/Actions";
+import { Button } from "../ui/Button";
 import { useLayoutEditor, type Handle } from "../useLayoutEditor";
-import "./photo-sources.css";
 import "./builder.css";
 
 const { width: W, height: H } = STORY_CANVAS;
@@ -133,18 +134,12 @@ export default function LayoutEditor({ photos, style, start, signedIn, onCancel,
   return (
     <div className="builder" role="dialog" aria-modal="true" aria-labelledby="builder-title">
       <header className="builder-bar">
-        <button type="button" className="button ghost" onClick={onCancel}>
-          Cancel
-        </button>
+        <Button label="Cancel" quiet onPress={onCancel} />
         <h2 id="builder-title" ref={heading} tabIndex={-1} className="builder-count">
           {countText}
         </h2>
-        <button type="button" className="button ghost" onClick={editor.undo} disabled={!editor.canUndo} aria-label="Undo">
-          Undo
-        </button>
-        <button type="button" className="button primary" onClick={editor.done}>
-          Done
-        </button>
+        <Button label="Undo" quiet onPress={editor.undo} disabled={!editor.canUndo} />
+        <Button label="Done" primary onPress={editor.done} />
       </header>
 
       <div className="builder-stage" ref={stageRef}>
@@ -192,15 +187,7 @@ export default function LayoutEditor({ photos, style, start, signedIn, onCancel,
         <p className="builder-status" role="status">
           {editor.status}
         </p>
-        {tools.length > 0 && (
-          <div className="builder-actions">
-            {tools.map((t) => (
-              <button key={t.label} type="button" className="button" onClick={t.onPress} aria-label={t.name}>
-                {t.label}
-              </button>
-            ))}
-          </div>
-        )}
+        {tools.length > 0 && <ToolGrid tools={tools} />}
       </section>
 
       {saving && (
@@ -210,7 +197,7 @@ export default function LayoutEditor({ photos, style, start, signedIn, onCancel,
               className="builder-sheet"
               onSubmit={(e) => {
                 e.preventDefault();
-                void editor.save();
+                if (!saving.busy) void editor.save();
               }}
               aria-label="Save layout"
             >
@@ -223,36 +210,13 @@ export default function LayoutEditor({ photos, style, start, signedIn, onCancel,
                   {saving.error}
                 </p>
               )}
-              <div className="builder-actions">
-                <button type="submit" className="button primary" disabled={saving.busy}>
-                  {saving.busy ? "Saving…" : editor.saveLabel}
-                </button>
-                <button type="button" className="button" onClick={editor.use}>
-                  Use without saving
-                </button>
-                <button type="button" className="button" onClick={() => setSaving(null)}>
-                  Keep editing
-                </button>
-              </div>
+              <SaveActions editor={editor} />
             </form>
           ) : (
             <section className="builder-sheet" aria-label="Use your layout">
               <h2>Your layout is ready</h2>
               <p>Use it in your collage now, no account needed. To keep it for your next collage, you can save it with a free account.</p>
-              <div className="builder-actions">
-                <button type="button" className="button primary" onClick={editor.use}>
-                  Use this layout
-                </button>
-                <button type="button" className="button" onClick={() => navigate("/sign-up")}>
-                  Create account to save
-                </button>
-                <button type="button" className="button" onClick={() => navigate("/account")}>
-                  Sign in
-                </button>
-                <button type="button" className="button" onClick={() => setSaving(null)}>
-                  Keep editing
-                </button>
-              </div>
+              <UseActions editor={editor} />
             </section>
           )}
         </div>
