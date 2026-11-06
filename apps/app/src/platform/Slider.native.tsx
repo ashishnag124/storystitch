@@ -46,17 +46,16 @@ export function Slider({ label, value, min, max, step, display, disabled, onChan
     [],
   );
   const fraction = (value - min) / (max - min);
-  const adjust = (direction: number) => !disabled && onChange(Math.min(max, Math.max(min, value + direction * Math.max(step, (max - min) / 10))));
+  const adjust = (direction: number) => !disabled && onChange(Math.round(Math.min(max, Math.max(min, value + direction * Math.max(step, (max - min) / 10))) / step) * step);
   return (
     <View style={styles.row}>
       <Text style={styles.label}>{label}</Text>
       <View
         accessible
-        role="slider"
+        accessibilityRole="adjustable"
         aria-label={label}
         aria-disabled={disabled}
         accessibilityValue={{ text: display }}
-        accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
         onAccessibilityAction={(e) => adjust(e.nativeEvent.actionName === "increment" ? 1 : -1)}
         onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
         style={[styles.track, disabled && styles.disabled]}

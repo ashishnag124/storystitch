@@ -4,6 +4,7 @@ import {
   MIN_CELL,
   bringToFront,
   cornerLines,
+  cornerSteps,
   cornersLayout,
   cornersOf,
   duplicateCell,
@@ -126,6 +127,30 @@ describe("AC-CUSTOM-02 grids", () => {
     valid(split.layout);
     const removed = removeGridCell(byId("three-wave"), 1)!;
     valid(removed.layout);
+  });
+});
+
+describe("AC-CUSTOM-10 steps for VoiceOver", () => {
+  it("offers every direction to a free corner and each one moves it", () => {
+    const pin = byId("four-pinwheel");
+    const corners = cornersOf(pin)!;
+    const center = corners.points.findIndex((p) => Math.abs(p.x - W / 2) < 1 && Math.abs(p.y - H / 2) < 1);
+    const from = corners.points[center]!;
+    const steps = cornerSteps(corners.locks[center]!);
+    expect(steps.map((s) => s.name)).toEqual(["Move up", "Move down", "Move left", "Move right"]);
+    for (const { by } of steps) {
+      const moved = moveCorner(pin, corners, center, { x: from.x + by.x * 40, y: from.y + by.y * 40 })!;
+      expect(moved.points[center]).toEqual({ x: from.x + by.x * 40, y: from.y + by.y * 40 });
+    }
+  });
+
+  it("offers an edge corner only the ways along its edge, and a canvas corner none", () => {
+    const six = byId("six-diagonal");
+    const corners = cornersOf(six)!;
+    const onLeft = corners.points.findIndex((p) => p.x < 1 && p.y > 100 && p.y < H - 100);
+    expect(cornerSteps(corners.locks[onLeft]!).map((s) => s.name)).toEqual(["Move up", "Move down"]);
+    const topLeft = corners.points.findIndex((p) => p.x < 1 && p.y < 1);
+    expect(cornerSteps(corners.locks[topLeft]!)).toEqual([]);
   });
 });
 

@@ -5,11 +5,11 @@ import type { Point, SavedLayout } from "@storystitch/shared";
 import { STORY_CANVAS } from "@storystitch/shared";
 import type { Start, Style } from "@storystitch/client";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { KeyboardAvoidingView, PanResponder, StyleSheet, Text, TextInput, View, type GestureResponderEvent } from "react-native";
+import { AccessibilityInfo, KeyboardAvoidingView, PanResponder, StyleSheet, Text, TextInput, View, type AccessibilityActionEvent, type GestureResponderEvent } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, fontFamily, type as typography } from "../theme";
 import { Button } from "../ui/Button";
-import { useLayoutEditor, type Handle } from "../useLayoutEditor";
+import { useLayoutEditor, type Handle, type Move } from "../useLayoutEditor";
 import type { Photo } from "./photos.native";
 import { blurredImage, drawDraft, hasBlurredBackground, previewOf } from "./render.native";
 
@@ -61,6 +61,28 @@ function useFingers(on: { down: (e: GestureResponderEvent) => void; move: (e: Ge
 
 const fingersOf = (e: GestureResponderEvent): Point[] => e.nativeEvent.touches.map((t) => ({ x: t.pageX, y: t.pageY }));
 
+/** Lets VoiceOver move something that a finger would drag, and says where it ended up. */
+function useVoiceOverMoves(moves: Move[], value: string) {
+  const moved = useRef(false);
+  useEffect(() => {
+    if (moved.current) AccessibilityInfo.announceForAccessibility(value);
+    moved.current = false;
+  }, [value]);
+  // Swipes need the adjustable trait, which only accessibilityRole sets, and aren't listed as actions too.
+  const adjustable = moves[0]?.name === "increment";
+  return {
+    accessible: true,
+    accessibilityRole: adjustable ? ("adjustable" as const) : undefined,
+    accessibilityValue: { text: value },
+    accessibilityActions: adjustable ? undefined : moves.map(({ name }) => ({ name })),
+    onAccessibilityAction: (e: AccessibilityActionEvent) => {
+      const refusal = moves.find((m) => m.name === e.nativeEvent.actionName)?.run();
+      if (refusal) AccessibilityInfo.announceForAccessibility(refusal);
+      else moved.current = true;
+    },
+  };
+}
+
 function Grip({ handle }: { handle: Handle }) {
   if (handle.kind === "across") return <View style={[styles.grip, { width: 44, height: 14 }]} />;
   if (handle.kind === "down") return <View style={[styles.grip, { width: 14, height: 44 }]} />;
@@ -81,8 +103,9 @@ function LineOrHandle({ handle, onGrab, onMove, onEnd }: HandleProps) {
     move: (e) => onMove(e.nativeEvent.pageX, e.nativeEvent.pageY),
     up: onEnd,
   });
+  const voiceOver = useVoiceOverMoves(handle.moves, handle.value);
   return (
-    <View testID="builder-handle" aria-label={handle.label} accessible pointerEvents="box-only" style={[styles.handle, handle.box]} {...fingers.panHandlers}>
+    <View testID="builder-handle" aria-label={handle.label} pointerEvents="box-only" style={[styles.handle, handle.box]} {...voiceOver} {...fingers.panHandlers}>
       <Grip handle={handle} />
     </View>
   );
@@ -139,6 +162,8 @@ export default function LayoutEditor({ photos, style, start, onCancel, onSaved }
     },
   });
 
+  const picking = useVoiceOverMoves(editor.pickMoves, editor.pickValue);
+
   return (
     <View role="dialog" aria-modal aria-label="Layout editor" style={[StyleSheet.absoluteFill, styles.editor]}>
       <View style={styles.bar}>
@@ -152,7 +177,7 @@ export default function LayoutEditor({ photos, style, start, onCancel, onSaved }
 
       <View style={styles.stage} onLayout={(e) => fit(e.nativeEvent.layout.width, e.nativeEvent.layout.height)}>
         <View style={{ width: view.width, height: view.height }}>
-          <View aria-label={`Layout being edited: ${countText}`} style={styles.preview} {...preview.panHandlers}>
+          <View aria-label={`Layout being edited: ${countText}`} style={styles.preview} {...picking} {...preview.panHandlers}>
             <Canvas pointerEvents="none" style={{ width: view.width, height: view.height }}>
               <Picture picture={picture} />
             </Canvas>
