@@ -34,6 +34,17 @@ describe("AC-API-06 minimum app version", () => {
   });
 });
 
+describe("AC-AUTH-13 links from emails", () => {
+  it("tells iOS that confirmation and reset links open both apps", async () => {
+    const res = await app.request("/.well-known/apple-app-site-association");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("application/json");
+    const { details } = ((await res.json()) as { applinks: { details: { appIDs: string[]; components: { "/": string }[] }[] } }).applinks;
+    expect(details[0]!.appIDs).toEqual(["R4Y4AMD49G.com.ashishnag.storystitch", "R4Y4AMD49G.com.ashishnag.storystitch.staging"]);
+    expect(details[0]!.components.map((c) => c["/"])).toEqual(["/api/auth/verify-email", "/api/auth/reset-password/*"]);
+  });
+});
+
 describe("AC-API-01 CORS", () => {
   const preflight = (origin: string) =>
     app.request("/health", {

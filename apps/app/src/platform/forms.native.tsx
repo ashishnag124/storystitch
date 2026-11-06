@@ -4,7 +4,7 @@ import { WEB_URL } from "../config";
 import { colors, type } from "../theme";
 import { Button } from "../ui/Button";
 
-/** Where emailed links come back to: the website, until Universal Links open them in the app. */
+/** Where emailed links go when iOS doesn't hand them to the app, such as on a computer: the website. */
 export const ORIGIN = WEB_URL;
 
 // The bot check page only runs on web.

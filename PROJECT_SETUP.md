@@ -226,6 +226,11 @@ first one. Claude can't do these: they need your Apple and Expo accounts. Run co
 
 The API side also needs `APP_SCHEME=storystitch-staging://` on staging.
 
+Emailed links open the app through Universal Links. Each app claims its API's address in `apps/app/app.config.ts`, and
+the API publishes the matching list at `/.well-known/apple-app-site-association`. A hand-run build enables the Associated
+Domains capability on the app ID. iOS reads that list when the app is installed, through Apple's cache, so the API has to
+serve it before installing, and a change can take a while to reach phones.
+
 ### iOS production checklist (yours)
 
 `.github/workflows/mobile-release.yml` builds the production app from a release tag and sends it to App Store
