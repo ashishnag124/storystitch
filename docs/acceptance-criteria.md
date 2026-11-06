@@ -182,6 +182,7 @@ Maestro reads the accessibility tree, so `ios` rows prove what a person can reac
 | AC-IOS-05 | Tapping a photo offers a zoom slider, Fit undoes the zoom, and Done closes the photo's tools. | ios |
 | AC-IOS-06 | Share opens the iOS share sheet with the export as a JPEG, or a PNG when that's the chosen format. It stays available while the image is being made: tapped then, the sheet opens as soon as the image is ready. | ios |
 | AC-IOS-07 | Start over returns to the pick screen. | ios |
+| AC-IOS-15 | Without an account, the layout editor opens, and Done offers to use the layout in the collage without signing in. | ios |
 | AC-IOS-08 | Save Image in the share sheet adds a 1080×1920 image to Photos without asking for access to the whole library. | manual |
 | AC-IOS-09 | With an account signed in on a simulator, `apps/app/maestro/local` passes: every layout editor tool for grids and free cells works and can be undone, and VoiceOver can't reach the screen behind the editor. Lines and handles report where they are. | manual |
 | AC-IOS-10 | On a real iPhone, a double-tap zooms a photo in and back out, and a flicked photo keeps gliding, and Fit undoes a full zoom on a Polaroid. The simulator's tools can't tap fast enough to count as a double-tap, and Maestro's tap on Fit has no effect there though a direct tap works. | manual |
@@ -210,7 +211,7 @@ Behind `VITE_FEATURE_LAYOUT_EDITOR` (needs accounts): on in staging and producti
 
 | ID | Criterion | Check |
 |---|---|---|
-| AC-CUSTOM-01 | The Layouts tool offers "Edit this layout", highlighted in gold. A signed-out user is asked to create an account or sign in, and the editor opens by itself once they're signed in, with their collage still there. Grids are edited by their lines, slanted layouts by their corners and lines, and everything else by moving whole cells. | auto |
+| AC-CUSTOM-01 | The Layouts tool offers "Edit this layout", highlighted in gold, and it opens without an account. Grids are edited by their lines, slanted layouts by their corners and lines, and everything else by moving whole cells. | auto |
 | AC-CUSTOM-02 | Grids: dragging a line resizes the cells on both sides and snaps to halves, thirds and other lines; a cell can be split across or down, reshaped (rectangle, arch, capsule) or removed; no cell gets smaller than the minimum; each photo stays with its cell. | auto |
 | AC-CUSTOM-03 | Slanted layouts: dragging a shared corner or a line moves it for every cell that shares it; canvas corners stay put, corners on an edge slide along it, and no cell folds, leaves the frame or stops being convex. | auto |
 | AC-CUSTOM-04 | Circles, hearts, stars, prints and Polaroids: cells move by dragging, resize by pinching, a handle or Bigger/Smaller, and prints turn; cells that mustn't overlap can't be pushed into each other; a cell can be copied or removed. | auto |
@@ -219,6 +220,7 @@ Behind `VITE_FEATURE_LAYOUT_EDITOR` (needs accounts): on in staging and producti
 | AC-CUSTOM-07 | Layouts save to the account with a name (up to 20, with a clear message when full), come first in the Layouts tool marked "Yours" for their photo count, and can be edited (replacing the saved one) and deleted. The API accepts only valid layouts, only from StoryStitch's own web origins or its native app (whose header a browser can't use to get past this), and only touches the signed-in user's own layouts. | auto |
 | AC-CUSTOM-09 | A saved layout this app version can't read is left out of the Layouts tool, and the user's other saved layouts still appear. | auto |
 | AC-CUSTOM-10 | On iOS, VoiceOver can do without dragging what a finger does to lines and handles: swipe up or down on a line, slanted line, resize handle or turn handle to step it, use the Move up, down, left and right actions on a corner (only the ways it can go) or on the Move photo element over the chosen photo in a free layout, and swipe on the preview to choose a photo. Each step says where it ended up or why it can't go further, and Undo reverses it. | auto |
+| AC-CUSTOM-11 | After Done, anyone can use the edited layout in their collage and export it without an account. Signed-out users are told an account is optional and only keeps the layout for later; if they create one or sign in, they come back to their layout, ready to name and save it. An unsaved layout stays in the Layouts tool while the photos are open, and isn't counted as an export of the layout it started from. | auto |
 | AC-CUSTOM-08 | The layout editor feels right one-handed on a real iPhone and Android phone: lines, corners and photos are easy to grab and drag without precise aim. | manual |
 
 ## Saved collages

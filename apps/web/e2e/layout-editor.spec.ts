@@ -1,7 +1,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { ACCOUNTS_PORT } from "../playwright.config.js";
-import { API, PASSWORD, emailedLink, libraryInput, makePhotos, openApp, submit } from "./helpers.js";
+import { API, PASSWORD, emailedLink, exportImage, libraryInput, makePhotos, openApp, submit } from "./helpers.js";
 
 // The build with accounts and the layout editor switched on (as on staging), with a real API and local Postgres.
 test.use({ baseURL: `http://localhost:${ACCOUNTS_PORT}` });
@@ -63,24 +63,56 @@ const savedLayouts = async (page: Page) =>
   ((await (await page.request.get(`${API}/layouts/mine`)).json()) as { layouts: { name: string; layout: { cells: Record<string, number>[] } }[] })
     .layouts;
 
-test("AC-CUSTOM-01 asks a signed-out user to make an account, then opens the editor once they're in", async ({ page, context }) => {
-  await pickPhotos(page, 3);
-  const edit = page.getByRole("button", { name: "Edit this layout" });
-  await expect(edit).toHaveCSS("background-color", "rgb(255, 194, 75)"); // gold, to stand out
-  await edit.click();
-  const ask = page.getByRole("dialog", { name: "Save your own layouts" });
-  await expect(ask).toBeVisible();
-  await ask.getByRole("button", { name: "Create account" }).click();
-  await expect(page).toHaveURL(/\/sign-up$/);
-  const email = await fillSignUp(page);
+test.describe("without an account", () => {
+  test.skip(process.env.E2E_TARGET !== "app", "apps/web still asks for an account first");
 
-  // They confirm in another tab (their mail app), then come back: the collage and the editor are waiting.
-  const mail = await context.newPage();
-  await mail.goto(await emailedLink(page, email));
-  await mail.close();
-  await page.getByRole("link", { name: "Back to StoryStitch" }).click();
-  await expect(editor(page)).toBeVisible();
-  await expect(editor(page).getByRole("heading", { name: "3 of 3 photos" })).toBeVisible();
+  test("AC-CUSTOM-01 AC-CUSTOM-11 opens, and the edited layout goes in the collage and exports", async ({ page }) => {
+    await pickPhotos(page, 3);
+    const edit = page.getByRole("button", { name: "Edit this layout" });
+    await expect(edit).toHaveCSS("background-color", "rgb(255, 194, 75)"); // gold, to stand out
+    await page.getByRole("radio", { name: "Three stacked", exact: true }).click();
+    await edit.click();
+    const e = editor(page);
+    await expect(e.getByRole("heading", { name: "3 of 3 photos" })).toBeVisible();
+    const line = e.getByRole("separator", { name: "Line between rows" }).first();
+    await drag(page, line, 0, 60);
+    await e.getByRole("button", { name: "Done" }).click();
+    await expect(page.getByText(/no account needed/)).toBeVisible();
+    await page.getByRole("button", { name: "Use this layout" }).click();
+    await expect(e).toHaveCount(0);
+
+    const unsaved = page.getByRole("radio", { name: "Edited layout (yours)" });
+    await expect(unsaved).toHaveAttribute("aria-checked", "true");
+    await page.getByRole("radio", { name: "Three stacked", exact: true }).click();
+    await unsaved.click(); // still there after trying another layout
+    await expect(unsaved).toHaveAttribute("aria-checked", "true");
+
+    const counted: string[] = [];
+    page.on("request", (r) => r.url().endsWith("/exports") && counted.push(r.url()));
+    await exportImage(page);
+    await page.waitForTimeout(300);
+    expect(counted).toEqual([]);
+  });
+
+  test("AC-CUSTOM-11 creating an account comes back to the layout, ready to save", async ({ page, context }) => {
+    await pickPhotos(page, 3);
+    await page.getByRole("button", { name: "Edit this layout" }).click();
+    await editor(page).getByRole("button", { name: "Done" }).click();
+    await page.getByRole("button", { name: "Create account to save" }).click();
+    await expect(page).toHaveURL(/\/sign-up$/);
+    const email = await fillSignUp(page);
+
+    // They confirm in another tab (their mail app), then come back: the collage and the editor are waiting.
+    const mail = await context.newPage();
+    await mail.goto(await emailedLink(page, email));
+    await mail.close();
+    await page.getByRole("link", { name: "Back to StoryStitch" }).click();
+    await expect(editor(page).getByRole("heading", { name: "3 of 3 photos" })).toBeVisible();
+    await page.getByLabel("Name").fill("Kept");
+    await page.getByRole("button", { name: "Save layout" }).click();
+    await expect(editor(page)).toHaveCount(0);
+    expect((await savedLayouts(page)).map((l) => l.name)).toEqual(["Kept"]);
+  });
 });
 
 test("AC-CUSTOM-02 AC-CUSTOM-05 AC-CUSTOM-06 AC-CUSTOM-07 reworks a grid by removing and splitting cells and dragging a line, then saves it", async ({ page }) => {

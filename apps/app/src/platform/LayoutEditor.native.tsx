@@ -1,7 +1,7 @@
-// The layout editor on iOS: a full-screen view for making a layout or changing one, saved to the user's account.
+// The layout editor on iOS: a full-screen view for changing a layout, to use in the collage or save to an account.
 // useLayoutEditor does the work; this draws it with Skia and feeds it touches.
 import { Canvas, Picture, createPicture, type SkImage } from "@shopify/react-native-skia";
-import type { Point, SavedLayout } from "@storystitch/shared";
+import type { Layout, Point, SavedLayout } from "@storystitch/shared";
 import { STORY_CANVAS } from "@storystitch/shared";
 import type { Start, Style } from "@storystitch/client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -11,13 +11,16 @@ import { colors, fontFamily, type as typography } from "../theme";
 import { Button } from "../ui/Button";
 import { useLayoutEditor, type CellMover, type Handle, type Move } from "../useLayoutEditor";
 import type { Photo } from "./photos.native";
+import { navigate } from "./route";
 import { blurredImage, drawDraft, hasBlurredBackground, previewOf } from "./render.native";
 
 interface Props {
   photos: Photo[];
   style: Style;
   start: Start;
+  signedIn: boolean;
   onCancel: () => void;
+  onUse: (layout: Layout, order: number[]) => void;
   onSaved: (saved: SavedLayout, order: number[]) => void;
 }
 
@@ -104,10 +107,10 @@ function MoveCell({ mover }: { mover: CellMover }) {
   return <View aria-label={mover.label} pointerEvents="none" style={[styles.handle, mover.box]} {...voiceOver} />;
 }
 
-export default function LayoutEditor({ photos, style, start, onCancel, onSaved }: Props) {
+export default function LayoutEditor({ photos, style, start, signedIn, onCancel, onUse, onSaved }: Props) {
   const insets = useSafeAreaInsets();
   const origin = useRef<Point>({ x: 0, y: 0 });
-  const editor = useLayoutEditor({ photos, style, start, onSaved, frameOrigin: () => origin.current });
+  const editor = useLayoutEditor({ photos, style, start, onUse, onSaved, frameOrigin: () => origin.current });
   const { layout, order, crops, selected, problems, view, fit, handles, tools, finishDrag, countText, saving, setSaving } = editor;
   const [fingerCount, setFingerCount] = useState(0);
 
@@ -198,28 +201,46 @@ export default function LayoutEditor({ photos, style, start, onCancel, onSaved }
       {saving && (
         // The editor starts below the status bar, so the keyboard needs that much more room.
         <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={insets.top} style={styles.backdrop}>
-          <View aria-label="Save layout" style={styles.sheet}>
-            <View style={{ gap: 4 }}>
-              <Text style={typography.hint}>Name</Text>
-              <TextInput
-                aria-label="Name"
-                value={saving.name}
-                maxLength={40}
-                autoFocus
-                onChangeText={(name) => setSaving({ ...saving, name, error: "" })}
-                style={styles.input}
-              />
+          {signedIn ? (
+            <View aria-label="Save layout" style={styles.sheet}>
+              <View style={{ gap: 4 }}>
+                <Text style={typography.hint}>Name</Text>
+                <TextInput
+                  aria-label="Name"
+                  value={saving.name}
+                  maxLength={40}
+                  autoFocus
+                  onChangeText={(name) => setSaving({ ...saving, name, error: "" })}
+                  style={styles.input}
+                />
+              </View>
+              {saving.error !== "" && (
+                <Text role="alert" style={styles.notice}>
+                  {saving.error}
+                </Text>
+              )}
+              <View style={styles.actions}>
+                <Button label={saving.busy ? "Saving…" : editor.saveLabel} primary disabled={saving.busy} onPress={() => void editor.save()} />
+                <Button label="Use without saving" onPress={editor.use} />
+                <Button label="Keep editing" onPress={() => setSaving(null)} />
+              </View>
             </View>
-            {saving.error !== "" && (
-              <Text role="alert" style={styles.notice}>
-                {saving.error}
+          ) : (
+            <View aria-label="Use your layout" style={styles.sheet}>
+              <Text role="heading" aria-level={2} style={typography.title}>
+                Your layout is ready
               </Text>
-            )}
-            <View style={styles.actions}>
-              <Button label="Keep editing" onPress={() => setSaving(null)} />
-              <Button label={saving.busy ? "Saving…" : editor.saveLabel} primary disabled={saving.busy} onPress={() => void editor.save()} />
+              <Text style={typography.body}>
+                Use it in your collage now, no account needed. To keep it for your next collage, you can save it with a free account.
+              </Text>
+              <View style={styles.actions}>
+                <Button label="Use this layout" primary onPress={editor.use} />
+                <Button label="Create account to save" onPress={() => navigate("/sign-up")} />
+                <Button label="Sign in" onPress={() => navigate("/account")} />
+                <Button label="Keep editing" onPress={() => setSaving(null)} />
+              </View>
             </View>
-          </View>
+          )}
         </KeyboardAvoidingView>
       )}
     </View>
