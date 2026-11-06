@@ -183,6 +183,7 @@ Maestro reads the accessibility tree, so `ios` rows prove what a person can reac
 | AC-IOS-06 | Share opens the iOS share sheet with the export as a JPEG, or a PNG when that's the chosen format. It stays available while the image is being made: tapped then, the sheet opens as soon as the image is ready. | ios |
 | AC-IOS-07 | Start over returns to the pick screen. | ios |
 | AC-IOS-15 | Without an account, the layout editor opens, and Done offers to use the layout in the collage without signing in. | ios |
+| AC-IOS-16 | On a real iPhone with the app installed, tapping the link in a real confirmation email opens the app, not Safari: the user is signed in and back where they were, with a message saying so, and a save they'd started is ready to finish. Tapping a real password reset link opens the app's new password form. | manual |
 | AC-IOS-08 | Save Image in the share sheet adds a 1080×1920 image to Photos without asking for access to the whole library. | manual |
 | AC-IOS-09 | With an account signed in on a simulator, `apps/app/maestro/local` passes: every layout editor tool for grids and free cells works and can be undone, and VoiceOver can't reach the screen behind the editor. Lines and handles report where they are. | manual |
 | AC-IOS-10 | On a real iPhone, a double-tap zooms a photo in and back out, and a flicked photo keeps gliding, and Fit undoes a full zoom on a Polaroid. The simulator's tools can't tap fast enough to count as a double-tap, and Maestro's tap on Fit has no effect there though a direct tap works. | manual |
@@ -203,6 +204,7 @@ Maestro reads the accessibility tree, so `ios` rows prove what a person can reac
 | AC-AUTH-08 | Deleting an account needs the account's password and removes the user and their sessions, saved layouts (and, once saving ships, their saved collages and files). | auto |
 | AC-AUTH-10 | On staging, a real verification email and password-reset email arrive, and sign-up and sign-in work on iPhone Safari and Android Chrome. | manual |
 | AC-AUTH-11 | When StoryStitch can't be reached, account forms say so and can be tried again, instead of waiting forever. | auto |
+| AC-AUTH-13 | The links in confirmation and password reset emails are Universal Links on the API's address: iOS opens the app for them, and they keep working in a browser. | auto |
 | AC-AUTH-12 | The Expo web app's /bot-check page holds only the bot check and passes its token to the iOS app that shows it. | auto |
 
 ## Layout editor

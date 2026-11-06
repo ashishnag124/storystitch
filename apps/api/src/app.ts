@@ -21,6 +21,21 @@ interface AppOptions {
   testEmails?: Email[];
 }
 
+/**
+ * Tells iOS which addresses open the app (Universal Links): the links in confirmation and password reset emails.
+ * The same links still work in a browser. Which domain belongs to which app is set by `apiHost` in apps/app/app.config.ts.
+ */
+const APP_SITE_ASSOCIATION = {
+  applinks: {
+    details: [
+      {
+        appIDs: ["R4Y4AMD49G.com.ashishnag.storystitch", "R4Y4AMD49G.com.ashishnag.storystitch.staging"],
+        components: [{ "/": "/api/auth/verify-email" }, { "/": "/api/auth/reset-password/*" }],
+      },
+    ],
+  },
+};
+
 /** The HTTP API, separate from the server so tests can call it directly with `app.request()`. */
 export function createApp({ pool, auth, corsOrigins, version, minimumIosVersion, usageIngestEnabled = false, testEmails }: AppOptions) {
   const app = new Hono();
@@ -41,6 +56,8 @@ export function createApp({ pool, auth, corsOrigins, version, minimumIosVersion,
 
   // Public, because an app has to ask this before it knows whether it can talk to the rest of the API.
   app.get("/app/minimum-version", (c) => c.json<MinimumVersion>({ ios: minimumIosVersion }));
+
+  app.get("/.well-known/apple-app-site-association", (c) => c.json(APP_SITE_ASSOCIATION));
 
   // Popular layouts: the web app reports each export's layout (nothing else) and reads the totals to break ranking ties.
   const layoutIds = new Set(layouts.map((l) => l.id));

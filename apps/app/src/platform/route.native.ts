@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-// Stage 3 adds deep links. Until then the app keeps its own location in memory, with the same shape as the web router.
+// The app keeps its own location in memory, with the same shape as the web router. emailLinks.native.ts handles links in.
 export const ACCOUNT_PATHS = ["/account", "/sign-up", "/reset-password"] as const;
 
 let current = "/";

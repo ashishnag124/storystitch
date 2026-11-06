@@ -292,7 +292,8 @@ export default function Accounts() {
     <Screen title={TITLES[path]}>
       {path === "/account" && <AccountHome params={searchParams} />}
       {path === "/sign-up" && <SignUp />}
-      {path === "/reset-password" && <ResetPassword token={searchParams.get("token")} error={searchParams.get("error")} />}
+      {/* The key starts over for a new link: asking for one leaves the form saying it's done. */}
+      {path === "/reset-password" && <ResetPassword key={searchParams.get("token")} token={searchParams.get("token")} error={searchParams.get("error")} />}
     </Screen>
   );
 }
