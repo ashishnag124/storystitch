@@ -12,7 +12,7 @@ function open(id: string) {
   const layout = layouts.find((l) => l.id === id)!;
   const start: Start = { layout, order: layout.cells.map((_, i) => i) };
   const photos = layout.cells.map((_, i) => ({ name: `${i}.jpg`, width: 1200, height: 1600, detections: [] }));
-  const { result } = renderHook(() => useLayoutEditor({ photos, style: DEFAULT_STYLE, start, onSaved: vi.fn(), frameOrigin: () => ({ x: 0, y: 0 }) }));
+  const { result } = renderHook(() => useLayoutEditor({ photos, style: DEFAULT_STYLE, start, onUse: vi.fn(), onSaved: vi.fn(), frameOrigin: () => ({ x: 0, y: 0 }) }));
   act(() => result.current.fit(360, 640));
   return result;
 }

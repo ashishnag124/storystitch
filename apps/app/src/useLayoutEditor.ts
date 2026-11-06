@@ -30,7 +30,7 @@ import {
   type Edited,
   type Grid,
 } from "@storystitch/layout-engine";
-import { STORY_CANVAS, cellBounds, editedLayoutProblems, hitTest, type Point, type SavedLayout } from "@storystitch/shared";
+import { STORY_CANVAS, cellBounds, editedLayoutProblems, hitTest, type Layout, type Point, type SavedLayout } from "@storystitch/shared";
 import { SaveError, autoCrop, explain, styleScale, withOrigin, type CropSource, type Draft, type Start, type Style } from "@storystitch/client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { saveLayout } from "./api";
@@ -115,12 +115,13 @@ interface Options {
   photos: CropSource[];
   style: Style;
   start: Start;
+  onUse: (layout: Layout, order: number[]) => void;
   onSaved: (saved: SavedLayout, order: number[]) => void;
   /** Where the preview's top left corner is on screen. */
   frameOrigin: () => Point;
 }
 
-export function useLayoutEditor({ photos, style, start, onSaved, frameOrigin }: Options) {
+export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOrigin }: Options) {
   const mode = useMemo(() => editModeOf(start.layout), [start.layout]);
   const [draft, setDraft] = useState<Draft>({ layout: start.layout, order: start.order });
   const [history, setHistory] = useState<Draft[]>([]);
@@ -470,7 +471,7 @@ export function useLayoutEditor({ photos, style, start, onSaved, frameOrigin }: 
     );
   }
 
-  // --- Done: check the layout, then name it and save it.
+  // --- Done: check the layout, then use it as it is, or name it and save it.
 
   const cells = layout.cells.length;
   const missing = photos.length - cells;
@@ -526,6 +527,7 @@ export function useLayoutEditor({ photos, style, start, onSaved, frameOrigin }: 
     canUndo: history.length > 0,
     undo,
     done,
+    use: () => onUse(layout, order),
     countText,
     status: message || countHint || problems[0]?.text || HINTS[mode](sel !== null),
     saving,

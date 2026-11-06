@@ -1,0 +1,14 @@
+appId: com.ashishnag.storystitch.staging
+name: AC-IOS-15 Editing a layout needs no account
+---
+- runFlow: ../shared/pick-photos.yaml
+- tapOn: Edit this layout
+- extendedWaitUntil:
+    visible: "4 of 4 photos"
+    timeout: 8000
+- tapOn: Done
+- assertVisible: Your layout is ready
+- tapOn: Use this layout
+- extendedWaitUntil:
+    visible: "Edited layout (yours)"
+    timeout: 8000
