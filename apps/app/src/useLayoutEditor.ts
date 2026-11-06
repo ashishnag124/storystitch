@@ -3,6 +3,7 @@
 // layout (editModeOf): lines in grids, shared corners and lines in slanted layouts, and whole cells otherwise.
 import {
   GRID_SHAPES,
+  MOVE_STEPS,
   bringToFront,
   canRotate,
   cornerLines,
@@ -98,6 +99,9 @@ export interface Handle {
   /** Where it is now, for VoiceOver. */
   value: string;
 }
+
+/** How VoiceOver moves the chosen photo, which a finger drags on the preview. */
+export type CellMover = Pick<Handle, "label" | "box" | "moves" | "value">;
 
 /** A button under the preview. */
 export interface Tool {
@@ -295,6 +299,7 @@ export function useLayoutEditor({ photos, style, start, onSaved, frameOrigin }: 
 
   const screen = (p: Point) => ({ x: toCanvas(p).x * k, y: toCanvas(p).y * k });
   const square = (x: number, y: number) => ({ left: x - HANDLE_PX / 2, top: y - HANDLE_PX / 2, width: HANDLE_PX, height: HANDLE_PX });
+  const percent = (p: Point) => ({ left: Math.round((p.x / W) * 100), top: Math.round((p.y / H) * 100) });
   const handles: Handle[] = [];
 
   for (const d of dividers) {
@@ -329,7 +334,6 @@ export function useLayoutEditor({ photos, style, start, onSaved, frameOrigin }: 
   if (corners) {
     const keep = (next: Corners | null) => next && commit({ ...draft, layout: cornersLayout(layout, next) });
     const keepOrRefuse = (next: Corners | null) => (next ? void keep(next) : refuse(NO_ROOM));
-    const percent = (p: Point) => ({ left: Math.round((p.x / W) * 100), top: Math.round((p.y / H) * 100) });
     lines.forEach((line, li) => {
       const [a, b] = [corners.points[line.members[0]!]!, corners.points[line.members.at(-1)!]!];
       const middle = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
@@ -370,9 +374,18 @@ export function useLayoutEditor({ photos, style, start, onSaved, frameOrigin }: 
   }
 
   const selBox = sel !== null && mode === "free" ? cellBounds(layout.cells[sel]!) : null;
+  let cellMover: CellMover | null = null;
   if (selBox && sel !== null) {
     const center = { x: selBox.x + selBox.w / 2, y: selBox.y + selBox.h / 2 };
     const corner = screen({ x: selBox.x + selBox.w, y: selBox.y + selBox.h });
+    const start = screen(selBox);
+    const { left, top } = percent(selBox);
+    cellMover = {
+      label: `Move photo ${sel + 1}`,
+      box: { left: start.x, top: start.y, width: corner.x - start.x, height: corner.y - start.y },
+      moves: MOVE_STEPS.map(({ name, by }) => ({ name, run: () => stepCell(by) })),
+      value: `${left}% from the left, ${top}% from the top`,
+    };
     handles.push({
       key: "resize",
       kind: "resize",
@@ -419,6 +432,15 @@ export function useLayoutEditor({ photos, style, start, onSaved, frameOrigin }: 
     const next = rotateCell(layout, sel, selCell.rotate + deg);
     if (!next) return refuse("There's no room to turn it further.");
     commit({ ...draft, layout: next });
+  };
+
+  /** Moves the chosen photo as a drag would, which brings it to the top where photos can overlap. */
+  const stepCell = (by: Point) => {
+    if (sel === null) return;
+    const base = layout.allowOverlap ? bringToFront(layout, sel) : layout;
+    const moved = moveCell(base, sel, (by.x * VOICEOVER_STEP_PX) / W, (by.y * VOICEOVER_STEP_PX) / H);
+    if (!moved) return refuse(NO_ROOM);
+    commit({ ...draft, layout: moved });
   };
 
   /** VoiceOver can't tap a photo, so it steps through them. */
@@ -494,6 +516,7 @@ export function useLayoutEditor({ photos, style, start, onSaved, frameOrigin }: 
     view,
     fit,
     handles,
+    cellMover,
     tools,
     pressPreview,
     movePreview,

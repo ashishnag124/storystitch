@@ -9,7 +9,7 @@ import { AccessibilityInfo, KeyboardAvoidingView, PanResponder, StyleSheet, Text
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, fontFamily, type as typography } from "../theme";
 import { Button } from "../ui/Button";
-import { useLayoutEditor, type Handle, type Move } from "../useLayoutEditor";
+import { useLayoutEditor, type CellMover, type Handle, type Move } from "../useLayoutEditor";
 import type { Photo } from "./photos.native";
 import { blurredImage, drawDraft, hasBlurredBackground, previewOf } from "./render.native";
 
@@ -111,6 +111,15 @@ function LineOrHandle({ handle, onGrab, onMove, onEnd }: HandleProps) {
   );
 }
 
+/**
+ * VoiceOver's way to move the chosen photo. It can't share the preview: there, swiping up and down chooses a photo,
+ * and on an element with named actions the same swipes step through those. Fingers pass through to the preview.
+ */
+function MoveCell({ mover }: { mover: CellMover }) {
+  const voiceOver = useVoiceOverMoves(mover.moves, mover.value);
+  return <View aria-label={mover.label} pointerEvents="none" style={[styles.handle, mover.box]} {...voiceOver} />;
+}
+
 export default function LayoutEditor({ photos, style, start, onCancel, onSaved }: Props) {
   const insets = useSafeAreaInsets();
   const origin = useRef<Point>({ x: 0, y: 0 });
@@ -189,6 +198,7 @@ export default function LayoutEditor({ photos, style, start, onCancel, onSaved }
           <View pointerEvents="none" style={[styles.band, styles.bandBottom, { height: "18%" }]}>
             <BandStripes />
           </View>
+          {editor.cellMover && <MoveCell mover={editor.cellMover} />}
           {handles.map((h) => (
             <LineOrHandle key={h.key} handle={h} onGrab={grabHandle} onMove={editor.moveHandle} onEnd={finishDrag} />
           ))}

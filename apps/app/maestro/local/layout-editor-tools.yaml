@@ -43,6 +43,9 @@ name: Layout editor tools
     point: "35%,35%"
 - assertVisible: ".*% of the width"
 - assertVisible: ".* degrees"
+# VoiceOver finds the chosen photo's Move actions apart from the preview, and hears where it is.
+- assertVisible: "Move photo .*"
+- assertVisible: ".*% from the left, .*% from the top"
 - tapOn: Smaller
 - tapOn: Bigger
 - tapOn: Turn left
