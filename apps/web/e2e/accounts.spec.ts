@@ -122,6 +122,19 @@ test("AC-PRIV-03 the privacy and support pages are public, and the Account scree
   await expect(page.getByRole("heading", { level: 1, name: "StoryStitch support" })).toBeVisible();
 });
 
+test("AC-AUTH-12 the bot check page holds only the check and passes its token to the iOS app", async ({ page }) => {
+  test.skip(process.env.E2E_TARGET !== "app", "apps/web has no /bot-check page");
+  // Stands in for the iOS app's WebView.
+  await page.addInitScript(() => {
+    const sent: string[] = [];
+    Object.assign(window, { sent, ReactNativeWebView: { postMessage: (message: string) => sent.push(message) } });
+  });
+  await page.goto("/bot-check");
+  await expect.poll(() => page.evaluate(() => (window as unknown as { sent: string[] }).sent[0] ?? ""), { timeout: 20_000 }).not.toBe("");
+  await expect(page.getByRole("heading")).toHaveCount(0);
+  await expect(page.getByRole("button")).toHaveCount(0);
+});
+
 test("AC-AUTH-01 making and exporting a collage never asks you to sign in", async ({ page }) => {
   const authCalls: string[] = [];
   page.on("request", (r) => r.url().startsWith(`${API}/api/auth`) && authCalls.push(r.url()));
