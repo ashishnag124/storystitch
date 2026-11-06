@@ -22,6 +22,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ios: {
       ...config.ios,
       bundleIdentifier,
+      // The app only uses HTTPS and Apple's keychain. This stops App Store Connect asking on every build.
+      config: { ...config.ios?.config, usesNonExemptEncryption: false },
       infoPlist: {
         ...config.ios?.infoPlist,
         // Without this, Save Image in the share sheet asks for the whole library.

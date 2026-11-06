@@ -205,21 +205,21 @@ the verification email arrives.
 `.github/workflows/mobile.yml` does nothing until step 8. No iOS build has run yet, so expect to fix things on the
 first one. Claude can't do these: they need your Apple and Expo accounts. Run commands from `apps/app`.
 
-- [ ] 1. **Apple Developer Program**: join at developer.apple.com/programs. Approval can take a few days.
+- [x] 1. **Apple Developer Program**: join at developer.apple.com/programs. Approval can take a few days.
 - [x] 2. **Expo account**: sign up at expo.dev, then run `npx eas-cli@27.2.0 login`.
 - [x] 3. **EAS project**: on expo.dev, create a project with the slug `storystitch`. Don't use `eas init`: it can't edit
   `app.config.ts`. Copy the project ID into `EAS_PROJECT_ID` in `apps/app/app.config.ts`.
-- [ ] 4. **Staging app in App Store Connect**: add an app with the bundle ID `com.ashishnag.storystitch.staging`, named
+- [x] 4. **Staging app in App Store Connect**: first register `com.ashishnag.storystitch.staging` under Certificates,
+  Identifiers & Profiles → Identifiers, or App Store Connect won't list it. Then add an app with that bundle ID, named
   StoryStitch Staging. Copy its numeric Apple ID into `ascAppId` in `apps/app/eas.json`. Merge steps 3 and 4 as a PR.
-- [ ] 5. **Turnstile site key for iOS**: the same public key as `TURNSTILE_SITE_KEY`, on the `preview` environment:
+- [x] 5. **Turnstile site key for iOS**: the same public key as `TURNSTILE_SITE_KEY`, on the `preview` environment:
   ```bash
   npx eas-cli@27.2.0 env:set preview --name EXPO_PUBLIC_TURNSTILE_SITE_KEY --value YOUR_SITE_KEY --visibility plaintext --scope project
   ```
 - [ ] 6. **First build and upload, by hand**: CI can't answer Apple's prompts, so run the `testflight` profile once
   with `npx eas-cli@27.2.0 build` and `--platform ios --profile testflight --auto-submit`, signing in to Apple when
-  asked. Accept when it offers to create the signing credentials and the App Store Connect API key. Answer the export
-  compliance question for the build in App Store Connect.
-- [ ] 7. **`EXPO_TOKEN`**: expo.dev → Account settings → Access tokens → create one, then `gh secret set EXPO_TOKEN` and
+  asked. Accept when it offers to create the signing credentials and the App Store Connect API key.
+- [x] 7. **`EXPO_TOKEN`**: expo.dev → Account settings → Access tokens → create one, then `gh secret set EXPO_TOKEN` and
   paste it.
 - [ ] 8. **Turn it on**, last of all: `gh variable set MOBILE_DELIVERY_ENABLED --body true`. The next merge to `main`
   that passes CI runs it. To turn it off, delete the variable.
@@ -235,15 +235,14 @@ No production build has run yet, so expect to fix things on the first one. Run c
 - [ ] 1. **Move production web to the Expo app first**, as in "Move production web to the Expo app" below. iOS sign-in
   loads the bot check from `/bot-check` on the production site, and `apps/web` doesn't have that page. Until this ships,
   sign-in fails in the production iOS app.
-- [ ] 2. **Production app in App Store Connect**: add an app with the bundle ID `com.ashishnag.storystitch`, named
-  StoryStitch. Copy its numeric Apple ID into `submit.production.ios.ascAppId` in `apps/app/eas.json`, and merge that.
+- [ ] 2. **Production app in App Store Connect**: first register `com.ashishnag.storystitch` under Identifiers, as for
+  staging. Then add an app with that bundle ID, named StoryStitch. Copy its numeric Apple ID into `submit.production.ios.ascAppId` in `apps/app/eas.json`, and merge that.
 - [ ] 3. **Turnstile site key for production builds**: the same public key, on the `production` environment:
   ```bash
   npx eas-cli@27.2.0 env:set production --name EXPO_PUBLIC_TURNSTILE_SITE_KEY --value YOUR_SITE_KEY --visibility plaintext --scope project
   ```
 - [ ] 4. **First production build, by hand**: run the `production` profile once with `npx eas-cli@27.2.0 build` and
-  `--platform ios --profile production --auto-submit`, signing in to Apple when asked. Answer the export compliance
-  question for the build in App Store Connect.
+  `--platform ios --profile production --auto-submit`, signing in to Apple when asked.
 - [ ] 5. **Turn it on**: `gh variable set MOBILE_PRODUCTION_ENABLED --body true`. To turn it off, delete the variable.
 - [ ] 6. **Each later build**: after `/release`, run `gh workflow run mobile-release.yml -f version=vX.Y.Z`.
 
