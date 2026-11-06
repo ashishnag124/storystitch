@@ -16,7 +16,7 @@ import { Toast, type ToastMessage } from "./ui/Toast";
 import { track } from "./usage";
 
 const MAX_PHOTOS = 8;
-const PRIVACY = "Your photos stay on this device. Nothing is uploaded.";
+const PRIVACY = "Your photos stay on this device. They're never uploaded.";
 
 export default function App() {
   const [photos, setPhotos] = useState<Photo[]>([]);
