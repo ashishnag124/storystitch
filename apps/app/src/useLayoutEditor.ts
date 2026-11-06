@@ -30,7 +30,7 @@ import {
   type Edited,
   type Grid,
 } from "@storystitch/layout-engine";
-import { STORY_CANVAS, cellBounds, hitTest, layoutProblems, type Point, type SavedLayout } from "@storystitch/shared";
+import { STORY_CANVAS, cellBounds, editedLayoutProblems, hitTest, type Point, type SavedLayout } from "@storystitch/shared";
 import { SaveError, autoCrop, explain, styleScale, withOrigin, type CropSource, type Draft, type Start, type Style } from "@storystitch/client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { saveLayout } from "./api";
@@ -154,10 +154,10 @@ export function useLayoutEditor({ photos, style, start, onSaved, frameOrigin }: 
     [layout, order, style, photos],
   );
 
-  // Check for cells under Instagram's buttons, overlaps and the like once the layout stops changing.
+  // Check for overlaps and the like once the layout stops changing.
   useEffect(() => {
     if (dragging) return;
-    const timer = setTimeout(() => setProblems(explain(layoutProblems(layout, 20))), CHECK_DELAY_MS);
+    const timer = setTimeout(() => setProblems(explain(editedLayoutProblems(layout, 20))), CHECK_DELAY_MS);
     return () => clearTimeout(timer);
   }, [layout, dragging]);
 
@@ -486,7 +486,7 @@ export function useLayoutEditor({ photos, style, start, onSaved, frameOrigin }: 
 
   function done() {
     if (missing) return setMessage(countHint);
-    const found = explain(layoutProblems(layout));
+    const found = explain(editedLayoutProblems(layout));
     setProblems(found);
     if (found.length) return setMessage(found[0]!.text);
     setSaving({ name: start.saved?.name ?? `My ${start.layout.name.toLowerCase()}`.slice(0, 40), busy: false, error: "" });

@@ -159,10 +159,6 @@ export default function LayoutEditor({ photos, style, start, onCancel, onSaved }
             onPointerCancel={onCanvasUp}
             onContextMenu={(e) => e.preventDefault()}
           />
-          <div className="builder-band top" style={{ height: `14%` }} aria-hidden="true">
-            <span>Instagram's buttons</span>
-          </div>
-          <div className="builder-band bottom" style={{ height: `18%` }} aria-hidden="true" />
 
           {handles.map((h) =>
             h.range ? (
