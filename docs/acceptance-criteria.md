@@ -160,7 +160,7 @@ describe the app exactly. When saving ships, AC-SAVE-02 and AC-SAVE-07 replace A
 | ID | Criterion | Check |
 |---|---|---|
 | AC-API-01 | Browsers may call the API only from StoryStitch's own web origins (CORS), with credentials; every other origin gets no access. | auto |
-| AC-API-02 | Database migrations are backward compatible: the previous API version still works against the new schema. | planned |
+| AC-API-02 | Database migrations are backward compatible: the previous API version still works against the new schema. A migration that isn't purely additive fails until each risky statement is marked as reviewed. | auto |
 | AC-API-03 | With the accounts flag off, the app behaves exactly as v1: no account features and no requests to the API. | auto |
 | AC-API-04 | `GET /health` reports the deployed version and whether the database is up, with status 503 when it isn't. | auto |
 | AC-API-05 | Account requests that change data are refused unless they come from StoryStitch's own web origins or its native app, which names its URL scheme (cross-site request forgery). Emailed links return only to those two, and a browser on another site can't pass as the app. | auto |

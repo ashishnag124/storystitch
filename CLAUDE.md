@@ -19,7 +19,7 @@ Product requirements: `docs/product-brief.md`. Acceptance criteria (what QA chec
 | API request/response shapes | `packages/shared/src/api.ts` (zod) first, then the API and its callers |
 | API routes, database access | `apps/api/src/` (Hono); tables in `apps/api/src/db/schema.ts` |
 | Accounts (sign-in, sessions, emails) | API: `apps/api/src/auth.ts` (Better Auth), `src/email.ts`; web: `apps/web/src/account/` (loaded only when `VITE_FEATURE_ACCOUNTS=true`) |
-| Database changes | edit `schema.ts`, then `pnpm db:generate`; commit the SQL in `apps/api/drizzle/`. Must keep working with the previous API version and every supported app version (`MIN_IOS_APP_VERSION` and up; iOS users stay on old versions for months): add first, remove in a later release |
+| Database changes | edit `schema.ts`, then `pnpm db:generate`; commit the SQL in `apps/api/drizzle/`. Must keep working with the previous API version and every supported app version (`MIN_IOS_APP_VERSION` and up; iOS users stay on old versions for months): add first, remove in a later release. The `AC-API-02` test allows only new tables, indexes and optional columns. To go further, run the last tagged API against the new schema, then put `-- reviewed: <what you checked>` above the statement |
 
 A request that needs an app or service not in `project.json` (e.g. "add an iOS app", "send emails", "add a background job") → stop and propose `/add-app` or a plan. Don't bolt it on ad hoc.
 
