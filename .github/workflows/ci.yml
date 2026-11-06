@@ -54,7 +54,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @storystitch/web exec playwright install --with-deps chromium webkit
       # Lint, typecheck, unit + end-to-end tests, and every criterion in docs/acceptance-criteria.md. Staging runs the
-      # Expo app, so that's what's graded here. release.yml grades apps/web until production moves too.
+      # Expo app, so that's what's graded here. release.yml grades whichever app production serves.
       - run: pnpm qa --target=app
       # The Expo app's iOS bundle: shows it still builds, long before there's an iOS app to run it in.
       - run: pnpm --filter @storystitch/app run build:ios
