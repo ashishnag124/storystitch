@@ -44,16 +44,16 @@ export function Field({ label, type: kind, value, onChange }: FieldProps) {
   );
 }
 
-export function SubmitButton({ label, disabled }: { label: string; disabled?: boolean; danger?: boolean }) {
+export function SubmitButton({ label, disabled, danger }: { label: string; disabled?: boolean; danger?: boolean }) {
   const submit = use(Submit);
-  return <Button label={label} primary disabled={disabled} onPress={submit} />;
+  return <Button label={label} primary danger={danger} disabled={disabled} onPress={submit} />;
 }
 
 export function Disclosure({ summary, children }: { summary: string; children: ReactNode }) {
   const [open, setOpen] = useState(false);
   return (
     <View style={{ gap: 12 }}>
-      <Button label={summary} onPress={() => setOpen(!open)} />
+      <Button label={summary} quiet danger onPress={() => setOpen(!open)} />
       {open && children}
     </View>
   );

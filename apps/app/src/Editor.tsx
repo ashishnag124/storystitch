@@ -225,7 +225,7 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
         <Text role="heading" aria-level={1} style={styles.hidden}>
           StoryStitch editor
         </Text>
-        <Button label="Start over" trackAs="start_over" onPress={onStartOver} />
+        <Button label="Start over" quiet trackAs="start_over" onPress={onStartOver} />
         <View style={styles.barActions}>
           <AccountLink />
           <Button
@@ -287,17 +287,22 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
             />
             {LAYOUT_EDITOR_ENABLED && (
               <View style={styles.layoutActions}>
-                <Button label="Edit this layout" primary trackAs="edit_layout" onPress={openEditor} />
-                {mineIds.has(scene.layout.id) &&
-                  (confirmDelete ? (
-                    <>
-                      <Text style={typography.body}>Delete {scene.layout.name}?</Text>
-                      <Button label="Delete" onPress={() => void deleteCurrent()} />
-                      <Button label="Keep" onPress={() => setConfirmDelete(false)} />
-                    </>
-                  ) : (
-                    <Button label="Delete" onPress={() => setConfirmDelete(true)} />
-                  ))}
+                {confirmDelete ? (
+                  <>
+                    <Text numberOfLines={1} style={[typography.body, styles.layoutAction]}>
+                      Delete {scene.layout.name}?
+                    </Text>
+                    <Button label="Keep" quiet onPress={() => setConfirmDelete(false)} />
+                    <Button label="Delete" primary danger onPress={() => void deleteCurrent()} />
+                  </>
+                ) : (
+                  <>
+                    <View style={styles.layoutAction}>
+                      <Button label="Edit this layout" primary trackAs="edit_layout" onPress={openEditor} />
+                    </View>
+                    {mineIds.has(scene.layout.id) && <Button label="Delete" quiet danger onPress={() => setConfirmDelete(true)} />}
+                  </>
+                )}
               </View>
             )}
           </View>
@@ -365,7 +370,8 @@ const styles = StyleSheet.create({
   barActions: { flexDirection: "row", gap: 8 },
   panelActions: { height: "auto", minHeight: 132, paddingVertical: 8 },
   layoutsTool: { gap: 6 },
-  layoutActions: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "center", gap: 8 },
+  layoutActions: { flexDirection: "row", alignItems: "center", gap: 8 },
+  layoutAction: { flex: 1 },
   backdrop: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0, zIndex: 20, justifyContent: "flex-end", backgroundColor: "rgba(0, 0, 0, 0.5)" },
   sheet: { gap: 12, padding: 20, borderTopLeftRadius: 20, borderTopRightRadius: 20, backgroundColor: colors.surface },
   sheetActions: { flexDirection: "row", flexWrap: "wrap", gap: 8 },

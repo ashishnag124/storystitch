@@ -205,6 +205,68 @@ test("AC-CUSTOM-04 AC-CUSTOM-07 moves and resizes a circle, then edits and delet
   expect(await savedLayouts(page)).toHaveLength(0);
 });
 
+/** A primary, a secondary at the same full width below it, and quiet actions in one row below that. */
+async function expectActions(page: Page, primary: string, secondary: string, quiet: string[]) {
+  const box = async (name: string) => (await page.getByRole("button", { name, exact: true }).boundingBox())!;
+  const [first, second] = [await box(primary), await box(secondary)];
+  expect(first.width).toBeGreaterThan(300);
+  expect(second).toMatchObject({ x: first.x, width: first.width });
+  expect(second.y).toBeGreaterThan(first.y);
+  await expect(page.getByRole("button", { name: primary, exact: true })).toHaveCSS("background-color", "rgb(255, 194, 75)");
+  const row = (await box(quiet[0]!)).y;
+  expect(row).toBeGreaterThan(second.y);
+  for (const name of quiet) {
+    const { y, height } = await box(name);
+    expect(y).toBe(row);
+    expect(height).toBeGreaterThanOrEqual(44);
+    await expect(page.getByRole("button", { name, exact: true }).getByText(name)).toHaveCSS("font-size", "14px");
+  }
+}
+
+test("AC-MOBILE-05 grouped actions keep to one hierarchy at phone width", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await pickPhotos(page, 3);
+  await page.getByRole("radio", { name: "Three stacked", exact: true }).click();
+  await page.getByRole("button", { name: "Edit this layout" }).click();
+  const e = editor(page);
+  await tapAt(page, 0.5, 0.2);
+  // Tools of equal rank: even rows of equal widths.
+  const tools = await Promise.all(["Split across", "Split down", "Shape", "Remove"].map(async (name) => (await e.getByRole("button", { name }).boundingBox())!));
+  expect(new Set(tools.map((t) => t.width)).size).toBe(1);
+  expect(tools[1]!.y).toBe(tools[0]!.y);
+  expect(tools[3]!.y).toBe(tools[2]!.y);
+
+  await e.getByRole("button", { name: "Done" }).click();
+  await expectActions(page, "Use this layout", "Create account to save", ["Sign in", "Keep editing"]);
+
+  await signedIn(page);
+  await pickPhotos(page, 3);
+  await page.getByRole("radio", { name: "Three stacked", exact: true }).click();
+  await page.getByRole("button", { name: "Edit this layout" }).click();
+  await e.getByRole("button", { name: "Done" }).click();
+  await expectActions(page, "Save layout", "Use without saving", ["Keep editing"]);
+  // The longest name allowed, saved with Enter: there's no submit button in the form to do it.
+  const name = "A layout name that takes up forty places";
+  await page.getByLabel("Name").fill(name);
+  await page.getByLabel("Name").press("Enter");
+  await expect(e).toHaveCount(0);
+
+  // Delete is quiet until it's asked to confirm, then filled, and all of that stays on one line.
+  const remove = page.getByRole("button", { name: "Delete", exact: true });
+  await expect(remove.getByText("Delete")).toHaveCSS("color", "rgb(255, 143, 143)");
+  await remove.click();
+  await expect(remove).toHaveCSS("background-color", "rgb(255, 143, 143)");
+  const line = async (l: Locator) => {
+    const { y, height } = (await l.boundingBox())!;
+    return y + height / 2;
+  };
+  const middle = await line(remove);
+  expect(await line(page.getByRole("button", { name: "Keep", exact: true }))).toBe(middle);
+  const question = page.getByText(`Delete ${name}?`);
+  expect(await line(question)).toBe(middle);
+  expect((await question.boundingBox())!.height).toBeLessThan(30);
+});
+
 test("AC-CUSTOM-05 fills the screen and keeps every handle thumb-sized", async ({ page }) => {
   await signedIn(page);
   await pickPhotos(page, 6);

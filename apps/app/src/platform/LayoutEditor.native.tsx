@@ -8,10 +8,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AccessibilityInfo, KeyboardAvoidingView, PanResponder, StyleSheet, Text, TextInput, View, type AccessibilityActionEvent, type GestureResponderEvent } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, fontFamily, type as typography } from "../theme";
+import { SaveActions, UseActions } from "../LayoutSheetActions";
+import { ToolGrid } from "../ui/Actions";
 import { Button } from "../ui/Button";
 import { useLayoutEditor, type CellMover, type Handle, type Move } from "../useLayoutEditor";
 import type { Photo } from "./photos.native";
-import { navigate } from "./route";
 import { blurredImage, drawDraft, hasBlurredBackground, previewOf } from "./render.native";
 
 interface Props {
@@ -163,11 +164,11 @@ export default function LayoutEditor({ photos, style, start, signedIn, onCancel,
   return (
     <View role="dialog" aria-modal aria-label="Layout editor" style={[StyleSheet.absoluteFill, styles.editor]}>
       <View style={styles.bar}>
-        <Button label="Cancel" onPress={onCancel} />
+        <Button label="Cancel" quiet onPress={onCancel} />
         <Text role="heading" aria-level={2} style={styles.count}>
           {countText}
         </Text>
-        <Button label="Undo" onPress={editor.undo} disabled={!editor.canUndo} />
+        <Button label="Undo" quiet onPress={editor.undo} disabled={!editor.canUndo} />
         <Button label="Done" primary onPress={editor.done} />
       </View>
 
@@ -189,13 +190,7 @@ export default function LayoutEditor({ photos, style, start, signedIn, onCancel,
         <Text role="status" style={styles.status}>
           {editor.status}
         </Text>
-        {tools.length > 0 && (
-          <View style={styles.actions}>
-            {tools.map((t) => (
-              <Button key={t.label} label={t.label} name={t.name} onPress={t.onPress} />
-            ))}
-          </View>
-        )}
+        {tools.length > 0 && <ToolGrid tools={tools} />}
       </View>
 
       {saving && (
@@ -219,11 +214,7 @@ export default function LayoutEditor({ photos, style, start, signedIn, onCancel,
                   {saving.error}
                 </Text>
               )}
-              <View style={styles.actions}>
-                <Button label={saving.busy ? "Saving…" : editor.saveLabel} primary disabled={saving.busy} onPress={() => void editor.save()} />
-                <Button label="Use without saving" onPress={editor.use} />
-                <Button label="Keep editing" onPress={() => setSaving(null)} />
-              </View>
+              <SaveActions editor={editor} />
             </View>
           ) : (
             <View aria-label="Use your layout" style={styles.sheet}>
@@ -233,12 +224,7 @@ export default function LayoutEditor({ photos, style, start, signedIn, onCancel,
               <Text style={typography.body}>
                 Use it in your collage now, no account needed. To keep it for your next collage, you can save it with a free account.
               </Text>
-              <View style={styles.actions}>
-                <Button label="Use this layout" primary onPress={editor.use} />
-                <Button label="Create account to save" onPress={() => navigate("/sign-up")} />
-                <Button label="Sign in" onPress={() => navigate("/account")} />
-                <Button label="Keep editing" onPress={() => setSaving(null)} />
-              </View>
+              <UseActions editor={editor} />
             </View>
           )}
         </KeyboardAvoidingView>
@@ -257,7 +243,6 @@ const styles = StyleSheet.create({
   grip: { borderWidth: 3, borderColor: colors.bg, borderRadius: 999, backgroundColor: colors.accent },
   tools: { minHeight: 128, justifyContent: "center", gap: 8, paddingTop: 10, paddingBottom: 14, paddingHorizontal: 12, borderTopLeftRadius: 20, borderTopRightRadius: 20, backgroundColor: colors.surface },
   status: { fontFamily, fontSize: 15, color: colors.muted, textAlign: "center" },
-  actions: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 8 },
   backdrop: { ...StyleSheet.absoluteFill, justifyContent: "flex-end", backgroundColor: "rgba(0, 0, 0, 0.5)" },
   sheet: { gap: 12, paddingTop: 20, paddingBottom: 28, paddingHorizontal: 16, borderTopLeftRadius: 20, borderTopRightRadius: 20, backgroundColor: colors.surface },
   input: { minHeight: 44, paddingHorizontal: 12, borderWidth: 1, borderColor: colors.border, borderRadius: 10, backgroundColor: colors.bg, color: colors.text, fontSize: 16 },

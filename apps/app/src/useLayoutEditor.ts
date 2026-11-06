@@ -461,14 +461,16 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
     );
   }
   if (sel !== null && mode === "free") {
-    tools.push({ label: "Smaller", onPress: () => scaleBy(1 / SCALE_STEP) }, { label: "Bigger", onPress: () => scaleBy(SCALE_STEP) });
+    tools.push(
+      { label: "Smaller", onPress: () => scaleBy(1 / SCALE_STEP) },
+      { label: "Bigger", onPress: () => scaleBy(SCALE_STEP) },
+      { label: "Add copy", onPress: () => apply(duplicateCell(layout, sel), "There's no room for another photo.") },
+    );
+    // Before Remove, so the two turns share a row of the grid.
     if (selCell?.shape === "rect") {
       tools.push({ label: "⟲", name: "Turn left", onPress: () => turnBy(-TURN_STEP) }, { label: "⟳", name: "Turn right", onPress: () => turnBy(TURN_STEP) });
     }
-    tools.push(
-      { label: "Add copy", onPress: () => apply(duplicateCell(layout, sel), "There's no room for another photo.") },
-      { label: "Remove", onPress: () => (setSelected(null), apply(removeCell(layout, sel), "A layout needs at least one cell.")) },
-    );
+    tools.push({ label: "Remove", onPress: () => (setSelected(null), apply(removeCell(layout, sel), "A layout needs at least one cell.")) });
   }
 
   // --- Done: check the layout, then use it as it is, or name it and save it.

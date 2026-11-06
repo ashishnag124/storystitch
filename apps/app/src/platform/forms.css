@@ -37,22 +37,13 @@
   outline-offset: 1px;
 }
 
-.danger-zone {
-  padding: 0 14px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface);
-}
-
-.danger-zone[open] {
-  padding-bottom: 14px;
-}
-
 .danger-zone summary {
   display: flex;
   align-items: center;
+  justify-content: center;
   min-height: 44px;
   color: var(--danger);
+  font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
 }

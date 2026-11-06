@@ -8,6 +8,9 @@ name: AC-IOS-15 Editing a layout needs no account
     timeout: 8000
 - tapOn: Done
 - assertVisible: Your layout is ready
+- assertVisible: Create account to save
+- assertVisible: Sign in
+- assertVisible: Keep editing
 - tapOn: Use this layout
 - extendedWaitUntil:
     visible: "Edited layout (yours)"
