@@ -8,8 +8,9 @@ import { Disclosure, Field, Form, ORIGIN, SubmitButton, sendToApp } from "./plat
 import { ACCOUNT_PATHS, navigate, useLocation } from "./platform/route";
 import { Turnstile } from "./platform/Turnstile";
 import { colors, fontFamily, type } from "./theme";
+import { Actions, QuietActions } from "./ui/Actions";
 import { Button } from "./ui/Button";
-import { ExternalLink, NavLink, TextLink } from "./ui/NavLink";
+import { ExternalLink, NavLink } from "./ui/NavLink";
 import { track } from "./usage";
 
 const MIN_PASSWORD = 8;
@@ -27,9 +28,10 @@ function Screen({ title, children }: { title: string; children: ReactNode }) {
           <NavLink to="/" label="Back to StoryStitch" />
         </View>
         {children}
-        <Text style={type.hint}>
-          <ExternalLink url={`${ORIGIN}/privacy`}>Privacy policy</ExternalLink> · <ExternalLink url={`${ORIGIN}/support`}>Support</ExternalLink>
-        </Text>
+        <QuietActions>
+          <ExternalLink url={`${ORIGIN}/privacy`} label="Privacy policy" />
+          <ExternalLink url={`${ORIGIN}/support`} label="Support" />
+        </QuietActions>
       </ScrollView>
     </SafeAreaView>
   );
@@ -43,7 +45,11 @@ function useBotCheck() {
     token,
     widget: <Turnstile onToken={setToken} resetKey={resetKey} />,
     headers: () => ({ "x-captcha-response": token ?? "" }),
-    reset: () => setResetKey((k) => k + 1),
+    // A token works once, so the form has to wait for the next one.
+    reset: () => {
+      setToken(null);
+      setResetKey((k) => k + 1);
+    },
   };
 }
 
@@ -82,22 +88,25 @@ function SignIn() {
       <Field label="Password" type="password" value={password} onChange={setPassword} autoComplete="current-password" minLength={MIN_PASSWORD} />
       {bot.widget}
       {error && <Message error>{error}</Message>}
-      {unverified &&
-        (resent ? (
-          <Message>We sent a new confirmation link to {email}.</Message>
-        ) : (
-          <Button
-            label="Send the confirmation email again"
-            onPress={async () => {
-              await authClient.sendVerificationEmail({ email, callbackURL: `${ORIGIN}/account?welcome=1` });
-              setResent(true);
-            }}
-          />
-        ))}
-      <SubmitButton label={busy ? "Signing in…" : "Sign in"} disabled={busy || !bot.token} />
-      <Text style={type.hint}>
-        <TextLink to="/reset-password">Forgot your password?</TextLink> · <TextLink to="/sign-up">Create an account</TextLink>
-      </Text>
+      <Actions>
+        <SubmitButton label={busy ? "Signing in…" : "Sign in"} disabled={busy || !bot.token} />
+        {unverified &&
+          (resent ? (
+            <Message>We sent a new confirmation link to {email}.</Message>
+          ) : (
+            <Button
+              label="Send the confirmation email again"
+              onPress={async () => {
+                await authClient.sendVerificationEmail({ email, callbackURL: `${ORIGIN}/account?welcome=1` });
+                setResent(true);
+              }}
+            />
+          ))}
+        <QuietActions>
+          <NavLink to="/reset-password" label="Forgot your password?" />
+          <NavLink to="/sign-up" label="Create an account" />
+        </QuietActions>
+      </Actions>
     </Form>
   );
 }
@@ -132,9 +141,9 @@ function SignUp() {
         <Message>
           Check your email. We sent a link to <Text style={styles.strong}>{email}</Text>. Open it on this device to finish creating your account.
         </Message>
-        <Text style={type.hint}>
-          <TextLink to="/account">Back to sign in</TextLink>
-        </Text>
+        <QuietActions>
+          <NavLink to="/account" label="Back to sign in" />
+        </QuietActions>
       </View>
     );
   }
@@ -146,10 +155,13 @@ function SignUp() {
       <Field label="Password (at least 8 characters)" type="password" value={password} onChange={setPassword} autoComplete="new-password" minLength={MIN_PASSWORD} />
       {bot.widget}
       {error && <Message error>{error}</Message>}
-      <SubmitButton label={busy ? "Creating…" : "Create account"} disabled={busy || !bot.token} />
-      <Text style={type.hint}>
-        Already have an account? <TextLink to="/account">Sign in</TextLink>
-      </Text>
+      <Actions>
+        <SubmitButton label={busy ? "Creating…" : "Create account"} disabled={busy || !bot.token} />
+        <QuietActions>
+          <Hint>Already have an account?</Hint>
+          <NavLink to="/account" label="Sign in" />
+        </QuietActions>
+      </Actions>
     </Form>
   );
 }
@@ -187,9 +199,9 @@ function ResetPassword({ token, error: linkError }: { token: string | null; erro
     return done ? (
       <View style={styles.form}>
         <Message>Your password is changed, and you're signed out everywhere else.</Message>
-        <Text style={type.hint}>
-          <TextLink to="/account">Sign in</TextLink>
-        </Text>
+        <QuietActions>
+          <NavLink to="/account" label="Sign in" />
+        </QuietActions>
       </View>
     ) : (
       <Form onSubmit={() => void setNewPassword()}>
@@ -234,14 +246,19 @@ function Profile({ email, welcome }: { email: string; welcome: boolean }) {
       <Text style={type.body}>
         Signed in as <Text style={styles.strong}>{email}</Text>
       </Text>
-      <Button label="Sign out" onPress={() => void authClient.signOut()} />
-      <Button
-        label="Sign out on every device"
-        onPress={async () => {
-          await authClient.revokeSessions();
-          await authClient.signOut();
-        }}
-      />
+      <Actions>
+        <Button label="Sign out" onPress={() => void authClient.signOut()} />
+        <QuietActions>
+          <Button
+            label="Sign out on every device"
+            quiet
+            onPress={async () => {
+              await authClient.revokeSessions();
+              await authClient.signOut();
+            }}
+          />
+        </QuietActions>
+      </Actions>
       <Disclosure summary="Delete account">
         <Form onSubmit={() => void deleteAccount()}>
           <Hint>This permanently deletes your account and everything saved in it.</Hint>
@@ -288,7 +305,8 @@ export default function Accounts() {
     <Screen title={TITLES[path]}>
       {path === "/account" && <AccountHome params={searchParams} />}
       {path === "/sign-up" && <SignUp />}
-      {path === "/reset-password" && <ResetPassword token={searchParams.get("token")} error={searchParams.get("error")} />}
+      {/* The key starts over for a new link: asking for one leaves the form saying it's done. */}
+      {path === "/reset-password" && <ResetPassword key={searchParams.get("token")} token={searchParams.get("token")} error={searchParams.get("error")} />}
     </Screen>
   );
 }

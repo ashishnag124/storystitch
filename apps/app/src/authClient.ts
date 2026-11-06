@@ -18,6 +18,7 @@ export function errorMessage(error: { status?: number; code?: string; message?: 
     case "INVALID_PASSWORD":
       return "That password isn't right.";
     case "INVALID_TOKEN":
+    case "TOKEN_EXPIRED":
       return "That link has expired or was already used. Ask for a new one.";
   }
   if (error.status === 400 || error.status === 403) return "The bot check didn't go through. Please try again.";

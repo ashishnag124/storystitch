@@ -1,12 +1,14 @@
-// The layout editor: a full-screen view for making a layout or changing one, saved to the user's account.
+// The layout editor: a full-screen view for changing a layout, to use in the collage or save to an account.
 // Loaded only when the layout editor is switched on. useLayoutEditor does the work; this draws it and feeds it pointers.
-import { STORY_CANVAS, drawOrder, type Point, type SavedLayout } from "@storystitch/shared";
+import { STORY_CANVAS, drawOrder, type Layout, type Point, type SavedLayout } from "@storystitch/shared";
 import { useCallback, useEffect, useLayoutEffect, useRef, type KeyboardEvent, type PointerEvent } from "react";
 import type { Photo } from "./photos";
 import { drawBlurredBackground, drawCell, fillBackground, hasBlurredBackground, outlinePath, previewOf } from "./render";
 import { cellShapes, styleScale, type Scene, type Start, type Style } from "@storystitch/client";
+import { SaveActions, UseActions } from "../LayoutSheetActions";
+import { ToolGrid } from "../ui/Actions";
+import { Button } from "../ui/Button";
 import { useLayoutEditor, type Handle } from "../useLayoutEditor";
-import "./photo-sources.css";
 import "./builder.css";
 
 const { width: W, height: H } = STORY_CANVAS;
@@ -21,11 +23,13 @@ interface Props {
   photos: Photo[];
   style: Style;
   start: Start;
+  signedIn: boolean;
   onCancel: () => void;
+  onUse: (layout: Layout, order: number[]) => void;
   onSaved: (saved: SavedLayout, order: number[]) => void;
 }
 
-export default function LayoutEditor({ photos, style, start, onCancel, onSaved }: Props) {
+export default function LayoutEditor({ photos, style, start, signedIn, onCancel, onUse, onSaved }: Props) {
   const stageRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
@@ -34,7 +38,7 @@ export default function LayoutEditor({ photos, style, start, onCancel, onSaved }
     const rect = canvasRef.current!.getBoundingClientRect();
     return { x: rect.left, y: rect.top };
   };
-  const editor = useLayoutEditor({ photos, style, start, onSaved, frameOrigin });
+  const editor = useLayoutEditor({ photos, style, start, onUse, onSaved, frameOrigin });
   const { layout, order, crops, selected, problems, view, fit, handles, tools, finishDrag, countText, saving, setSaving } = editor;
   const imageFor = useCallback((i: number) => previewOf(photos[i]!), [photos]);
 
@@ -130,18 +134,12 @@ export default function LayoutEditor({ photos, style, start, onCancel, onSaved }
   return (
     <div className="builder" role="dialog" aria-modal="true" aria-labelledby="builder-title">
       <header className="builder-bar">
-        <button type="button" className="button ghost" onClick={onCancel}>
-          Cancel
-        </button>
+        <Button label="Cancel" quiet onPress={onCancel} />
         <h2 id="builder-title" ref={heading} tabIndex={-1} className="builder-count">
           {countText}
         </h2>
-        <button type="button" className="button ghost" onClick={editor.undo} disabled={!editor.canUndo} aria-label="Undo">
-          Undo
-        </button>
-        <button type="button" className="button primary" onClick={editor.done}>
-          Done
-        </button>
+        <Button label="Undo" quiet onPress={editor.undo} disabled={!editor.canUndo} />
+        <Button label="Done" primary onPress={editor.done} />
       </header>
 
       <div className="builder-stage" ref={stageRef}>
@@ -159,10 +157,6 @@ export default function LayoutEditor({ photos, style, start, onCancel, onSaved }
             onPointerCancel={onCanvasUp}
             onContextMenu={(e) => e.preventDefault()}
           />
-          <div className="builder-band top" style={{ height: `14%` }} aria-hidden="true">
-            <span>Instagram's buttons</span>
-          </div>
-          <div className="builder-band bottom" style={{ height: `18%` }} aria-hidden="true" />
 
           {handles.map((h) =>
             h.range ? (
@@ -193,50 +187,38 @@ export default function LayoutEditor({ photos, style, start, onCancel, onSaved }
         <p className="builder-status" role="status">
           {editor.status}
         </p>
-        {tools.length > 0 && (
-          <div className="builder-actions">
-            {tools.map((t) => (
-              <button key={t.label} type="button" className="button" onClick={t.onPress} aria-label={t.name}>
-                {t.label}
-              </button>
-            ))}
-          </div>
-        )}
+        {tools.length > 0 && <ToolGrid tools={tools} />}
       </section>
 
       {saving && (
         <div className="builder-sheet-backdrop">
-          <form
-            className="builder-sheet"
-            onSubmit={(e) => {
-              e.preventDefault();
-              void editor.save();
-            }}
-            aria-label="Save layout"
-          >
-            <label className="field">
-              <span>Name</span>
-              <input
-                value={saving.name}
-                maxLength={40}
-                autoFocus
-                onChange={(e) => setSaving({ ...saving, name: e.target.value, error: "" })}
-              />
-            </label>
-            {saving.error && (
-              <p className="notice" role="alert">
-                {saving.error}
-              </p>
-            )}
-            <div className="builder-actions">
-              <button type="button" className="button" onClick={() => setSaving(null)}>
-                Keep editing
-              </button>
-              <button type="submit" className="button primary" disabled={saving.busy}>
-                {saving.busy ? "Saving…" : editor.saveLabel}
-              </button>
-            </div>
-          </form>
+          {signedIn ? (
+            <form
+              className="builder-sheet"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!saving.busy) void editor.save();
+              }}
+              aria-label="Save layout"
+            >
+              <label className="field">
+                <span>Name</span>
+                <input value={saving.name} maxLength={40} autoFocus onChange={(e) => setSaving({ ...saving, name: e.target.value, error: "" })} />
+              </label>
+              {saving.error && (
+                <p className="notice" role="alert">
+                  {saving.error}
+                </p>
+              )}
+              <SaveActions editor={editor} />
+            </form>
+          ) : (
+            <section className="builder-sheet" aria-label="Use your layout">
+              <h2>Your layout is ready</h2>
+              <p>Use it in your collage now, no account needed. To keep it for your next collage, you can save it with a free account.</p>
+              <UseActions editor={editor} />
+            </section>
+          )}
         </div>
       )}
     </div>

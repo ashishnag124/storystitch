@@ -3,7 +3,7 @@ import {
   NATIVE_APP_HEADER,
   SAVED_LAYOUT_LIMIT,
   SaveLayoutSchema,
-  layoutProblems,
+  editedLayoutProblems,
   type SavedLayout,
   type SavedLayouts,
 } from "@storystitch/shared";
@@ -53,7 +53,7 @@ export function savedLayoutRoutes(app: Hono, { pool, auth, corsOrigins }: { pool
     const parsed = SaveLayoutSchema.safeParse(await c.req.json().catch(() => null));
     if (!parsed.success) return { error: c.json({ error: "INVALID_LAYOUT", problems: ["Not a layout"] }, 400) };
     const { name, layout } = parsed.data;
-    const problems = layoutProblems({ ...layout, id: "saved", name });
+    const problems = editedLayoutProblems({ ...layout, id: "saved", name });
     if (problems.length) return { error: c.json({ error: "INVALID_LAYOUT", problems }, 400) };
     return { name, layout };
   }

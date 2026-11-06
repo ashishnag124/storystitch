@@ -12,7 +12,7 @@ function open(id: string) {
   const layout = layouts.find((l) => l.id === id)!;
   const start: Start = { layout, order: layout.cells.map((_, i) => i) };
   const photos = layout.cells.map((_, i) => ({ name: `${i}.jpg`, width: 1200, height: 1600, detections: [] }));
-  const { result } = renderHook(() => useLayoutEditor({ photos, style: DEFAULT_STYLE, start, onSaved: vi.fn(), frameOrigin: () => ({ x: 0, y: 0 }) }));
+  const { result } = renderHook(() => useLayoutEditor({ photos, style: DEFAULT_STYLE, start, onUse: vi.fn(), onSaved: vi.fn(), frameOrigin: () => ({ x: 0, y: 0 }) }));
   act(() => result.current.fit(360, 640));
   return result;
 }
@@ -73,5 +73,60 @@ describe("AC-CUSTOM-10 moving lines and handles with VoiceOver", () => {
     const angle = of("rotate")!.value;
     run(of("rotate")!.moves, "increment");
     expect(of("rotate")!.value).not.toBe(angle);
+  });
+
+  it("moves the chosen photo by named moves, keeps it undoable and says when it can't go further", () => {
+    const editor = open("four-polaroids");
+    const mover = () => editor.current.cellMover!;
+    expect(editor.current.cellMover).toBeNull();
+    run(editor.current.pickMoves, "increment");
+    expect(mover().label).toBe("Move photo 1");
+    expect(mover().moves.map((m) => m.name)).toEqual(["Move up", "Move down", "Move left", "Move right"]);
+
+    const place = () => mover().value.match(/(\d+)% from the left, (\d+)% from the top/)!.slice(1).map(Number) as [number, number];
+    const step = (name: string) => {
+      const [left, top] = place();
+      expect(run(mover().moves, name)).toBeUndefined();
+      return [Math.sign(place()[0] - left), Math.sign(place()[1] - top)];
+    };
+    expect(step("Move down")).toEqual([0, 1]);
+    expect(step("Move up")).toEqual([0, -1]);
+    expect(step("Move right")).toEqual([1, 0]);
+    expect(step("Move left")).toEqual([-1, 0]);
+
+    const moved = mover().value;
+    run(mover().moves, "Move right");
+    act(() => editor.current.undo());
+    expect(mover().value).toBe(moved);
+
+    let refusal: string | undefined;
+    for (let i = 0; i < 40 && !refusal; i++) refusal = run(mover().moves, "Move left");
+    expect(refusal).toMatch(/no room/);
+    expect(editor.current.status).toBe(refusal);
+  });
+
+  it("leaves the preview's swipes choosing a photo after moving one", () => {
+    const editor = open("four-polaroids");
+    run(editor.current.pickMoves, "increment");
+    run(editor.current.cellMover!.moves, "Move down");
+    run(editor.current.pickMoves, "increment");
+    expect(editor.current.pickValue).toBe("Photo 2 chosen");
+    expect(editor.current.cellMover!.label).toBe("Move photo 2");
+  });
+
+  it("brings a photo to the top when it moves, as a drag does, where photos can overlap", () => {
+    const editor = open(layouts.find((l) => l.allowOverlap)!.id);
+    run(editor.current.pickMoves, "increment");
+    const top = () => Math.max(...editor.current.layout.cells.slice(1).map((c) => c.z));
+    expect(run(editor.current.cellMover!.moves, "Move down")).toBeUndefined();
+    expect(editor.current.layout.cells[0]!.z).toBeGreaterThan(top());
+  });
+
+  it("has nothing to move in a grid or slanted layout, where photos don't move", () => {
+    for (const id of ["two-stack", "six-diagonal"]) {
+      const editor = open(id);
+      run(editor.current.pickMoves, "increment");
+      expect(editor.current.cellMover).toBeNull();
+    }
   });
 });

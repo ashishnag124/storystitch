@@ -480,16 +480,18 @@ export function moveCorner(base: Layout, corners: Corners, i: number, to: Point)
   return cornersFit(base, next, [i]) ? next : null;
 }
 
-/** The ways a corner can go a step at a time, for VoiceOver, which can't drag: `by` is a unit step. */
+/** The ways VoiceOver, which can't drag, moves things a step at a time: `by` is a unit step. */
+export const MOVE_STEPS: { name: string; by: Point }[] = [
+  { name: "Move up", by: { x: 0, y: -1 } },
+  { name: "Move down", by: { x: 0, y: 1 } },
+  { name: "Move left", by: { x: -1, y: 0 } },
+  { name: "Move right", by: { x: 1, y: 0 } },
+];
+
+/** The steps a corner can take. */
 export function cornerSteps(lock: CornerLock): { name: string; by: Point }[] {
   if (lock.kind === "fixed") return [];
-  const steps = [
-    { name: "Move up", by: { x: 0, y: -1 } },
-    { name: "Move down", by: { x: 0, y: 1 } },
-    { name: "Move left", by: { x: -1, y: 0 } },
-    { name: "Move right", by: { x: 1, y: 0 } },
-  ];
-  return lock.kind === "free" ? steps : steps.filter(({ by }) => Math.abs(by.x * lock.dir.x + by.y * lock.dir.y) > 0.2);
+  return lock.kind === "free" ? MOVE_STEPS : MOVE_STEPS.filter(({ by }) => Math.abs(by.x * lock.dir.x + by.y * lock.dir.y) > 0.2);
 }
 
 /** A straight line of shared corners running from one canvas edge to another: drag it to shift it. */

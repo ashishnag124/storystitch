@@ -1,15 +1,17 @@
-// The layout editor on iOS: a full-screen view for making a layout or changing one, saved to the user's account.
+// The layout editor on iOS: a full-screen view for changing a layout, to use in the collage or save to an account.
 // useLayoutEditor does the work; this draws it with Skia and feeds it touches.
-import { Canvas, Fill, LinearGradient, Picture, createPicture, vec, type SkImage } from "@shopify/react-native-skia";
-import type { Point, SavedLayout } from "@storystitch/shared";
+import { Canvas, Picture, createPicture, type SkImage } from "@shopify/react-native-skia";
+import type { Layout, Point, SavedLayout } from "@storystitch/shared";
 import { STORY_CANVAS } from "@storystitch/shared";
 import type { Start, Style } from "@storystitch/client";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AccessibilityInfo, KeyboardAvoidingView, PanResponder, StyleSheet, Text, TextInput, View, type AccessibilityActionEvent, type GestureResponderEvent } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, fontFamily, type as typography } from "../theme";
+import { SaveActions, UseActions } from "../LayoutSheetActions";
+import { ToolGrid } from "../ui/Actions";
 import { Button } from "../ui/Button";
-import { useLayoutEditor, type Handle, type Move } from "../useLayoutEditor";
+import { useLayoutEditor, type CellMover, type Handle, type Move } from "../useLayoutEditor";
 import type { Photo } from "./photos.native";
 import { blurredImage, drawDraft, hasBlurredBackground, previewOf } from "./render.native";
 
@@ -17,25 +19,11 @@ interface Props {
   photos: Photo[];
   style: Style;
   start: Start;
+  signedIn: boolean;
   onCancel: () => void;
+  onUse: (layout: Layout, order: number[]) => void;
   onSaved: (saved: SavedLayout, order: number[]) => void;
 }
-
-/** One dark stripe and one light, 16 points across, at 45°. Keep in step with `.builder-band` in builder.css. */
-const STRIPE_END = vec(16 * Math.SQRT1_2, 16 * Math.SQRT1_2);
-const STRIPE_COLORS = ["rgba(43, 19, 64, 0.28)", "rgba(43, 19, 64, 0.28)", "rgba(43, 19, 64, 0.12)", "rgba(43, 19, 64, 0.12)"];
-const STRIPE_STOPS = [0, 0.5, 0.5, 1];
-
-/** Fills a band with diagonal stripes. It never changes, so dragging a handle doesn't redraw it. */
-const BandStripes = memo(function BandStripes() {
-  return (
-    <Canvas pointerEvents="none" style={StyleSheet.absoluteFill}>
-      <Fill>
-        <LinearGradient start={vec(0, 0)} end={STRIPE_END} mode="repeat" colors={STRIPE_COLORS} positions={STRIPE_STOPS} />
-      </Fill>
-    </Canvas>
-  );
-});
 
 /** Calls the latest `on` for every touch, whichever render the responder was made in. */
 function useFingers(on: { down: (e: GestureResponderEvent) => void; move: (e: GestureResponderEvent) => void; up: () => void }) {
@@ -111,10 +99,19 @@ function LineOrHandle({ handle, onGrab, onMove, onEnd }: HandleProps) {
   );
 }
 
-export default function LayoutEditor({ photos, style, start, onCancel, onSaved }: Props) {
+/**
+ * VoiceOver's way to move the chosen photo. It can't share the preview: there, swiping up and down chooses a photo,
+ * and on an element with named actions the same swipes step through those. Fingers pass through to the preview.
+ */
+function MoveCell({ mover }: { mover: CellMover }) {
+  const voiceOver = useVoiceOverMoves(mover.moves, mover.value);
+  return <View aria-label={mover.label} pointerEvents="none" style={[styles.handle, mover.box]} {...voiceOver} />;
+}
+
+export default function LayoutEditor({ photos, style, start, signedIn, onCancel, onUse, onSaved }: Props) {
   const insets = useSafeAreaInsets();
   const origin = useRef<Point>({ x: 0, y: 0 });
-  const editor = useLayoutEditor({ photos, style, start, onSaved, frameOrigin: () => origin.current });
+  const editor = useLayoutEditor({ photos, style, start, onUse, onSaved, frameOrigin: () => origin.current });
   const { layout, order, crops, selected, problems, view, fit, handles, tools, finishDrag, countText, saving, setSaving } = editor;
   const [fingerCount, setFingerCount] = useState(0);
 
@@ -167,11 +164,11 @@ export default function LayoutEditor({ photos, style, start, onCancel, onSaved }
   return (
     <View role="dialog" aria-modal aria-label="Layout editor" style={[StyleSheet.absoluteFill, styles.editor]}>
       <View style={styles.bar}>
-        <Button label="Cancel" onPress={onCancel} />
+        <Button label="Cancel" quiet onPress={onCancel} />
         <Text role="heading" aria-level={2} style={styles.count}>
           {countText}
         </Text>
-        <Button label="Undo" onPress={editor.undo} disabled={!editor.canUndo} />
+        <Button label="Undo" quiet onPress={editor.undo} disabled={!editor.canUndo} />
         <Button label="Done" primary onPress={editor.done} />
       </View>
 
@@ -182,13 +179,7 @@ export default function LayoutEditor({ photos, style, start, onCancel, onSaved }
               <Picture picture={picture} />
             </Canvas>
           </View>
-          <View pointerEvents="none" style={[styles.band, styles.bandTop, { height: "14%" }]}>
-            <BandStripes />
-            <Text style={styles.bandLabel}>Instagram's buttons</Text>
-          </View>
-          <View pointerEvents="none" style={[styles.band, styles.bandBottom, { height: "18%" }]}>
-            <BandStripes />
-          </View>
+          {editor.cellMover && <MoveCell mover={editor.cellMover} />}
           {handles.map((h) => (
             <LineOrHandle key={h.key} handle={h} onGrab={grabHandle} onMove={editor.moveHandle} onEnd={finishDrag} />
           ))}
@@ -199,40 +190,43 @@ export default function LayoutEditor({ photos, style, start, onCancel, onSaved }
         <Text role="status" style={styles.status}>
           {editor.status}
         </Text>
-        {tools.length > 0 && (
-          <View style={styles.actions}>
-            {tools.map((t) => (
-              <Button key={t.label} label={t.label} name={t.name} onPress={t.onPress} />
-            ))}
-          </View>
-        )}
+        {tools.length > 0 && <ToolGrid tools={tools} />}
       </View>
 
       {saving && (
         // The editor starts below the status bar, so the keyboard needs that much more room.
         <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={insets.top} style={styles.backdrop}>
-          <View aria-label="Save layout" style={styles.sheet}>
-            <View style={{ gap: 4 }}>
-              <Text style={typography.hint}>Name</Text>
-              <TextInput
-                aria-label="Name"
-                value={saving.name}
-                maxLength={40}
-                autoFocus
-                onChangeText={(name) => setSaving({ ...saving, name, error: "" })}
-                style={styles.input}
-              />
+          {signedIn ? (
+            <View aria-label="Save layout" style={styles.sheet}>
+              <View style={{ gap: 4 }}>
+                <Text style={typography.hint}>Name</Text>
+                <TextInput
+                  aria-label="Name"
+                  value={saving.name}
+                  maxLength={40}
+                  autoFocus
+                  onChangeText={(name) => setSaving({ ...saving, name, error: "" })}
+                  style={styles.input}
+                />
+              </View>
+              {saving.error !== "" && (
+                <Text role="alert" style={styles.notice}>
+                  {saving.error}
+                </Text>
+              )}
+              <SaveActions editor={editor} />
             </View>
-            {saving.error !== "" && (
-              <Text role="alert" style={styles.notice}>
-                {saving.error}
+          ) : (
+            <View aria-label="Use your layout" style={styles.sheet}>
+              <Text role="heading" aria-level={2} style={typography.title}>
+                Your layout is ready
               </Text>
-            )}
-            <View style={styles.actions}>
-              <Button label="Keep editing" onPress={() => setSaving(null)} />
-              <Button label={saving.busy ? "Saving…" : editor.saveLabel} primary disabled={saving.busy} onPress={() => void editor.save()} />
+              <Text style={typography.body}>
+                Use it in your collage now, no account needed. To keep it for your next collage, you can save it with a free account.
+              </Text>
+              <UseActions editor={editor} />
             </View>
-          </View>
+          )}
         </KeyboardAvoidingView>
       )}
     </View>
@@ -245,15 +239,10 @@ const styles = StyleSheet.create({
   count: { flex: 1, fontFamily, fontSize: 16, fontWeight: "700", color: colors.text, textAlign: "center" },
   stage: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 8 },
   preview: { borderRadius: 10, overflow: "hidden" },
-  band: { position: "absolute", left: 0, right: 0, overflow: "hidden" },
-  bandTop: { top: 0, borderTopLeftRadius: 10, borderTopRightRadius: 10 },
-  bandBottom: { bottom: 0, borderBottomLeftRadius: 10, borderBottomRightRadius: 10 },
-  bandLabel: { position: "absolute", top: 6, left: 8, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 999, overflow: "hidden", backgroundColor: "rgba(43, 19, 64, 0.7)", color: colors.text, fontFamily, fontSize: 11 },
   handle: { position: "absolute", alignItems: "center", justifyContent: "center" },
   grip: { borderWidth: 3, borderColor: colors.bg, borderRadius: 999, backgroundColor: colors.accent },
   tools: { minHeight: 128, justifyContent: "center", gap: 8, paddingTop: 10, paddingBottom: 14, paddingHorizontal: 12, borderTopLeftRadius: 20, borderTopRightRadius: 20, backgroundColor: colors.surface },
   status: { fontFamily, fontSize: 15, color: colors.muted, textAlign: "center" },
-  actions: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 8 },
   backdrop: { ...StyleSheet.absoluteFill, justifyContent: "flex-end", backgroundColor: "rgba(0, 0, 0, 0.5)" },
   sheet: { gap: 12, paddingTop: 20, paddingBottom: 28, paddingHorizontal: 16, borderTopLeftRadius: 20, borderTopRightRadius: 20, backgroundColor: colors.surface },
   input: { minHeight: 44, paddingHorizontal: 12, borderWidth: 1, borderColor: colors.border, borderRadius: 10, backgroundColor: colors.bg, color: colors.text, fontSize: 16 },

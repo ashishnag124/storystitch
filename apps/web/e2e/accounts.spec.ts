@@ -48,6 +48,16 @@ test("AC-AUTH-05 AC-AUTH-06 sign up, confirm by email, stay signed in across rel
   await signedInAs(page, email);
 });
 
+test("AC-A11Y-03 the account screens' links are at least 44 px tall", async ({ page }) => {
+  for (const [path, names] of [
+    ["/account", ["Back to StoryStitch", "Forgot your password?", "Create an account", "Privacy policy", "Support"]],
+    ["/sign-up", ["Sign in"]],
+  ] as const) {
+    await page.goto(path);
+    for (const name of names) expect((await page.getByRole("link", { name, exact: true }).boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  }
+});
+
 test("AC-AUTH-05 reset a forgotten password by email", async ({ page }) => {
   const email = await signUp(page);
   await page.goto(await emailedLink(page, email));
@@ -133,6 +143,35 @@ test("AC-AUTH-12 the bot check page holds only the check and passes its token to
   await expect.poll(() => page.evaluate(() => (window as unknown as { sent: string[] }).sent[0] ?? ""), { timeout: 20_000 }).not.toBe("");
   await expect(page.getByRole("heading")).toHaveCount(0);
   await expect(page.getByRole("button")).toHaveCount(0);
+});
+
+test("AC-AUTH-04 a second try waits for a new bot check token", async ({ page }) => {
+  test.skip(process.env.E2E_TARGET !== "app", "apps/web is staying as it is until it's replaced");
+  // Cloudflare's test key always gives the same token, so this stands in for Turnstile with a new one each time.
+  await page.route("**/turnstile/v0/api.js*", (route) =>
+    route.fulfill({
+      contentType: "text/javascript",
+      body: `window.turnstile = {
+        count: 0,
+        issue() { this.options.callback("token-" + ++this.count); },
+        render(el, options) { this.options = options; this.issue(); return "widget"; },
+        reset() { setTimeout(() => this.issue(), 800); },
+        remove() {},
+      };`,
+    }),
+  );
+  const tokens: string[] = [];
+  page.on("request", (r) => r.url().endsWith("/sign-in/email") && tokens.push(r.headers()["x-captcha-response"] ?? ""));
+  await page.goto("/account");
+  await page.getByLabel("Email").fill("nobody@example.com");
+  await page.getByLabel("Password").fill(PASSWORD);
+  const signIn = page.getByRole("button", { name: "Sign in", exact: true });
+  await signIn.click();
+  await expect(page.getByText("That email and password don't match.")).toBeVisible();
+  await expect(signIn).toBeDisabled();
+  await expect(signIn).toBeEnabled();
+  await signIn.click();
+  await expect.poll(() => tokens).toEqual(["token-1", "token-2"]);
 });
 
 test("AC-AUTH-01 making and exporting a collage never asks you to sign in", async ({ page }) => {

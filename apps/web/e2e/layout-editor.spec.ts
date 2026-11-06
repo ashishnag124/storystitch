@@ -1,7 +1,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { ACCOUNTS_PORT } from "../playwright.config.js";
-import { API, PASSWORD, emailedLink, libraryInput, makePhotos, openApp, submit } from "./helpers.js";
+import { API, PASSWORD, emailedLink, exportImage, libraryInput, makePhotos, openApp, submit } from "./helpers.js";
 
 // The build with accounts and the layout editor switched on (as on staging), with a real API and local Postgres.
 test.use({ baseURL: `http://localhost:${ACCOUNTS_PORT}` });
@@ -63,24 +63,56 @@ const savedLayouts = async (page: Page) =>
   ((await (await page.request.get(`${API}/layouts/mine`)).json()) as { layouts: { name: string; layout: { cells: Record<string, number>[] } }[] })
     .layouts;
 
-test("AC-CUSTOM-01 asks a signed-out user to make an account, then opens the editor once they're in", async ({ page, context }) => {
-  await pickPhotos(page, 3);
-  const edit = page.getByRole("button", { name: "Edit this layout" });
-  await expect(edit).toHaveCSS("background-color", "rgb(255, 194, 75)"); // gold, to stand out
-  await edit.click();
-  const ask = page.getByRole("dialog", { name: "Save your own layouts" });
-  await expect(ask).toBeVisible();
-  await ask.getByRole("button", { name: "Create account" }).click();
-  await expect(page).toHaveURL(/\/sign-up$/);
-  const email = await fillSignUp(page);
+test.describe("without an account", () => {
+  test.skip(process.env.E2E_TARGET !== "app", "apps/web still asks for an account first");
 
-  // They confirm in another tab (their mail app), then come back: the collage and the editor are waiting.
-  const mail = await context.newPage();
-  await mail.goto(await emailedLink(page, email));
-  await mail.close();
-  await page.getByRole("link", { name: "Back to StoryStitch" }).click();
-  await expect(editor(page)).toBeVisible();
-  await expect(editor(page).getByRole("heading", { name: "3 of 3 photos" })).toBeVisible();
+  test("AC-CUSTOM-01 AC-CUSTOM-11 opens, and the edited layout goes in the collage and exports", async ({ page }) => {
+    await pickPhotos(page, 3);
+    const edit = page.getByRole("button", { name: "Edit this layout" });
+    await expect(edit).toHaveCSS("background-color", "rgb(255, 194, 75)"); // gold, to stand out
+    await page.getByRole("radio", { name: "Three stacked", exact: true }).click();
+    await edit.click();
+    const e = editor(page);
+    await expect(e.getByRole("heading", { name: "3 of 3 photos" })).toBeVisible();
+    const line = e.getByRole("separator", { name: "Line between rows" }).first();
+    await drag(page, line, 0, 60);
+    await e.getByRole("button", { name: "Done" }).click();
+    await expect(page.getByText(/no account needed/)).toBeVisible();
+    await page.getByRole("button", { name: "Use this layout" }).click();
+    await expect(e).toHaveCount(0);
+
+    const unsaved = page.getByRole("radio", { name: "Edited layout (yours)" });
+    await expect(unsaved).toHaveAttribute("aria-checked", "true");
+    await page.getByRole("radio", { name: "Three stacked", exact: true }).click();
+    await unsaved.click(); // still there after trying another layout
+    await expect(unsaved).toHaveAttribute("aria-checked", "true");
+
+    const counted: string[] = [];
+    page.on("request", (r) => r.url().endsWith("/exports") && counted.push(r.url()));
+    await exportImage(page);
+    await page.waitForTimeout(300);
+    expect(counted).toEqual([]);
+  });
+
+  test("AC-CUSTOM-11 creating an account comes back to the layout, ready to save", async ({ page, context }) => {
+    await pickPhotos(page, 3);
+    await page.getByRole("button", { name: "Edit this layout" }).click();
+    await editor(page).getByRole("button", { name: "Done" }).click();
+    await page.getByRole("button", { name: "Create account to save" }).click();
+    await expect(page).toHaveURL(/\/sign-up$/);
+    const email = await fillSignUp(page);
+
+    // They confirm in another tab (their mail app), then come back: the collage and the editor are waiting.
+    const mail = await context.newPage();
+    await mail.goto(await emailedLink(page, email));
+    await mail.close();
+    await page.getByRole("link", { name: "Back to StoryStitch" }).click();
+    await expect(editor(page).getByRole("heading", { name: "3 of 3 photos" })).toBeVisible();
+    await page.getByLabel("Name").fill("Kept");
+    await page.getByRole("button", { name: "Save layout" }).click();
+    await expect(editor(page)).toHaveCount(0);
+    expect((await savedLayouts(page)).map((l) => l.name)).toEqual(["Kept"]);
+  });
 });
 
 test("AC-CUSTOM-02 AC-CUSTOM-05 AC-CUSTOM-06 AC-CUSTOM-07 reworks a grid by removing and splitting cells and dragging a line, then saves it", async ({ page }) => {
@@ -111,6 +143,15 @@ test("AC-CUSTOM-02 AC-CUSTOM-05 AC-CUSTOM-06 AC-CUSTOM-07 reworks a grid by remo
   const [saved] = await savedLayouts(page);
   expect(saved!.name).toBe("Two over one");
   expect(saved!.layout.cells).toHaveLength(3);
+});
+
+test("AC-CUSTOM-06 draws nothing over the photos", async ({ page }) => {
+  test.skip(process.env.E2E_TARGET !== "app", "apps/web keeps its bands until it's replaced");
+  await signedIn(page);
+  await pickPhotos(page, 3);
+  await page.getByRole("button", { name: "Edit this layout" }).click();
+  await expect(editor(page).getByRole("heading", { name: "3 of 3 photos" })).toBeVisible();
+  await expect(page.getByText("Instagram's buttons")).toHaveCount(0);
 });
 
 test("AC-CUSTOM-03 drags the shared corner of a slanted layout", async ({ page }) => {
@@ -162,6 +203,68 @@ test("AC-CUSTOM-04 AC-CUSTOM-07 moves and resizes a circle, then edits and delet
   await page.getByRole("button", { name: "Delete", exact: true }).click();
   await expect(page.getByRole("radio", { name: "Small circle (yours)" })).toHaveCount(0);
   expect(await savedLayouts(page)).toHaveLength(0);
+});
+
+/** A primary, a secondary at the same full width below it, and quiet actions in one row below that. */
+async function expectActions(page: Page, primary: string, secondary: string, quiet: string[]) {
+  const box = async (name: string) => (await page.getByRole("button", { name, exact: true }).boundingBox())!;
+  const [first, second] = [await box(primary), await box(secondary)];
+  expect(first.width).toBeGreaterThan(300);
+  expect(second).toMatchObject({ x: first.x, width: first.width });
+  expect(second.y).toBeGreaterThan(first.y);
+  await expect(page.getByRole("button", { name: primary, exact: true })).toHaveCSS("background-color", "rgb(255, 194, 75)");
+  const row = (await box(quiet[0]!)).y;
+  expect(row).toBeGreaterThan(second.y);
+  for (const name of quiet) {
+    const { y, height } = await box(name);
+    expect(y).toBe(row);
+    expect(height).toBeGreaterThanOrEqual(44);
+    await expect(page.getByRole("button", { name, exact: true }).getByText(name)).toHaveCSS("font-size", "14px");
+  }
+}
+
+test("AC-MOBILE-05 grouped actions keep to one hierarchy at phone width", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await pickPhotos(page, 3);
+  await page.getByRole("radio", { name: "Three stacked", exact: true }).click();
+  await page.getByRole("button", { name: "Edit this layout" }).click();
+  const e = editor(page);
+  await tapAt(page, 0.5, 0.2);
+  // Tools of equal rank: even rows of equal widths.
+  const tools = await Promise.all(["Split across", "Split down", "Shape", "Remove"].map(async (name) => (await e.getByRole("button", { name }).boundingBox())!));
+  expect(new Set(tools.map((t) => t.width)).size).toBe(1);
+  expect(tools[1]!.y).toBe(tools[0]!.y);
+  expect(tools[3]!.y).toBe(tools[2]!.y);
+
+  await e.getByRole("button", { name: "Done" }).click();
+  await expectActions(page, "Use this layout", "Create account to save", ["Sign in", "Keep editing"]);
+
+  await signedIn(page);
+  await pickPhotos(page, 3);
+  await page.getByRole("radio", { name: "Three stacked", exact: true }).click();
+  await page.getByRole("button", { name: "Edit this layout" }).click();
+  await e.getByRole("button", { name: "Done" }).click();
+  await expectActions(page, "Save layout", "Use without saving", ["Keep editing"]);
+  // The longest name allowed, saved with Enter: there's no submit button in the form to do it.
+  const name = "A layout name that takes up forty places";
+  await page.getByLabel("Name").fill(name);
+  await page.getByLabel("Name").press("Enter");
+  await expect(e).toHaveCount(0);
+
+  // Delete is quiet until it's asked to confirm, then filled, and all of that stays on one line.
+  const remove = page.getByRole("button", { name: "Delete", exact: true });
+  await expect(remove.getByText("Delete")).toHaveCSS("color", "rgb(255, 143, 143)");
+  await remove.click();
+  await expect(remove).toHaveCSS("background-color", "rgb(255, 143, 143)");
+  const line = async (l: Locator) => {
+    const { y, height } = (await l.boundingBox())!;
+    return y + height / 2;
+  };
+  const middle = await line(remove);
+  expect(await line(page.getByRole("button", { name: "Keep", exact: true }))).toBe(middle);
+  const question = page.getByText(`Delete ${name}?`);
+  expect(await line(question)).toBe(middle);
+  expect((await question.boundingBox())!.height).toBeLessThan(30);
 });
 
 test("AC-CUSTOM-05 fills the screen and keeps every handle thumb-sized", async ({ page }) => {

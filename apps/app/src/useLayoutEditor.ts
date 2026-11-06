@@ -3,6 +3,7 @@
 // layout (editModeOf): lines in grids, shared corners and lines in slanted layouts, and whole cells otherwise.
 import {
   GRID_SHAPES,
+  MOVE_STEPS,
   bringToFront,
   canRotate,
   cornerLines,
@@ -29,7 +30,7 @@ import {
   type Edited,
   type Grid,
 } from "@storystitch/layout-engine";
-import { STORY_CANVAS, cellBounds, hitTest, layoutProblems, type Point, type SavedLayout } from "@storystitch/shared";
+import { STORY_CANVAS, cellBounds, editedLayoutProblems, hitTest, type Layout, type Point, type SavedLayout } from "@storystitch/shared";
 import { SaveError, autoCrop, explain, styleScale, withOrigin, type CropSource, type Draft, type Start, type Style } from "@storystitch/client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { saveLayout } from "./api";
@@ -99,6 +100,9 @@ export interface Handle {
   value: string;
 }
 
+/** How VoiceOver moves the chosen photo, which a finger drags on the preview. */
+export type CellMover = Pick<Handle, "label" | "box" | "moves" | "value">;
+
 /** A button under the preview. */
 export interface Tool {
   label: string;
@@ -111,12 +115,13 @@ interface Options {
   photos: CropSource[];
   style: Style;
   start: Start;
+  onUse: (layout: Layout, order: number[]) => void;
   onSaved: (saved: SavedLayout, order: number[]) => void;
   /** Where the preview's top left corner is on screen. */
   frameOrigin: () => Point;
 }
 
-export function useLayoutEditor({ photos, style, start, onSaved, frameOrigin }: Options) {
+export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOrigin }: Options) {
   const mode = useMemo(() => editModeOf(start.layout), [start.layout]);
   const [draft, setDraft] = useState<Draft>({ layout: start.layout, order: start.order });
   const [history, setHistory] = useState<Draft[]>([]);
@@ -150,10 +155,10 @@ export function useLayoutEditor({ photos, style, start, onSaved, frameOrigin }: 
     [layout, order, style, photos],
   );
 
-  // Check for cells under Instagram's buttons, overlaps and the like once the layout stops changing.
+  // Check for overlaps and the like once the layout stops changing.
   useEffect(() => {
     if (dragging) return;
-    const timer = setTimeout(() => setProblems(explain(layoutProblems(layout, 20))), CHECK_DELAY_MS);
+    const timer = setTimeout(() => setProblems(explain(editedLayoutProblems(layout, 20))), CHECK_DELAY_MS);
     return () => clearTimeout(timer);
   }, [layout, dragging]);
 
@@ -295,6 +300,7 @@ export function useLayoutEditor({ photos, style, start, onSaved, frameOrigin }: 
 
   const screen = (p: Point) => ({ x: toCanvas(p).x * k, y: toCanvas(p).y * k });
   const square = (x: number, y: number) => ({ left: x - HANDLE_PX / 2, top: y - HANDLE_PX / 2, width: HANDLE_PX, height: HANDLE_PX });
+  const percent = (p: Point) => ({ left: Math.round((p.x / W) * 100), top: Math.round((p.y / H) * 100) });
   const handles: Handle[] = [];
 
   for (const d of dividers) {
@@ -329,7 +335,6 @@ export function useLayoutEditor({ photos, style, start, onSaved, frameOrigin }: 
   if (corners) {
     const keep = (next: Corners | null) => next && commit({ ...draft, layout: cornersLayout(layout, next) });
     const keepOrRefuse = (next: Corners | null) => (next ? void keep(next) : refuse(NO_ROOM));
-    const percent = (p: Point) => ({ left: Math.round((p.x / W) * 100), top: Math.round((p.y / H) * 100) });
     lines.forEach((line, li) => {
       const [a, b] = [corners.points[line.members[0]!]!, corners.points[line.members.at(-1)!]!];
       const middle = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
@@ -370,9 +375,18 @@ export function useLayoutEditor({ photos, style, start, onSaved, frameOrigin }: 
   }
 
   const selBox = sel !== null && mode === "free" ? cellBounds(layout.cells[sel]!) : null;
+  let cellMover: CellMover | null = null;
   if (selBox && sel !== null) {
     const center = { x: selBox.x + selBox.w / 2, y: selBox.y + selBox.h / 2 };
     const corner = screen({ x: selBox.x + selBox.w, y: selBox.y + selBox.h });
+    const start = screen(selBox);
+    const { left, top } = percent(selBox);
+    cellMover = {
+      label: `Move photo ${sel + 1}`,
+      box: { left: start.x, top: start.y, width: corner.x - start.x, height: corner.y - start.y },
+      moves: MOVE_STEPS.map(({ name, by }) => ({ name, run: () => stepCell(by) })),
+      value: `${left}% from the left, ${top}% from the top`,
+    };
     handles.push({
       key: "resize",
       kind: "resize",
@@ -421,6 +435,15 @@ export function useLayoutEditor({ photos, style, start, onSaved, frameOrigin }: 
     commit({ ...draft, layout: next });
   };
 
+  /** Moves the chosen photo as a drag would, which brings it to the top where photos can overlap. */
+  const stepCell = (by: Point) => {
+    if (sel === null) return;
+    const base = layout.allowOverlap ? bringToFront(layout, sel) : layout;
+    const moved = moveCell(base, sel, (by.x * VOICEOVER_STEP_PX) / W, (by.y * VOICEOVER_STEP_PX) / H);
+    if (!moved) return refuse(NO_ROOM);
+    commit({ ...draft, layout: moved });
+  };
+
   /** VoiceOver can't tap a photo, so it steps through them. */
   const pickMoves = swipes((direction) => {
     const count = layout.cells.length;
@@ -438,17 +461,19 @@ export function useLayoutEditor({ photos, style, start, onSaved, frameOrigin }: 
     );
   }
   if (sel !== null && mode === "free") {
-    tools.push({ label: "Smaller", onPress: () => scaleBy(1 / SCALE_STEP) }, { label: "Bigger", onPress: () => scaleBy(SCALE_STEP) });
+    tools.push(
+      { label: "Smaller", onPress: () => scaleBy(1 / SCALE_STEP) },
+      { label: "Bigger", onPress: () => scaleBy(SCALE_STEP) },
+      { label: "Add copy", onPress: () => apply(duplicateCell(layout, sel), "There's no room for another photo.") },
+    );
+    // Before Remove, so the two turns share a row of the grid.
     if (selCell?.shape === "rect") {
       tools.push({ label: "⟲", name: "Turn left", onPress: () => turnBy(-TURN_STEP) }, { label: "⟳", name: "Turn right", onPress: () => turnBy(TURN_STEP) });
     }
-    tools.push(
-      { label: "Add copy", onPress: () => apply(duplicateCell(layout, sel), "There's no room for another photo.") },
-      { label: "Remove", onPress: () => (setSelected(null), apply(removeCell(layout, sel), "A layout needs at least one cell.")) },
-    );
+    tools.push({ label: "Remove", onPress: () => (setSelected(null), apply(removeCell(layout, sel), "A layout needs at least one cell.")) });
   }
 
-  // --- Done: check the layout, then name it and save it.
+  // --- Done: check the layout, then use it as it is, or name it and save it.
 
   const cells = layout.cells.length;
   const missing = photos.length - cells;
@@ -464,7 +489,7 @@ export function useLayoutEditor({ photos, style, start, onSaved, frameOrigin }: 
 
   function done() {
     if (missing) return setMessage(countHint);
-    const found = explain(layoutProblems(layout));
+    const found = explain(editedLayoutProblems(layout));
     setProblems(found);
     if (found.length) return setMessage(found[0]!.text);
     setSaving({ name: start.saved?.name ?? `My ${start.layout.name.toLowerCase()}`.slice(0, 40), busy: false, error: "" });
@@ -494,6 +519,7 @@ export function useLayoutEditor({ photos, style, start, onSaved, frameOrigin }: 
     view,
     fit,
     handles,
+    cellMover,
     tools,
     pressPreview,
     movePreview,
@@ -503,6 +529,7 @@ export function useLayoutEditor({ photos, style, start, onSaved, frameOrigin }: 
     canUndo: history.length > 0,
     undo,
     done,
+    use: () => onUse(layout, order),
     countText,
     status: message || countHint || problems[0]?.text || HINTS[mode](sel !== null),
     saving,

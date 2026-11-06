@@ -55,6 +55,18 @@ describe("AC-CUSTOM-07 saved layouts", () => {
     expect((await c.call("/layouts/mine", { body: { name: "x", layout: { cells: [] } } })).status).toBe(400);
   });
 
+  it("AC-CUSTOM-06 saves a layout with a photo under Instagram's overlays", async () => {
+    const { c } = await verifiedUser(api);
+    const strip = {
+      family: "grid",
+      cells: [
+        { shape: "rect", x: 0, y: 0, w: 1, h: 0.1 },
+        { shape: "rect", x: 0, y: 0.1, w: 1, h: 0.9 },
+      ],
+    };
+    expect((await c.call("/layouts/mine", { body: save("Top strip", strip) })).status).toBe(201);
+  });
+
   it("never shows or changes another user's layouts", async () => {
     const alice = await verifiedUser(api);
     const bob = await verifiedUser(api);
