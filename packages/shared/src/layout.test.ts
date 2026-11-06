@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { LAYOUT_FAMILIES, LayoutSchema, layouts, layoutsFor, type Layout } from "./layout";
-import { layoutProblems } from "./validate";
+import { editedLayoutProblems, layoutProblems } from "./validate";
 
 const parse = (raw: unknown): Layout => LayoutSchema.parse(raw);
 
@@ -65,6 +65,16 @@ describe("AC-LAYOUT-01 layoutProblems", () => {
       ],
     });
     expect(layoutProblems(layout)).toContain("strip cell 0 has only 0% of its area outside the safe-zone bands");
+  });
+
+  it("AC-CUSTOM-06 lets an edited layout put a photo under the bands, and still refuses one past the edge", () => {
+    const cells = [
+      { shape: "rect", x: 0, y: 0, w: 1, h: 0.1 },
+      { shape: "rect", x: 0, y: 0.1, w: 1, h: 0.9 },
+    ];
+    expect(editedLayoutProblems(parse({ id: "strip", name: "Strip", family: "filmstrip", cells }))).toEqual([]);
+    const past = [{ shape: "rect", x: 0.5, y: 0, w: 0.6, h: 1 }];
+    expect(editedLayoutProblems(parse({ id: "past", name: "Past", family: "filmstrip", cells: past }))).toContain("past cell 0 leaves the canvas");
   });
 
   it("reports an arch too short for its curved top", () => {

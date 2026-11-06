@@ -113,6 +113,15 @@ test("AC-CUSTOM-02 AC-CUSTOM-05 AC-CUSTOM-06 AC-CUSTOM-07 reworks a grid by remo
   expect(saved!.layout.cells).toHaveLength(3);
 });
 
+test("AC-CUSTOM-06 draws nothing over the photos", async ({ page }) => {
+  test.skip(process.env.E2E_TARGET !== "app", "apps/web keeps its bands until it's replaced");
+  await signedIn(page);
+  await pickPhotos(page, 3);
+  await page.getByRole("button", { name: "Edit this layout" }).click();
+  await expect(editor(page).getByRole("heading", { name: "3 of 3 photos" })).toBeVisible();
+  await expect(page.getByText("Instagram's buttons")).toHaveCount(0);
+});
+
 test("AC-CUSTOM-03 drags the shared corner of a slanted layout", async ({ page }) => {
   await signedIn(page);
   await pickPhotos(page, 4);

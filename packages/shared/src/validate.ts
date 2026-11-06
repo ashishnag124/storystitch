@@ -52,3 +52,8 @@ export function layoutProblems(layout: Layout, step = 10): string[] {
   });
   return problems;
 }
+
+/** The problems that matter in a layout someone made. Only built-in layouts have to stay clear of Instagram's overlays. */
+export function editedLayoutProblems(layout: Layout, step = 10): string[] {
+  return layoutProblems(layout, step).filter((p) => !p.includes("safe-zone"));
+}
