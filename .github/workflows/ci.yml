@@ -24,7 +24,7 @@ jobs:
   check:
     if: github.event_name != 'pull_request' || github.base_ref == 'main' || contains(github.event.pull_request.labels.*.name, 'run-sim')
     runs-on: ubuntu-24.04
-    # Usually 5 to 9 minutes, but a slow `playwright install` has passed at 31. A stuck one sat for over 45.
+    # Usually 5 to 9 minutes. The Playwright steps have their own limits, so this is for anything else that sticks.
     timeout-minutes: 35
     # Real Postgres for the API's tests and migrations.
     services: &postgres
@@ -52,7 +52,20 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @storystitch/web exec playwright install --with-deps chromium webkit
+      # 114 MB from apt, usually in seconds. Now and then Azure's Ubuntu mirror sends it at 50 to 100 kB/s, which takes 20
+      # to 45 minutes and never trips apt's timeout, which only sees silence. So stop early and use the next mirror.
+      - name: Install Playwright's system packages
+        timeout-minutes: 11
+        run: |
+          # `timeout` runs as root because apt does: run as the runner, it can't stop apt, which then blocks the retry.
+          install_deps() { sudo env "PATH=$PATH" timeout 5m apps/web/node_modules/.bin/playwright install-deps chromium webkit; }
+          install_deps && exit 0
+          echo "::warning::apt failed or took over 5 minutes. Trying again without the Azure mirror."
+          sudo sed -i '/azure\.archive\.ubuntu\.com/d' /etc/apt/apt-mirrors.txt
+          install_deps
+      - name: Install Playwright's browsers
+        timeout-minutes: 5
+        run: pnpm --filter @storystitch/web exec playwright install chromium webkit
       # Lint, typecheck, unit + end-to-end tests, and every criterion in docs/acceptance-criteria.md. Staging runs the
       # Expo app, so that's what's graded here. release.yml grades whichever app production serves.
       - run: pnpm qa --target=app
