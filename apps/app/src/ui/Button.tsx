@@ -28,7 +28,7 @@ export function Button({ label, name, onPress, primary, big, disabled, trackAs }
       }}
       style={[styles.button, primary && styles.primary, big && styles.big, disabled && styles.disabled]}
     >
-      <Text style={[styles.label, primary && styles.primaryLabel, big && styles.bigLabel]}>{label}</Text>
+      <Text style={[styles.label, name !== undefined && styles.symbol, primary && styles.primaryLabel, big && styles.bigLabel]}>{label}</Text>
     </Pressable>
   );
 }
@@ -48,6 +48,7 @@ const styles = StyleSheet.create({
   big: { minHeight: 56, paddingHorizontal: 32 },
   disabled: { opacity: 0.55 },
   label: { fontFamily, fontSize: 16, fontWeight: "700", color: colors.text },
+  symbol: { fontSize: 34 },
   primaryLabel: { color: colors.accentText },
   bigLabel: { fontSize: 18, fontWeight: "800" },
 });
