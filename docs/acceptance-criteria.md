@@ -250,7 +250,7 @@ Behind `VITE_FEATURE_LAYOUT_EDITOR` (needs accounts): on in staging and producti
 | AC-USAGE-06 | The API refuses oversized bodies and other web origins, limits batches per visitor, and writes nothing while `USAGE_INGEST_ENABLED` is off. | auto |
 | AC-USAGE-07 | Page views use fixed screen names, cover the pick, editor, layout editor and account screens, and never send a path or query string. `/bot-check` isn't counted. | auto |
 | AC-USAGE-08 | With tracking on, the iOS app sends usage events to a local API, and the whole core flow still works with the API unreachable. | manual |
-| AC-USAGE-09 | The privacy policy and App Store answers match what's tracked, and the app shows the policy notice for 30 days after the change. | manual |
+| AC-USAGE-09 | The privacy policy and App Store answers match what's tracked. | manual |
 
 ## Admin analytics
 

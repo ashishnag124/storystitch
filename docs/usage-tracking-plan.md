@@ -419,6 +419,8 @@ makes no claim about this and doesn't need to change. If decision 5 goes the oth
 for 30 days, with a link to `/privacy`: "We've updated our privacy policy. We now count how the app is used, anonymously."
 It ends on a fixed date in code, so it stores nothing on the device. It should ship at the same time as the policy.
 
+**Update, November 7, 2026:** the owner removed this notice before submitting 1.0.0. It made no sense on the home screen.
+
 ### App Store Connect
 
 The repo has no record of the current answers. The move-to-Expo plan lists privacy labels as a step still to do, so
@@ -498,7 +500,7 @@ the ID and run only with `E2E_TARGET=app`, and `pnpm qa --target=web` leaves tho
 | AC-USAGE-06 | The API refuses oversized bodies and other web origins, limits batches per visitor, and writes nothing while `USAGE_INGEST_ENABLED` is off. | auto | `apps/api` |
 | AC-USAGE-07 | Page views use fixed screen names, cover the pick, editor, layout editor and account screens, and never send a path or query string. `/bot-check` isn't counted. | auto, was planned until the default target changed | Playwright, `E2E_TARGET=app` |
 | AC-USAGE-08 | With tracking on, the iOS app sends usage events to a local API, and the whole core flow still works with the API unreachable. | manual | Simulator. `apps/app/maestro/core` needs no API, so it can't prove delivery |
-| AC-USAGE-09 | The privacy policy and App Store answers match what's tracked, and the app shows the policy notice for 30 days after the change. | manual | By hand before turning it on |
+| AC-USAGE-09 | The privacy policy and App Store answers match what's tracked. | manual | By hand before turning it on |
 
 **Edited rows:**
 

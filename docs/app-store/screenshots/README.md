@@ -45,7 +45,7 @@ Don't use the photos already in the simulator or `apps/web/e2e/fixtures`. Three 
    APP_VARIANT=staging pnpm run prebuild:ios
    ```
 
-   Then build `ios/StoryStitchStaging.xcworkspace`, scheme `StoryStitchStaging`, with `-configuration Release`. Leave `EXPO_PUBLIC_FEATURE_USAGE` unset, as that file does. With it on, the home screen adds a privacy policy notice until `POLICY_NOTICE_UNTIL` (December 15, 2026).
+   Then build `ios/StoryStitchStaging.xcworkspace`, scheme `StoryStitchStaging`, with `-configuration Release`.
 
 2. Clone the simulator, so the photos don't change the order that the Maestro flows pick from. Keep the UDID this prints for the next steps:
 
