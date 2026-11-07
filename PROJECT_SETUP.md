@@ -73,7 +73,7 @@ What and why: the v2 section of `docs/product-brief.md`. Acceptance criteria: th
 |---|---|---|
 | B0 | Brief v2, planned criteria, legal drafts, accounts and DNS (checklist below) | docs merged; checklist in progress |
 | B1 | API + Postgres on Railway (staging, production), custom domains, CI/release/QA wiring | in progress: staging API live; checklist below |
-| B2 | Optional email and password accounts (Better Auth, Resend, Turnstile), account deletion, behind `VITE_FEATURE_ACCOUNTS` | on in staging; on in production from the next `/release` |
+| B2 | Optional email and password accounts (Better Auth, Resend, Turnstile), account deletion, behind `VITE_FEATURE_ACCOUNTS` | on in staging and production |
 | B3 | Save collages to Cloudflare R2, "My stories", storage limits | not started |
 | B4 | Supporter pass (Lemon Squeezy) | deferred: see "Later" in the brief |
 | B5 | Admin analytics (`/admin`, desktop, admin login with authenticator code) | not started |
@@ -97,7 +97,7 @@ Claude never reads that file; it loads values from it into Railway and GitHub wh
 - [ ] **Legal pages**: have the policy reviewed. `apps/web/public/privacy.html` and `support.html` are the pages at
   /privacy and /support, and the Expo app copies them when it builds. Terms are postponed: `docs/legal/terms.md` is a
   draft, and the app has no terms page.
-- [ ] **Usage tracking**, before turning it on: have the policy's usage text reviewed, then in App Store Connect → App
+- [x] **Usage tracking** (on in production since v1.0.0, November 7, 2026), before turning it on: have the policy's usage text reviewed, then in App Store Connect → App
   Privacy, for the staging and production apps, add Usage Data → Product Interaction (Analytics) and Diagnostics → Other
   Diagnostic Data (Analytics), both not linked and not used for tracking. Check that Product Interaction also lists App
   Functionality, for the count that ranks layouts. The tracking answer stays No. On Android, the matching Play Console
@@ -240,10 +240,10 @@ serve it before installing, and a change can take a while to reach phones.
 
 `.github/workflows/mobile-release.yml` builds the production app from a release tag and sends it to App Store
 Connect. It only runs when started by hand, and nothing reaches the App Store until you submit the build for review.
-No production build has run yet, so expect to fix things on the first one. Run commands from `apps/app`. What to enter in
+The first production build ran by hand from v1.0.0 on November 7, 2026, and `mobile-release.yml` made build 2 from v1.0.1. Run commands from `apps/app`. What to enter in
 App Store Connect is in `docs/app-store-submission.md`.
 
-- [ ] 1. **Move production web to the Expo app first**, as in "Move production web to the Expo app" below. iOS sign-in
+- [x] 1. **Move production web to the Expo app first**, as in "Move production web to the Expo app" below. iOS sign-in
   loads the bot check from `/bot-check` on the production site, and `apps/web` doesn't have that page. Until this ships,
   sign-in fails in the production iOS app.
 - [x] 2. **Production app in App Store Connect**: first register `com.ashishnag.storystitch` under Identifiers, as for
@@ -252,10 +252,10 @@ App Store Connect is in `docs/app-store-submission.md`.
   ```bash
   npx eas-cli@27.2.0 env:set production --name EXPO_PUBLIC_TURNSTILE_SITE_KEY --value YOUR_SITE_KEY --visibility plaintext --scope project
   ```
-- [ ] 4. **First production build, by hand**: run the `production` profile once with `npx eas-cli@27.2.0 build` and
+- [x] 4. **First production build, by hand**: run the `production` profile once with `npx eas-cli@27.2.0 build` and
   `--platform ios --profile production --auto-submit`, signing in to Apple when asked.
-- [ ] 5. **Turn it on**: `gh variable set MOBILE_PRODUCTION_ENABLED --body true`. To turn it off, delete the variable.
-- [ ] 6. **Each later build**: after `/release`, run `gh workflow run mobile-release.yml -f version=vX.Y.Z`.
+- [x] 5. **Turn it on**: `gh variable set MOBILE_PRODUCTION_ENABLED --body true`. To turn it off, delete the variable.
+- [x] 6. **Each later build**: after `/release`, run `gh workflow run mobile-release.yml -f version=vX.Y.Z`.
 
 The production API already defaults to `APP_SCHEME=storystitch://`, which matches this app.
 
@@ -275,7 +275,9 @@ Run `/release` in Claude Code from this repo. It checks CI on `main`, shows what
 
 ## Move production web to the Expo app
 
-Merging this change ships nothing. `release.yml` keeps grading and deploying `apps/web`, so `main` stays releasable, until you set `PRODUCTION_WEB_APP`. Don't set it until the Expo web app and the iOS app on TestFlight have both been reviewed.
+**Done:** `PRODUCTION_WEB_APP=app` was set and v1.0.0 moved production to the Expo app on November 7, 2026. The steps below are kept for reference and for a rollback.
+
+`release.yml` grades and deploys `apps/web` while `PRODUCTION_WEB_APP` is unset, and the Expo app once it's `app`.
 
 ### Before the release (yours)
 
