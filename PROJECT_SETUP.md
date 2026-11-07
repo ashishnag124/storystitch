@@ -240,14 +240,15 @@ serve it before installing, and a change can take a while to reach phones.
 
 `.github/workflows/mobile-release.yml` builds the production app from a release tag and sends it to App Store
 Connect. It only runs when started by hand, and nothing reaches the App Store until you submit the build for review.
-No production build has run yet, so expect to fix things on the first one. Run commands from `apps/app`.
+No production build has run yet, so expect to fix things on the first one. Run commands from `apps/app`. What to enter in
+App Store Connect is in `docs/app-store-submission.md`.
 
 - [ ] 1. **Move production web to the Expo app first**, as in "Move production web to the Expo app" below. iOS sign-in
   loads the bot check from `/bot-check` on the production site, and `apps/web` doesn't have that page. Until this ships,
   sign-in fails in the production iOS app.
-- [ ] 2. **Production app in App Store Connect**: first register `com.ashishnag.storystitch` under Identifiers, as for
+- [x] 2. **Production app in App Store Connect**: first register `com.ashishnag.storystitch` under Identifiers, as for
   staging. Then add an app with that bundle ID, named StoryStitch. Copy its numeric Apple ID into `submit.production.ios.ascAppId` in `apps/app/eas.json`, and merge that.
-- [ ] 3. **Turnstile site key for production builds**: the same public key, on the `production` environment:
+- [x] 3. **Turnstile site key for production builds**: the same public key, on the `production` environment:
   ```bash
   npx eas-cli@27.2.0 env:set production --name EXPO_PUBLIC_TURNSTILE_SITE_KEY --value YOUR_SITE_KEY --visibility plaintext --scope project
   ```
