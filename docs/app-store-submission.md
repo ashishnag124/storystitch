@@ -119,14 +119,22 @@ Answer **None** or **No** to every question: no violence, sexual content, profan
 
 ## Screenshots
 
-App Store Connect needs at least one set at the 6.9-inch size, 1320 × 2868 from an iPhone 18 Pro Max simulator, and 3 to 10 images. Smaller iPhone sizes can reuse that set. The app is iPhone only, so no iPad set is needed.
+The set is in `docs/app-store/screenshots/`, and every photo in it is CC0. Its `README.md` lists each photo's source and how to retake each image.
 
-Use photos you have the right to use, such as your own. Suggested order:
+Final order, 9 images:
 
-1. A finished collage in the editor, with the layout strip showing
-2. The layout strip with several layouts for the same photos
-3. A Polaroid or scattered layout
-4. Editing a layout
-5. The Style tool
+1. The home screen
+2. Five Polaroids, with the layout strip
+3. Mosaic of eight
+4. Eight circles, with the same 8 photos
+5. Heart and two, on Blush
+6. Two arches on Sage, zooming one photo
+7. The layout editor, with a corner dragged
+8. The Style tool, turning the circles Navy
+9. The share sheet, on the edited collage
 
-Don't show Instagram's logo or app screens in them.
+Upload them in that order to the iPhone set. App Store Connect takes 1 to 10 images per size, as PNG or JPEG, with no alpha channel. These are 1320 × 2868 from an iPhone 18 Pro Max simulator, an accepted size for the large Dynamic Island class. Apple's page names the medium class as the required one, so if App Store Connect asks for it, make a 1206 × 2622 set with the command in the README. The app is iPhone only, so no iPad set is needed.
+
+From April 2027, Apple also requires iPhone Duo screenshots for apps built with the iOS 27.1 SDK or later.
+
+Don't show Instagram's logo or app screens in them. The home screen's own text does name Instagram: "Turn 1–8 photos into an Instagram Story collage."
