@@ -10,7 +10,7 @@ test("AC-PICK-01 AC-PRIV-02 starts on photo picking and says photos stay on the 
   await expect(input).toHaveAttribute("type", "file");
   await expect(input).toHaveAttribute("multiple");
   await expect(input).toHaveAttribute("accept", /\.heic/);
-  await expect(page.getByText(/nothing is uploaded/i)).toBeVisible();
+  await expect(page.getByText(/never uploaded/i)).toBeVisible();
 });
 
 test("AC-PICK-09 phones get one-tap photo sources for their platform, and no camera button", async ({ page }, testInfo) => {

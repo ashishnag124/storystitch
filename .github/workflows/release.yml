@@ -133,4 +133,5 @@ jobs:
       api_url: ${{ vars.API_URL_PRODUCTION }}
       accounts: true
       layout_editor: true
+      usage: true
     secrets: inherit

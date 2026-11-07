@@ -119,9 +119,10 @@ replaces parts of it. Build order and status: see "Backend milestones" in `PROJE
 
 ## Admin analytics
 
-- First-party events stored in our own database: visits, photos picked (count only), layout chosen, export, share,
-  save, sign-up, and errors. Never image content, emails or IP addresses;
-  visitors are counted with a hash that changes every day.
+- First-party events: visits, screen views, tagged button presses, photos picked (count only), layout chosen, export,
+  share, save, sign-up and error codes. Our own database keeps only daily counts, with no event log. Never image
+  content, file names, layout names, emails, IP addresses or account or device IDs; visitors are counted with a hash
+  that changes every day and is held in memory only.
 - A `/admin` dashboard: daily totals, the picked → exported → saved funnel, most-used layouts, and errors.
 - Only accounts marked as admin can open it, signing in with email, password and an authenticator-app code. It's
   built for desktop; on a phone it says to open it on a desktop.

@@ -13,7 +13,8 @@
         "EXPO_PUBLIC_API_URL": "https://api-staging.storystitch.ashishnag.com",
         "EXPO_PUBLIC_WEB_URL": "https://staging.storystitch.ashishnag.com",
         "EXPO_PUBLIC_FEATURE_ACCOUNTS": "true",
-        "EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR": "true"
+        "EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR": "true",
+        "EXPO_PUBLIC_FEATURE_USAGE": "true"
       }
     },
     "preview": {
@@ -36,7 +37,8 @@
         "EXPO_PUBLIC_API_URL": "https://api.storystitch.ashishnag.com",
         "EXPO_PUBLIC_WEB_URL": "https://storystitch.ashishnag.com",
         "EXPO_PUBLIC_FEATURE_ACCOUNTS": "true",
-        "EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR": "true"
+        "EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR": "true",
+        "EXPO_PUBLIC_FEATURE_USAGE": "true"
       }
     }
   },
@@ -48,7 +50,7 @@
     },
     "production": {
       "ios": {
-        "ascAppId": "REPLACE_WITH_PRODUCTION_APP_STORE_CONNECT_APP_ID"
+        "ascAppId": "6831817943"
       }
     }
   }

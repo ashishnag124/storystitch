@@ -1,10 +1,14 @@
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { AccountLink } from "./AccountLink";
+import { POLICY_NOTICE_UNTIL, PRIVACY_URL, USAGE_ENABLED } from "./config";
 import { Hero } from "./platform/Hero";
 import { PhotoSources } from "./platform/PhotoSources";
 import type { PickedPhoto } from "./platform/photos";
 import { colors, fontFamily, type } from "./theme";
 import { Logo } from "./ui/Logo";
+import { ExternalLink } from "./ui/NavLink";
+
+const POLICY_NOTICE = USAGE_ENABLED && Date.now() < Date.parse(POLICY_NOTICE_UNTIL);
 
 interface Props {
   privacy: string;
@@ -44,6 +48,12 @@ export function PickScreen({ privacy, progress, notices, onPicked }: Props) {
           </Text>
         ))}
         <Text style={styles.privacy}>{privacy}</Text>
+        {POLICY_NOTICE && (
+          <>
+            <Text style={styles.privacy}>We've updated our privacy policy. We now count how the app is used, anonymously.</Text>
+            <ExternalLink url={PRIVACY_URL} label="Read the privacy policy" />
+          </>
+        )}
       </View>
     </ScrollView>
   );
