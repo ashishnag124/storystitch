@@ -1,7 +1,7 @@
 import { cellShapes, styleScale, type Scene } from "@storystitch/client";
 import { STORY_CANVAS, drawOrder } from "@storystitch/shared";
 import { decodeFull, type Photo } from "./photos.web";
-import { drawBlurredBackground, drawCell, fillBackground, hasBlurredBackground, type Drawable } from "./render.web";
+import { drawBlurredBackground, drawCell, drawMark, fillBackground, hasBlurredBackground, markFont, type Drawable } from "./render.web";
 
 export type ExportFormat = "image/jpeg" | "image/png";
 
@@ -72,9 +72,9 @@ export interface ExportJob {
 
 /**
  * Renders the 1080×1920 export from the original photos, decoding one at a time
- * so memory stays at a single full-resolution photo. Returns null if the job was cancelled.
+ * so memory stays at a single full-resolution photo. `mark` adds the "Made with StoryStitch" mark. Returns null if the job was cancelled.
  */
-export async function renderExport(scene: Scene, photos: Photo[], format: ExportFormat, job: ExportJob): Promise<Blob | null> {
+export async function renderExport(scene: Scene, photos: Photo[], format: ExportFormat, mark: boolean, job: ExportJob): Promise<Blob | null> {
   const start = performance.now();
   const size = STORY_CANVAS;
   const canvas = document.createElement("canvas");
@@ -96,6 +96,10 @@ export async function renderExport(scene: Scene, photos: Photo[], format: Export
     const img = await decode(photos[scene.order[i]!]!);
     drawCell(ctx, shapes[i]!, img, scene.crops[i]!, radius, border, scene.style.borderColor);
     img.image.close();
+  }
+  if (mark) {
+    await document.fonts.load(markFont(size));
+    drawMark(ctx, size);
   }
   const blob = await encode(canvas, format);
   // Recorded for the performance acceptance test (AC-PERF-03) and visible in browser dev tools.

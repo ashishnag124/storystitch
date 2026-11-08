@@ -17,7 +17,7 @@ import { STORY_CANVAS, hitTest, type Frame, type Point } from "@storystitch/shar
 import { useCallback, useEffect, useImperativeHandle, useRef, useState, type KeyboardEvent, type PointerEvent, type Ref } from "react";
 import { haptic, prefersReducedMotion, tween } from "./motion.web";
 import type { Photo } from "./photos";
-import { drawScene, outlineBounds, previewOf, snapshotCell, type Marks } from "./render";
+import { drawMark, drawScene, markFont, outlineBounds, previewOf, snapshotCell, type Marks } from "./render";
 import "./stage.css";
 
 /** Zoom change per pixel of Ctrl+scroll / trackpad pinch. */
@@ -65,12 +65,14 @@ interface Props {
   onSelect: (cell: number | null) => void;
   onScene: (next: (scene: Scene) => Scene) => void;
   onStatus: (text: string) => void;
+  /** Shows the "Made with StoryStitch" mark, as the export will have it. */
+  mark: boolean;
 }
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
 
 /** The preview: everything drawn on the canvas, and every gesture and key on it. */
-export function Stage({ ref, scene, photos, selected, onSelect, onScene, onStatus }: Props) {
+export function Stage({ ref, scene, photos, selected, onSelect, onScene, onStatus, mark }: Props) {
   const [lifted, setLifted] = useState<{ from: number; over: number } | null>(null);
   const [showNumbers, setShowNumbers] = useState(false);
   const [coach, setCoach] = useState(true);
@@ -86,21 +88,22 @@ export function Stage({ ref, scene, photos, selected, onSelect, onScene, onStatu
   const imageFor = useCallback((i: number) => previewOf(photos[i]!), [photos]);
 
   // The latest state, for drawing from animation frames.
-  const latest = useRef({ scene, selected, lifted, showNumbers });
+  const latest = useRef({ scene, selected, lifted, showNumbers, mark });
   useEffect(() => {
-    latest.current = { scene, selected, lifted, showNumbers };
+    latest.current = { scene, selected, lifted, showNumbers, mark };
   });
 
   /** Draws the scene plus whatever is animating over it. */
   const draw = useCallback(() => {
     const ctx = canvasRef.current?.getContext("2d");
     if (!ctx) return;
-    const { scene, selected, lifted, showNumbers } = latest.current;
+    const { scene, selected, lifted, showNumbers, mark } = latest.current;
     const o = overlay.current;
     const marks: Marks = lifted
       ? { dim: lifted.from, target: lifted.over === lifted.from ? undefined : lifted.over, hidden: o.hidden }
       : { selected: selected ?? undefined, numbers: showNumbers, hidden: o.hidden };
     drawScene(ctx, STORY_CANVAS, scene, imageFor, marks);
+    if (mark) drawMark(ctx, STORY_CANVAS);
     if (o.fade) {
       ctx.save();
       ctx.globalAlpha = 1 - o.fade.t;
@@ -134,7 +137,9 @@ export function Stage({ ref, scene, photos, selected, onSelect, onScene, onStatu
     }
   }, [imageFor]);
 
-  useEffect(draw, [scene, selected, lifted, showNumbers, draw]);
+  useEffect(draw, [scene, selected, lifted, showNumbers, mark, draw]);
+  // Draws the mark again once its font has loaded.
+  useEffect(() => void document.fonts.load(markFont(STORY_CANVAS)).then(draw), [draw]);
 
   // Fit the 9:16 preview into whatever space the screen leaves between the top bar and the tools.
   useEffect(() => {

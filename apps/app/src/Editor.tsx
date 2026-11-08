@@ -2,7 +2,7 @@ import { assignedScene, cellShapes, newScene, rankedScenes, usageLayout, withCro
 import { MAX_ZOOM, MIN_ZOOM, clampCrop } from "@storystitch/layout-engine";
 import { STORY_CANVAS, type Layout, type SavedLayout } from "@storystitch/shared";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AppState, ScrollView, StyleSheet, Text, View } from "react-native";
+import { AppState, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { AccountLink } from "./AccountLink";
 import { deleteSaved, listSaved, recordExport } from "./api";
 import { LAYOUT_EDITOR_ENABLED } from "./config";
@@ -65,7 +65,9 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
     ...(summary ? [{ text: summary, alert: false }] : []),
   ]);
   const [format, setFormat] = useState<ExportFormat>("image/jpeg");
-  const [exported, setExported] = useState<{ scene: Scene; format: ExportFormat; blob: Blob } | null>(null);
+  /** Whether the export carries the "Made with StoryStitch" mark. */
+  const [mark, setMark] = useState(true);
+  const [exported, setExported] = useState<{ scene: Scene; format: ExportFormat; mark: boolean; blob: Blob } | null>(null);
   const [exportError, setExportError] = useState(false);
   /** Share was tapped before the image was ready, and opens once it is. */
   const [shareWaiting, setShareWaiting] = useState(false);
@@ -101,11 +103,11 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
       // An earlier failure says nothing about this export, and would end a wait for it.
       setExportError(false);
       const start = performance.now();
-      renderExport(scene, photos, format, job)
+      renderExport(scene, photos, format, mark, job)
         .then((blob) => {
           if (!blob || job.cancelled) return;
           perfTimes.exportMs = performance.now() - start;
-          setExported({ scene, format, blob });
+          setExported({ scene, format, mark, blob });
           setExportError(false);
         })
         .catch((err) => {
@@ -121,8 +123,8 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
       job.cancelled = true;
       clearTimeout(timer);
     };
-  }, [scene, photos, format]);
-  const ready = exported && exported.scene === scene && exported.format === format ? exported.blob : null;
+  }, [scene, photos, format, mark]);
+  const ready = exported && exported.scene === scene && exported.format === format && exported.mark === mark ? exported.blob : null;
   const extension = format === "image/png" ? "png" : "jpg";
 
   async function share(file: NonNullable<typeof ready>) {
@@ -244,7 +246,7 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
       </View>
 
       <View aria-hidden={covered} style={styles.stage}>
-        <Stage ref={stage} scene={scene} photos={photos} selected={selected} onSelect={setSelected} onScene={onScene} onStatus={setStatus} />
+        <Stage ref={stage} scene={scene} photos={photos} selected={selected} onSelect={setSelected} onScene={onScene} onStatus={setStatus} mark={mark} />
         <View aria-live="polite" style={styles.toasts} pointerEvents="box-none">
           {toasts.map((t) => (
             <Toast key={t.text} {...t} onClose={() => setToasts((all) => all.filter((x) => x.text !== t.text))} />
@@ -311,6 +313,19 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
         ) : (
           <ScrollView contentContainerStyle={styles.exportTool}>
             <FormatSelect value={format} onChange={setFormat} />
+            <View style={styles.markRow}>
+              <Text style={typography.hint}>Made with StoryStitch</Text>
+              <Switch
+                aria-label="Made with StoryStitch"
+                value={mark}
+                onValueChange={setMark}
+                trackColor={{ false: colors.border, true: colors.accent }}
+                thumbColor={colors.text}
+                ios_backgroundColor={colors.border}
+                // React Native Web colors the thumb of a switch that's on with its own prop.
+                {...{ activeThumbColor: colors.text }}
+              />
+            </View>
             {warnings.length > 0 && (
               <View role="list" style={styles.warnings}>
                 {warnings.map((w) => (
@@ -386,6 +401,7 @@ const styles = StyleSheet.create({
   tabCurrent: { fontWeight: "800", color: colors.accent },
   badge: { position: "absolute", top: 10, right: "30%", width: 8, height: 8, borderRadius: 4, backgroundColor: "#d97706" },
   exportTool: { flexGrow: 1, justifyContent: "center", gap: 8 },
+  markRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   exportError: { fontFamily, padding: 12, borderRadius: 14, fontSize: 14, backgroundColor: colors.warnBg, color: colors.warnText },
   warnings: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, backgroundColor: colors.warnBg },
   warning: { fontFamily, fontSize: 13, color: colors.warnText },
