@@ -120,7 +120,7 @@ reuse IDs.
 | AC-EXPORT-06 | Where it can't, the image downloads instead. | auto |
 | AC-EXPORT-07 | The export is rendered from the original photos, not the downscaled previews. | auto |
 | AC-EXPORT-08 | Sharing to Instagram on a real phone opens a Story with the image, and no face sits under Instagram's overlays. | manual |
-| AC-EXPORT-09 | The Export tab has a "Made with StoryStitch" switch, on by default. When it's on, the export carries a small, see-through StoryStitch mark tucked into the lower right corner, no wider than a quarter of the image. When it's off, the export has no mark. | auto |
+| AC-EXPORT-09 | The Export tab has a "Made with StoryStitch" switch, on by default. When it's on, the export carries a small, see-through StoryStitch mark in the lower right corner, set in far enough to sit on the photo rather than on the layout's outer margin, and about a quarter of the image's width at most. When it's off, the export has no mark. | auto |
 
 ## Performance
 
