@@ -1,4 +1,4 @@
-import { SAFE_ZONE, type Size } from "@storystitch/shared";
+import type { Size } from "@storystitch/shared";
 import type { Box } from "./motion";
 
 /** The "Made with StoryStitch" mark drawn into the export: the logo and the name, small and see-through. */
@@ -17,13 +17,14 @@ export interface MarkLayout {
 }
 
 /**
- * Lays out the mark in the lower right, just inside Instagram's overlay bands so the reply bar doesn't cover it.
+ * Lays out the mark tucked into the lower right corner, with just enough inset that the edge doesn't clip it.
  * `textWidth` is the name's width at `markFontSize(size)`, measured by the renderer.
  */
 export function markLayout(size: Size, textWidth: number): MarkLayout {
   const fontSize = markFontSize(size);
-  const right = size.width * (1 - SAFE_ZONE.sides);
-  const baseline = size.height * (1 - SAFE_ZONE.bottom) - fontSize * 0.25; // room for the "y"'s tail
+  const inset = fontSize * 0.5;
+  const right = size.width - inset;
+  const baseline = size.height - inset - fontSize * 0.25; // room for the "y"'s tail
   const h = fontSize * 0.8;
   const w = (h * 16) / 28;
   const x = right - textWidth - w - fontSize * 0.3;
