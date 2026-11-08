@@ -160,3 +160,45 @@ test("AC-EXPORT-05 Share hands a 1080×1920 image to the share sheet", async ({ 
     height: 1920,
   });
 });
+
+test("AC-EXPORT-09 the StoryStitch mark is small, see-through and in the lower right, and the switch removes it", async ({ page }) => {
+  test.skip(process.env.E2E_TARGET !== "app", "apps/web is staying as it is until it's replaced");
+  await pickOne(page, await drawJpeg(page, 1080, 1920, "g.fillStyle='#808080';g.fillRect(0,0,w,h);"), "Full bleed");
+  await page.getByRole("tab", { name: "Export" }).click();
+  const toggle = page.getByRole("switch", { name: "Made with StoryStitch" });
+  await expect(toggle).toBeChecked();
+  const marked = await exportImage(page);
+  await toggle.click();
+  await expect(toggle).not.toBeChecked();
+  const plain = await exportImage(page);
+
+  // Where the two exports differ, and by how much.
+  const { box, maxDiff } = await page.evaluate(
+    async ([a, b]) => {
+      const read = async (b64: string) => {
+        const bitmap = await createImageBitmap(await (await fetch(`data:image/jpeg;base64,${b64}`)).blob());
+        const ctx = new OffscreenCanvas(bitmap.width, bitmap.height).getContext("2d")!;
+        ctx.drawImage(bitmap, 0, 0);
+        return ctx.getImageData(0, 0, bitmap.width, bitmap.height);
+      };
+      const [x, y] = [await read(a!), await read(b!)];
+      let [x0, y0, x1, y1, maxDiff] = [Infinity, Infinity, -1, -1, 0];
+      for (let i = 0; i < x.data.length; i += 4) {
+        const d = Math.max(...[0, 1, 2].map((c) => Math.abs(x.data[i + c]! - y.data[i + c]!)));
+        if (d < 16) continue;
+        const p = i / 4;
+        const [px, py] = [p % x.width, Math.floor(p / x.width)];
+        [x0, y0, x1, y1, maxDiff] = [Math.min(x0, px), Math.min(y0, py), Math.max(x1, px), Math.max(y1, py), Math.max(maxDiff, d)];
+      }
+      return { box: { x0, y0, x1, y1 }, maxDiff };
+    },
+    [marked.toString("base64"), plain.toString("base64")],
+  );
+  expect(box.x1).toBeGreaterThan(0); // the mark is there
+  expect(maxDiff).toBeLessThan(110); // and see-through: solid white on this grey would differ by 127
+  expect(box.x1 - box.x0).toBeLessThanOrEqual(1080 / 4);
+  expect(box.x0).toBeGreaterThan(540);
+  expect(box.y0).toBeGreaterThan(960);
+  expect(box.x1).toBeLessThanOrEqual(1080 * 0.94 + 4);
+  expect(box.y1).toBeLessThanOrEqual(1920 * 0.82 + 4);
+});
