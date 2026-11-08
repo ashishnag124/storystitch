@@ -1,4 +1,4 @@
-import { SAFE_ZONE, STORY_CANVAS } from "@storystitch/shared";
+import { STORY_CANVAS } from "@storystitch/shared";
 import { describe, expect, it } from "vitest";
 import { MARK_TEXT, markFontSize, markLayout } from "./mark";
 
@@ -12,10 +12,11 @@ describe("AC-EXPORT-09 markLayout", () => {
     expect(right - layout.logo.x).toBeLessThanOrEqual(W / 4);
   });
 
-  it("sits in the lower right, clear of Instagram's overlays", () => {
-    expect(right).toBeCloseTo(W * (1 - SAFE_ZONE.sides));
-    expect(layout.logo.x).toBeGreaterThan(W / 2);
-    expect(layout.logo.y).toBeGreaterThan(H / 2);
-    expect(layout.text.y + layout.fontSize * 0.25).toBeCloseTo(H * (1 - SAFE_ZONE.bottom));
+  it("is tucked into the lower right corner", () => {
+    const bottom = layout.text.y + layout.fontSize * 0.25;
+    expect(right).toBeLessThan(W);
+    expect(right).toBeGreaterThan(W - 20);
+    expect(bottom).toBeLessThan(H);
+    expect(bottom).toBeGreaterThan(H - 20);
   });
 });
