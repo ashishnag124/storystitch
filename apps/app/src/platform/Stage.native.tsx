@@ -7,7 +7,7 @@ import { PanResponder, Pressable, StyleSheet, Text, View, type GestureResponderE
 import { colors, fontFamily } from "../theme";
 import { haptic, prefersReducedMotion, tween } from "./motion.native";
 import type { Photo } from "./photos.native";
-import { blurredImage, drawCellAt, drawFaded, drawScene, hasBlurredBackground, outlineBounds, previewOf, type Marks } from "./render.native";
+import { blurredImage, drawCellAt, drawFaded, drawMark, drawScene, hasBlurredBackground, outlineBounds, previewOf, type Marks } from "./render.native";
 
 /** How long the gesture hint shows if nobody touches the preview first. */
 const COACH_MS = 8000;
@@ -47,12 +47,14 @@ interface Props {
   onSelect: (cell: number | null) => void;
   onScene: (next: (scene: Scene) => Scene) => void;
   onStatus: (text: string) => void;
+  /** Shows the "Made with StoryStitch" mark, as the export will have it. */
+  mark: boolean;
 }
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
 
 /** The preview: drawn with Skia, with the same gestures as the web preview. */
-export function Stage({ ref, scene, photos, selected, onSelect, onScene, onStatus }: Props) {
+export function Stage({ ref, scene, photos, selected, onSelect, onScene, onStatus, mark }: Props) {
   const [area, setArea] = useState({ width: 0, height: 0 });
   const [lifted, setLifted] = useState<{ from: number; over: number } | null>(null);
   const [coach, setCoach] = useState(true);
@@ -92,6 +94,7 @@ export function Stage({ ref, scene, photos, selected, onSelect, onScene, onStatu
         : { selected: selected ?? undefined, hidden: o.hidden };
       canvas.scale(k, k);
       drawScene(canvas, STORY_CANVAS, scene, imageFor, blurred, marks);
+      if (mark) drawMark(canvas, STORY_CANVAS);
       if (o.fade) drawFaded(canvas, STORY_CANVAS, o.fade.scene, imageFor, null, 1 - o.fade.t, lerp(1, 1.03, o.fade.t));
       for (const f of o.flights ?? []) drawCellAt(canvas, STORY_CANVAS, f.scene, f.cell, imageFor, lerpBox(f.from, f.to, f.t), { shadow: 40 * (1 - f.t) });
       if (g?.kind === "lift") {
@@ -103,7 +106,7 @@ export function Stage({ ref, scene, photos, selected, onSelect, onScene, onStatu
         drawCellAt(canvas, STORY_CANVAS, scene, g.from, imageFor, to, { turn: 2 * t, shadow: 48 * t });
       }
     }, Skia.XYWHRect(0, 0, width || 1, height || 1));
-  }, [k, width, height, scene, imageFor, blurred, selected, lifted, frame]);
+  }, [k, width, height, scene, imageFor, blurred, selected, lifted, mark, frame]);
 
   /** Applies `edit` to the crop of `cell`, then fits it to the cell's frame. */
   const editCrop = useCallback(

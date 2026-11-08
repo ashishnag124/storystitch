@@ -8,3 +8,8 @@ export let Skia: ReturnType<typeof JsiSkApi>;
 export function loadCanvasKit(canvasKit: Parameters<typeof JsiSkApi>[0]) {
   Skia = JsiSkApi(canvasKit);
 }
+
+/** render.native.ts's mark looks up an installed font, which CanvasKit doesn't have. The parity test doesn't draw the mark. */
+export function matchFont(): never {
+  throw new Error("No installed fonts on CanvasKit");
+}

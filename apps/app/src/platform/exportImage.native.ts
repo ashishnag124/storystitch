@@ -4,7 +4,7 @@ import { STORY_CANVAS, drawOrder } from "@storystitch/shared";
 import { EncodingType, cacheDirectory, writeAsStringAsync } from "expo-file-system/legacy";
 import { isAvailableAsync, shareAsync } from "expo-sharing";
 import { decodeFull, type Photo } from "./photos.native";
-import { blurredImage, drawBlurredBackground, drawCell, fillBackground, hasBlurredBackground } from "./render.native";
+import { blurredImage, drawBlurredBackground, drawCell, drawMark, fillBackground, hasBlurredBackground } from "./render.native";
 
 export type ExportFormat = "image/jpeg" | "image/png";
 const JPEG_QUALITY = 90;
@@ -16,9 +16,9 @@ export interface ExportJob {
 
 /**
  * Renders the 1080×1920 export from the original photos, decoding one at a time so memory stays at a single
- * full-resolution photo. Returns the base64 of the encoded file, or null if the job was cancelled.
+ * full-resolution photo. `mark` adds the "Made with StoryStitch" mark. Returns the base64 of the encoded file, or null if the job was cancelled.
  */
-export async function renderExport(scene: Scene, photos: Photo[], format: ExportFormat, job: ExportJob): Promise<string | null> {
+export async function renderExport(scene: Scene, photos: Photo[], format: ExportFormat, mark: boolean, job: ExportJob): Promise<string | null> {
   const size = STORY_CANVAS;
   const surface = Skia.Surface.Make(size.width, size.height);
   if (!surface) throw new Error("Couldn't make a surface");
@@ -38,6 +38,7 @@ export async function renderExport(scene: Scene, photos: Photo[], format: Export
     await draw(photos[scene.order[i]!]!, (img) => drawCell(canvas, shapes[i]!, img, scene.crops[i]!, radius, border, scene.style.borderColor));
   }
   if (job.cancelled) return null;
+  if (mark) drawMark(canvas, size);
   surface.flush();
   const png = format === "image/png";
   return surface.makeImageSnapshot().encodeToBase64(png ? ImageFormat.PNG : ImageFormat.JPEG, png ? undefined : JPEG_QUALITY);

@@ -1,8 +1,22 @@
 // The same drawing as render.web.ts, on Skia. Keep the two in step: both draw the same layouts and styles.
-import { DEFAULT_BACKGROUND, backgroundOf, cellShapes, styleScale, type Box, type CellShape, type Outline, type Scene } from "@storystitch/client";
+import {
+  DEFAULT_BACKGROUND,
+  MARK_OPACITY,
+  MARK_TEXT,
+  backgroundOf,
+  cellShapes,
+  markFontSize,
+  markLayout,
+  markLogoParts,
+  styleScale,
+  type Box,
+  type CellShape,
+  type Outline,
+  type Scene,
+} from "@storystitch/client";
 import { CENTER_CROP, sourceRect, type Crop } from "@storystitch/layout-engine";
 import { drawOrder, type Size } from "@storystitch/shared";
-import { ClipOp, FilterMode, MipmapMode, PaintStyle, Skia, StrokeJoin, type SkCanvas, type SkImage, type SkPaint, type SkPath } from "@shopify/react-native-skia";
+import { ClipOp, FilterMode, MipmapMode, PaintStyle, Skia, StrokeJoin, matchFont, type SkCanvas, type SkFont, type SkImage, type SkPaint, type SkPath } from "@shopify/react-native-skia";
 import type { Photo } from "./photos.native";
 
 /** Anything drawable with its pixel size: a preview copy or a decoded original. */
@@ -221,5 +235,25 @@ export function drawFaded(canvas: SkCanvas, size: Size, scene: Scene, imageFor: 
   canvas.translate((size.width * (1 - scale)) / 2, (size.height * (1 - scale)) / 2);
   canvas.scale(scale, scale);
   drawScene(canvas, size, scene, imageFor, blurred);
+  canvas.restore();
+}
+
+let markFont: { size: number; font: SkFont } | undefined;
+
+/** Draws the "Made with StoryStitch" mark over the collage, drawn solid on its own layer and then laid on see-through. */
+export function drawMark(canvas: SkCanvas, size: Size) {
+  const fontSize = markFontSize(size);
+  if (markFont?.size !== fontSize) markFont = { size: fontSize, font: matchFont({ fontFamily: "Bricolage Grotesque", fontSize, fontWeight: "bold" }) };
+  const { font } = markFont;
+  const m = markLayout(size, font.measureText(MARK_TEXT).width);
+  const layer = Skia.Paint();
+  layer.setAlphaf(MARK_OPACITY);
+  // A faint shadow keeps it readable on light photos.
+  layer.setImageFilter(Skia.ImageFilter.MakeDropShadow(0, 0, m.fontSize * 0.15, m.fontSize * 0.15, Skia.Color("rgba(0, 0, 0, 0.35)"), null));
+  canvas.saveLayer(layer);
+  for (const part of markLogoParts(m.logo)) {
+    canvas.drawRRect(Skia.RRectXY(Skia.XYWHRect(part.box.x, part.box.y, part.box.w, part.box.h), part.radius, part.radius), paintOf(part.color));
+  }
+  canvas.drawText(MARK_TEXT, m.text.x, m.text.y, paintOf("#fff"), font);
   canvas.restore();
 }

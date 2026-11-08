@@ -1,4 +1,18 @@
-import { DEFAULT_BACKGROUND, backgroundOf, cellShapes, styleScale, type Box, type CellShape, type Outline, type Scene } from "@storystitch/client";
+import {
+  DEFAULT_BACKGROUND,
+  MARK_OPACITY,
+  MARK_TEXT,
+  backgroundOf,
+  cellShapes,
+  markFontSize,
+  markLayout,
+  markLogoParts,
+  styleScale,
+  type Box,
+  type CellShape,
+  type Outline,
+  type Scene,
+} from "@storystitch/client";
 import { CENTER_CROP, sourceRect, type Crop } from "@storystitch/layout-engine";
 import { drawOrder, type Size } from "@storystitch/shared";
 import type { Photo } from "./photos";
@@ -204,4 +218,39 @@ export function drawScene(
     });
     ctx.restore();
   }
+}
+
+/** The mark's font. Load it before drawing (`document.fonts.load(markFont(size))`), or the name falls back to another font. */
+export const markFont = (size: Size) => `700 ${markFontSize(size)}px "Bricolage Grotesque Variable", system-ui, sans-serif`;
+
+/** Draws the "Made with StoryStitch" mark over the collage, drawn solid on its own layer and then laid on see-through. */
+export function drawMark(ctx: CanvasRenderingContext2D, size: Size) {
+  const font = markFont(size);
+  ctx.font = font;
+  const textWidth = ctx.measureText(MARK_TEXT).width;
+  const m = markLayout(size, textWidth);
+  const pad = m.fontSize; // room for the shadow and the "y"'s tail
+  const left = m.logo.x - pad;
+  const top = m.logo.y - pad;
+  const layer = document.createElement("canvas");
+  layer.width = Math.ceil(m.text.x + textWidth + pad - left);
+  layer.height = Math.ceil(m.text.y + pad - top);
+  const g = layer.getContext("2d")!;
+  g.translate(-left, -top);
+  for (const part of markLogoParts(m.logo)) {
+    g.fillStyle = part.color;
+    g.beginPath();
+    g.roundRect(part.box.x, part.box.y, part.box.w, part.box.h, part.radius);
+    g.fill();
+  }
+  g.font = font;
+  g.fillStyle = "#fff";
+  g.fillText(MARK_TEXT, m.text.x, m.text.y);
+  ctx.save();
+  ctx.globalAlpha = MARK_OPACITY;
+  // A faint shadow keeps it readable on light photos.
+  ctx.shadowColor = "rgb(0 0 0 / 0.35)";
+  ctx.shadowBlur = m.fontSize * 0.3;
+  ctx.drawImage(layer, left, top);
+  ctx.restore();
 }
