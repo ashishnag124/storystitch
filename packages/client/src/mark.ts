@@ -3,10 +3,10 @@ import type { Box } from "./motion";
 
 /** The "Made with StoryStitch" mark drawn into the export: the logo and the name, small and see-through. */
 export const MARK_TEXT = "storystitch";
-export const MARK_OPACITY = 0.55;
+export const MARK_OPACITY = 0.78;
 
-/** The name's font size: small enough that the whole mark stays under a quarter of the image's width. */
-export const markFontSize = (size: Size) => size.width * 0.026;
+/** The name's font size: small enough that the whole mark stays within about a quarter of the image's width. */
+export const markFontSize = (size: Size) => size.width * 0.035;
 
 export interface MarkLayout {
   /** The logo, a 9:16 frame like the app's icon. */
@@ -17,14 +17,14 @@ export interface MarkLayout {
 }
 
 /**
- * Lays out the mark tucked into the lower right corner, with just enough inset that the edge doesn't clip it.
+ * Lays out the mark in the lower right corner, far enough in to sit on the photo rather than on a layout's
+ * outer margin (28px by default) and clear of the photo's rounded corner.
  * `textWidth` is the name's width at `markFontSize(size)`, measured by the renderer.
  */
 export function markLayout(size: Size, textWidth: number): MarkLayout {
   const fontSize = markFontSize(size);
-  const inset = fontSize * 0.5;
-  const right = size.width - inset;
-  const baseline = size.height - inset - fontSize * 0.25; // room for the "y"'s tail
+  const right = size.width - fontSize * 1.9;
+  const baseline = size.height - fontSize * 2.1 - fontSize * 0.25; // room for the "y"'s tail
   const h = fontSize * 0.8;
   const w = (h * 16) / 28;
   const x = right - textWidth - w - fontSize * 0.3;

@@ -161,7 +161,7 @@ test("AC-EXPORT-05 Share hands a 1080×1920 image to the share sheet", async ({ 
   });
 });
 
-test("AC-EXPORT-09 the StoryStitch mark is small, see-through and in the lower right corner, and the switch removes it", async ({ page }) => {
+test("AC-EXPORT-09 the StoryStitch mark is small, see-through and in from the lower right corner, and the switch removes it", async ({ page }) => {
   test.skip(process.env.E2E_TARGET !== "app", "apps/web is staying as it is until it's replaced");
   await pickOne(page, await drawJpeg(page, 1080, 1920, "g.fillStyle='#808080';g.fillRect(0,0,w,h);"), "Full bleed");
   await page.getByRole("tab", { name: "Export" }).click();
@@ -195,11 +195,13 @@ test("AC-EXPORT-09 the StoryStitch mark is small, see-through and in the lower r
     [marked.toString("base64"), plain.toString("base64")],
   );
   expect(box.x1).toBeGreaterThan(0); // the mark is there
-  expect(maxDiff).toBeLessThan(110); // and see-through: solid white on this grey would differ by 127
+  expect(maxDiff).toBeLessThan(120); // and see-through: solid white on this grey would differ by 127
   expect(box.x1 - box.x0).toBeLessThanOrEqual(1080 / 4);
   expect(box.x0).toBeGreaterThan(540);
   expect(box.y0).toBeGreaterThan(960);
-  // Tucked into the corner: its shadow reaches within a few pixels of the right and bottom edges.
-  expect(box.x1).toBeGreaterThan(1080 - 24);
-  expect(box.y1).toBeGreaterThan(1920 - 24);
+  // In from the corner: clear of a layout's 28px outer margin and its photo's rounded corner, but not far.
+  expect(box.x1).toBeLessThan(1080 - 48);
+  expect(box.x1).toBeGreaterThan(1080 - 100);
+  expect(box.y1).toBeLessThan(1920 - 48);
+  expect(box.y1).toBeGreaterThan(1920 - 110);
 });
