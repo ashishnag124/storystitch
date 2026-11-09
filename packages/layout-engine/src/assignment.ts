@@ -165,19 +165,27 @@ export const POPULARITY_BONUS = 0.1;
 export const POPULARITY_FULL_AT = 20;
 
 /**
- * Every layout with its best assignment for these photos, best fit first. `popularity` (exports per layout
- * id) breaks near-ties: see POPULARITY_BONUS. Exact ties go to the lower id, so the order never depends on
- * how the options were listed.
+ * Placement cost per cell for a layout whose whole canvas is background, in proportion to the share that is.
+ * Small, sparse cells can match each photo's shape, so they crop less; without this, layouts that leave most
+ * of the canvas empty often rank above ones the photos fill.
+ */
+export const BACKGROUND_COST = 1.5;
+
+/**
+ * Every layout with its best assignment for these photos, best fit first. An option's `background` is the
+ * share of the canvas outside every photo (0 when omitted): see BACKGROUND_COST. `popularity` (exports per
+ * layout id) breaks near-ties: see POPULARITY_BONUS. Exact ties go to the lower id, so the order never
+ * depends on how the options were listed.
  */
 export function rankLayouts<T extends { id: string }>(
-  options: { layout: T; cells: CellTarget[] }[],
+  options: { layout: T; cells: CellTarget[]; background?: number }[],
   photos: PhotoSubjects[],
   popularity: Record<string, number> = {},
 ): { layout: T; assignment: Assignment }[] {
   const exports = (id: string) => popularity[id] ?? 0;
   const top = Math.max(POPULARITY_FULL_AT, ...options.map((o) => exports(o.layout.id)));
-  const score = (o: { layout: T; cells: CellTarget[] }, cost: number) =>
-    cost - POPULARITY_BONUS * o.cells.length * (exports(o.layout.id) / top);
+  const score = (o: { layout: T; cells: CellTarget[]; background?: number }, cost: number) =>
+    cost + o.cells.length * (BACKGROUND_COST * (o.background ?? 0) - POPULARITY_BONUS * (exports(o.layout.id) / top));
   return options
     .map((o) => {
       const assignment = assignPhotos(photos, o.cells);

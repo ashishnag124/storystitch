@@ -22,9 +22,27 @@ describe("layout library", () => {
     expect(new Set(layouts.map((l) => l.family))).toEqual(new Set(LAYOUT_FAMILIES));
   });
 
+  it("AC-LAYOUT-06 has a filled alternative for every negative-space layout", () => {
+    // Rectangles as [x, y, w, h], stretched so the photos run the full height, in a fixed order.
+    const filled = (l: Layout) => {
+      const rects = l.cells.map((c) => (c.shape === "rect" ? [c.x, c.y, c.w, c.h] : null));
+      if (rects.some((r) => !r)) return null;
+      const top = Math.min(...rects.map((r) => r![1]!));
+      const span = Math.max(...rects.map((r) => r![1]! + r![3]!)) - top;
+      return rects.map((r) => [r![0]!, (r![1]! - top) / span, r![2]!, r![3]! / span]).sort((a, b) => a[1]! - b[1]! || a[0]! - b[0]!);
+    };
+    const same = (a: number[][], b: number[][]) => a.length === b.length && a.every((r, i) => r.every((v, j) => Math.abs(v - b[i]![j]!) < 0.06));
+    for (const negative of layouts.filter((l) => l.family === "negative-space")) {
+      const shape = filled(negative)!;
+      const twin = layouts.find((l) => l.family !== "negative-space" && filled(l) && same(filled(l)!, shape));
+      expect(twin, negative.id).toBeDefined();
+    }
+  });
+
+  // A few hundred ms each locally, but CI's two cores run every package's tests at once: shaped layouts took over 5 s there.
   it.each(layouts.map((l) => [l.id, l] as const))("AC-LAYOUT-01 %s is valid", (_, layout) => {
     expect(layoutProblems(layout)).toEqual([]);
-  });
+  }, 20_000);
 });
 
 describe("AC-LAYOUT-01 layoutProblems", () => {

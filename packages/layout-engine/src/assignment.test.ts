@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  BACKGROUND_COST,
   POPULARITY_BONUS,
   POPULARITY_FULL_AT,
   assignPhotos,
@@ -132,6 +133,28 @@ describe("rankLayouts", () => {
     expect(rankLayouts(options, photos).map((r) => r.layout.id)).toEqual(ids);
     expect(rankLayouts([...options].reverse(), photos).map((r) => r.layout.id)).toEqual(ids);
     expect(ids.indexOf("columns")).toBeLessThan(ids.indexOf("columns-copy")); // a tie goes to the lower id
+  });
+
+  describe("AC-RANK-06 background", () => {
+    // Two portrait photos: the sparse layout's 3:4 cells fit them exactly, but leave most of the canvas empty.
+    const sparse = { layout: { id: "a-sparse" }, cells: [cell(600, 800), cell(600, 800)], background: 0.6 };
+    const dense = { layout: { id: "b-dense" }, cells: [cell(600, 900), cell(600, 900)], background: 0.1 };
+    const photos = [portrait, portrait];
+    const costOf = (id: string) => rankLayouts([sparse, dense], photos).find((r) => r.layout.id === id)!.assignment.cost;
+
+    it("puts a layout the photos fill above a slightly better fit that leaves the canvas empty", () => {
+      expect(costOf("a-sparse")).toBeLessThan(costOf("b-dense"));
+      expect(costOf("b-dense") - costOf("a-sparse")).toBeLessThan(BACKGROUND_COST * 2 * (0.6 - 0.1));
+      expect(rankLayouts([sparse, dense], photos)[0]!.layout.id).toBe("b-dense");
+    });
+
+    it("keeps a sparse layout first when it fits clearly better", () => {
+      const squat = { ...dense, cells: [wideCell, wideCell] };
+      const lighter = { ...sparse, background: 0.4 };
+      const fitGap = rankLayouts([squat], photos)[0]!.assignment.cost - rankLayouts([lighter], photos)[0]!.assignment.cost;
+      expect(fitGap).toBeGreaterThan(BACKGROUND_COST * 2 * (0.4 - 0.1));
+      expect(rankLayouts([lighter, squat], photos)[0]!.layout.id).toBe("a-sparse");
+    });
   });
 
   describe("AC-RANK-04 popularity", () => {

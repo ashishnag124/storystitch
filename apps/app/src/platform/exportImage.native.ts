@@ -1,7 +1,7 @@
 import { cellShapes, styleScale, type Scene } from "@storystitch/client";
 import { ImageFormat, Skia } from "@shopify/react-native-skia";
 import { STORY_CANVAS, drawOrder } from "@storystitch/shared";
-import { EncodingType, cacheDirectory, writeAsStringAsync } from "expo-file-system/legacy";
+import { EncodingType, cacheDirectory, deleteAsync, makeDirectoryAsync, writeAsStringAsync } from "expo-file-system/legacy";
 import { isAvailableAsync, shareAsync } from "expo-sharing";
 import { decodeFull, type Photo } from "./photos.native";
 import { blurredImage, drawBlurredBackground, drawCell, drawMark, fillBackground, hasBlurredBackground } from "./render.native";
@@ -55,10 +55,20 @@ export const EXPORT_PAUSE_MS = 2000;
 /** The share sheet can open whenever the image is ready, so Share stays available while it's made. */
 export const canWaitToShare: boolean = true;
 
-/** Opens the share sheet, where the user picks Instagram or Save Image. */
+/** The folder the last shared file is in. */
+let lastShareFolder: string | undefined;
+
+/**
+ * Opens the share sheet, where the user picks Instagram or Save Image. Each share gets a folder of its own, so the
+ * file keeps its name but its path is new. With one path for every share, an edited collage sent through Messages
+ * went out as the one shared before it. The previous folder is removed.
+ */
 export async function shareOrDownload(base64: string, filename: string): Promise<boolean> {
   if (!(await isAvailableAsync())) return false;
-  const uri = `${cacheDirectory}${filename}`;
+  if (lastShareFolder) await deleteAsync(lastShareFolder, { idempotent: true });
+  lastShareFolder = `${cacheDirectory}share-${Date.now()}/`;
+  await makeDirectoryAsync(lastShareFolder, { intermediates: true });
+  const uri = `${lastShareFolder}${filename}`;
   await writeAsStringAsync(uri, base64, { encoding: EncodingType.Base64 });
   await shareAsync(uri);
   return true;

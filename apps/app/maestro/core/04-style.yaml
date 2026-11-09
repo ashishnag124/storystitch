@@ -8,9 +8,9 @@ name: AC-IOS-04 The Style tool changes colors and spacing
     text: Black
     selected: true
 - tapOn: Spacing
-- assertVisible: "14"
+- assertVisible: "8"
 - swipe:
     start: "60%,86%"
     end: "85%,86%"
     duration: 600
-- assertNotVisible: "14"
+- assertNotVisible: "8"
