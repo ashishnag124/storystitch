@@ -22,9 +22,10 @@ describe("layout library", () => {
     expect(new Set(layouts.map((l) => l.family))).toEqual(new Set(LAYOUT_FAMILIES));
   });
 
+  // A few hundred ms each locally, but CI's two cores run every package's tests at once: shaped layouts took over 5 s there.
   it.each(layouts.map((l) => [l.id, l] as const))("AC-LAYOUT-01 %s is valid", (_, layout) => {
     expect(layoutProblems(layout)).toEqual([]);
-  });
+  }, 20_000);
 });
 
 describe("AC-LAYOUT-01 layoutProblems", () => {

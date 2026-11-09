@@ -1,5 +1,5 @@
 import { CENTER_CROP, type Detection } from "@storystitch/layout-engine";
-import { STORY_CANVAS, layouts, layoutsFor } from "@storystitch/shared";
+import { STORY_CANVAS, layouts, layoutsFor, type Layout } from "@storystitch/shared";
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_BACKGROUND,
@@ -104,6 +104,19 @@ describe("rankedScenes", () => {
     const portrait = [{ width: 1080, height: 1920, detections: [] }];
     expect(rankedScenes(portrait)[0]!.layout.id).toBe("single-bleed");
     expect(rankedScenes(plain(1))[0]!.layout.id).toBe("single-framed");
+  });
+
+  it("AC-RANK-06 puts a layout the photos fill first for odd photo counts", () => {
+    const person = { kind: "person", score: 0.9, box: { x: 0.35, y: 0.25, w: 0.3, h: 0.4 } } as const;
+    const portrait = { width: 3024, height: 4032, detections: [person] };
+    const landscape = { width: 4032, height: 3024, detections: [person] };
+    const filled = (l: Layout) => ["grid", "feature", "mosaic", "diagonal"].includes(l.family) || l.id.endsWith("-wave");
+    for (const n of [3, 5, 7]) {
+      for (const photos of [Array(n).fill(portrait), Array(n).fill(landscape)]) {
+        const top = rankedScenes(photos)[0]!.layout;
+        expect(filled(top), top.id).toBe(true);
+      }
+    }
   });
 });
 
