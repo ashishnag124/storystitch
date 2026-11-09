@@ -11,8 +11,8 @@ Product requirements: `docs/product-brief.md`. Acceptance criteria (what QA chec
 | Data shape / shared contract (layouts and their types) | `packages/shared/src/` (zod) first, then implement |
 | Cropping, assignment, ranking (pure functions) | `packages/layout-engine/src/` |
 | App logic with no UI or browser APIs (scene, layout editor drafts, API calls) | `packages/client/src/` |
-| Web app UI | `apps/web/src/` |
-| The Expo app, on staging now and replacing `apps/web` in production once `PRODUCTION_WEB_APP` is set (web and iOS) | `apps/app/src/`; anything browser-only goes in a `*.web.ts(x)` file (lint enforces it) |
+| Old web app UI (production's rollback only; new UI goes in `apps/app`) | `apps/web/src/` |
+| The Expo app (web and iOS), on staging and production since v1.0.0 | `apps/app/src/`; anything browser-only goes in a `*.web.ts(x)` file (lint enforces it) |
 | On-device subject detection (Web Worker, MediaPipe) | `apps/web/src/detect/`; models in `apps/web/public/models/` |
 | End-to-end tests (Playwright) | `apps/web/e2e/` |
 | iOS simulator tests (Maestro) | `apps/app/maestro/`: `core/` needs no API and is graded by `pnpm qa --target=ios` (a flow's `name:` starts with its `AC-IOS-*` ID); `local/` needs a signed-in account and the local API, and isn't graded |
@@ -27,7 +27,7 @@ A request that needs an app or service not in `project.json` (e.g. "add an iOS a
 
 - **Local** is the default for everything: `.env`, `pnpm dev`. Run, test and debug here.
 - **Staging** = whatever is on `main`, served by the Expo app (`apps/app`). You get there by promoting `dev` into `main` in a PR, nothing else.
-- **Production** = the `production` branch, moved only by `/release` after the user confirms. It serves `apps/web` until the user sets the `PRODUCTION_WEB_APP` variable to `app` (see "Move production web to the Expo app" in `PROJECT_SETUP.md`).
+- **Production** = the `production` branch, moved only by `/release` after the user confirms. It serves the Expo app, because the `PRODUCTION_WEB_APP` variable is `app` (since v1.0.0, November 7, 2026). Deleting the variable switches the next release back to `apps/web` (see "Rollback" in `PROJECT_SETUP.md`). The production iOS app is built from a release tag by `mobile-release.yml`, and only the user submits it to Apple.
 - Never deploy to or change settings on staging or production yourself. If debugging needs hosted logs, ask the user to run the command and paste the output.
 
 ## Commands
