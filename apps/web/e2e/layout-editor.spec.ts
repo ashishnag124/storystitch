@@ -224,6 +224,7 @@ async function expectActions(page: Page, primary: string, secondary: string, qui
 }
 
 test("AC-MOBILE-05 grouped actions keep to one hierarchy at phone width", async ({ page }) => {
+  test.skip(process.env.E2E_TARGET !== "app", "apps/web still asks for an account first, and is staying as it is until it's replaced");
   await page.setViewportSize({ width: 375, height: 812 });
   await pickPhotos(page, 3);
   await page.getByRole("radio", { name: "Three stacked", exact: true }).click();
