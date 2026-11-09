@@ -31,6 +31,7 @@ Web app on Cloudflare Pages, plus an API with Postgres on Railway (from v2). All
 | `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_FEATURE_ACCOUNTS`, `EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR` for iOS | `apps/app/eas.json`, read by EAS builds and by `mobile.yml` for updates | iOS builds and updates |
 | `EXPO_PUBLIC_TURNSTILE_SITE_KEY` for iOS | EAS environment variable, `preview` environment. GitHub secrets don't reach EAS builds | iOS builds and updates |
 | `MOBILE_PRODUCTION_ENABLED` | GitHub variable, off until the "iOS production checklist" is done. Allows `mobile-release.yml` to run | production iOS builds |
+| `MOBILE_PRODUCTION_UPDATES_ENABLED` (optional, default off) | GitHub variable. `true` lets `mobile-release.yml` publish an update instead of building when a production build has the same native code | production iOS updates |
 | `EXPO_PUBLIC_PERF_READOUT` (optional) | Set by hand for a test build on a real phone; never in a hosted environment | shows timing numbers on screen |
 | EAS project ID, App Store Connect app ID | `apps/app/app.config.ts`; `apps/app/eas.json`, a placeholder until the checklist below (both public values) | EAS |
 | `API_URL_STAGING`, `API_URL_PRODUCTION` | GitHub variables | web builds (`VITE_API_URL`) in `ci.yml` / `release.yml` |
@@ -239,7 +240,8 @@ serve it before installing, and a change can take a while to reach phones.
 ### iOS production checklist (yours)
 
 `.github/workflows/mobile-release.yml` builds the production app from a release tag and sends it to App Store
-Connect. It only runs when started by hand, and nothing reaches the App Store until you submit the build for review.
+Connect, or publishes it as an update once step 7 is on. It only runs when started by hand, and no build reaches the
+App Store until you submit it for review.
 The first production build ran by hand from v1.0.0 on November 7, 2026, and `mobile-release.yml` made build 2 from v1.0.1. Run commands from `apps/app`. What to enter in
 App Store Connect is in `docs/app-store-submission.md`.
 
@@ -256,8 +258,19 @@ App Store Connect is in `docs/app-store-submission.md`.
   `--platform ios --profile production --auto-submit`, signing in to Apple when asked.
 - [x] 5. **Turn it on**: `gh variable set MOBILE_PRODUCTION_ENABLED --body true`. To turn it off, delete the variable.
 - [x] 6. **Each later build**: after `/release`, run `gh workflow run mobile-release.yml -f version=vX.Y.Z`.
+- [ ] 7. **Updates over the air**, once 1.0.0 is on the App Store: `gh variable set MOBILE_PRODUCTION_UPDATES_ENABLED --body true`.
+  From then on `mobile-release.yml` publishes the release as an update to the `production` channel when a production
+  build has the same native code (the runtime version, a fingerprint), and builds as before when not. `/release` asks
+  first whether any of those builds is in App Store review: an update would reach the reviewer's copy too, so then it
+  builds instead (`-f mode=build`). To turn updates off, delete the variable.
 
 The production API already defaults to `APP_SCHEME=storystitch://`, which matches this app.
+
+**What an update may change.** Apple allows downloaded JavaScript to fix bugs and add features, as long as it doesn't
+change the app's main purpose, add a store or storefront for other code, or get around App Store review (the Apple
+Developer Program License Agreement, and App Review Guideline 2.5.2). A bigger change, or anything needing new permissions or native code,
+goes out as a new build through review (`-f mode=build`). An installed app downloads an update when it starts and
+uses it from the next start.
 
 ### DNS records (Cloudflare → ashishnag.com → DNS → Records)
 
@@ -323,6 +336,28 @@ Run `/add-app` (e.g. an iOS app, API + database, accounts). It updates `project.
 
 - Web: Cloudflare dashboard → Workers & Pages → `storystitch-web` → Deployments → roll back to a previous production deployment. Then fix forward on `main` and `/release` again.
 - API: Railway dashboard → `api` → Deployments → redeploy the previous one. Migrations aren't rolled back: they're written to work with the previous API version (add first, remove later), so the older API keeps working against the newer schema.
+- iOS app, after a bad update: see "Roll back a production update" below. A bad build can't be rolled back: submit a fixed one.
+
+### Roll back a production update
+
+From `apps/app`, signed in with `npx eas-cli@27.2.0 login`. Each takes about a minute. Phones pick up the change when
+the app starts and use it from the start after that.
+
+- **Back to the previous update.** Find its group ID in the earlier `mobile-release.yml` run's summary, or in the list:
+  ```bash
+  npx eas-cli@27.2.0 update:list --branch production --platform ios
+  ```
+  then publish it again:
+  ```bash
+  npx eas-cli@27.2.0 update:republish --group GROUP_ID --platform ios --message "Roll back to vX.Y.Z"
+  ```
+- **Back to the JavaScript inside the build**, when there's no good earlier update. Use the runtime version from the
+  run's summary:
+  ```bash
+  npx eas-cli@27.2.0 update:roll-back-to-embedded --channel production --platform ios --runtime-version RUNTIME_VERSION --message "Roll back to the build"
+  ```
+
+Then fix forward on `main` and `/release` again.
 
 ### Rolling back from the Expo app to `apps/web`
 

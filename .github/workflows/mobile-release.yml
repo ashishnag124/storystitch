@@ -1,8 +1,10 @@
-# Builds the production iOS app from a release tag and sends it to App Store Connect. It doesn't publish anything:
-# the build waits there until someone submits it for review by hand.
+# Sends a release tag to the production iOS app. Native code unchanged since a production build: publish an update
+# to the `production` channel, which reaches every production build with the same native code. Otherwise: build and
+# send to App Store Connect, where the build waits until someone submits it for review by hand.
 #
 # Only ever started by hand, after /release has put that tag on production. Off until EXPO_TOKEN is set and the
-# MOBILE_PRODUCTION_ENABLED variable is `true`. Setup: "iOS production checklist" in PROJECT_SETUP.md.
+# MOBILE_PRODUCTION_ENABLED variable is `true`. Updates also need MOBILE_PRODUCTION_UPDATES_ENABLED=true; without it,
+# every run builds. Setup: "iOS production checklist" in PROJECT_SETUP.md.
 name: Mobile release
 
 on:
@@ -11,6 +13,11 @@ on:
       version:
         description: "Release tag already on production, e.g. v1.0.0"
         required: true
+      mode:
+        description: "auto: an update when a production build has the same native code, otherwise a build. build: always build"
+        type: choice
+        options: [auto, build]
+        default: auto
 
 permissions:
   contents: read
@@ -56,4 +63,51 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: npm install --global eas-cli@27.2.0
-      - run: eas build --platform ios --profile production --auto-submit --non-interactive
+
+      # `eas update` ignores the env in eas.json. It has to bundle with the same values, and APP_VARIANT has to match,
+      # or the update gets a different runtime version from the builds it's meant for.
+      - name: Load the production values from eas.json
+        run: jq -r '.build.production.env | to_entries[] | "\(.key)=\(.value)"' eas.json >> "$GITHUB_ENV"
+
+      # The runtime version is a fingerprint of the native code, and an update only reaches builds that share it.
+      # /release asks before starting this whether any of those builds is in App Store review, and passes `build` if so.
+      - id: path
+        name: Choose an update or a build
+        env:
+          MODE: ${{ inputs.mode }}
+          UPDATES_ENABLED: ${{ vars.MOBILE_PRODUCTION_UPDATES_ENABLED }}
+        run: |
+          set -euo pipefail
+          runtime=$(pnpm exec expo-updates runtimeversion:resolve --platform ios | jq -r .runtimeVersion)
+          builds=$(eas build:list --platform ios --build-profile production --runtime-version "$runtime" --status finished --limit 50 --json --non-interactive)
+          numbers=$(echo "$builds" | jq -r '[.[].appBuildVersion] | join(", ")')
+          if [ "$MODE" = "build" ]; then
+            path=build; why="build was chosen"
+          elif [ -z "$numbers" ]; then
+            path=build; why="no production build has this native code yet"
+          elif [ "$UPDATES_ENABLED" != "true" ]; then
+            path=build; why="MOBILE_PRODUCTION_UPDATES_ENABLED isn't true"
+          else
+            path=update; why="it reaches production builds $numbers"
+          fi
+          echo "path=$path" >> "$GITHUB_OUTPUT"
+          {
+            echo "Runtime version: \`$runtime\`"
+            echo
+            echo "**$path** $VERSION: $why."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Build and send to App Store Connect
+        if: steps.path.outputs.path == 'build'
+        run: eas build --platform ios --profile production --auto-submit --non-interactive
+
+      - name: Publish an update to the production channel
+        if: steps.path.outputs.path == 'update'
+        run: |
+          set -euo pipefail
+          eas update --channel production --environment production --platform ios --message "$VERSION" --json > "$RUNNER_TEMP/update.json"
+          group=$(jq -r '.[0].group' "$RUNNER_TEMP/update.json")
+          {
+            echo
+            echo "Update group: \`$group\`. To undo it, see \"Roll back a production update\" in PROJECT_SETUP.md."
+          } >> "$GITHUB_STEP_SUMMARY"
