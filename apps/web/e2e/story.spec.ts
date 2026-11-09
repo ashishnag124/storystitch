@@ -177,7 +177,7 @@ test.describe("editing", () => {
     await page.getByRole("slider", { name: "Spacing" }).fill("40");
 
     await page.getByRole("button", { name: "Reset style" }).click();
-    await expect(page.getByRole("slider", { name: "Spacing" })).toHaveValue("14");
+    await expect(page.getByRole("slider", { name: "Spacing" })).toHaveValue("8");
     await chip("Color").click();
     await expect(page.getByRole("button", { name: "White" })).toHaveAttribute("aria-pressed", "true");
   });

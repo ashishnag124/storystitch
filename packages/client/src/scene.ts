@@ -37,7 +37,7 @@ export const PRINT_BORDER = 14;
 /** A Polaroid card's margins around its photo, as fractions of the card's width. */
 export const POLAROID = { side: 0.06, bottom: 0.24 } as const;
 
-export const DEFAULT_STYLE: Style = { background: null, gap: 14, margin: 28, radius: 20, border: null, borderColor: "#ffffff" };
+export const DEFAULT_STYLE: Style = { background: null, gap: 8, margin: 12, radius: 20, border: null, borderColor: "#ffffff" };
 
 /** The background a scene shows: the user's pick, else blur for "framed on blur" layouts, else the default color. */
 export function backgroundOf(layout: Layout, style: Style): Background {
@@ -148,13 +148,22 @@ function rankOption(layout: Layout, style: Style): { layout: Layout; cells: Cell
 }
 
 /**
+ * Ranked layouts with the one the editor opens on first: the best that isn't negative-space, since leaving an
+ * empty band is the user's choice. The rest keep their order.
+ */
+export function openingFirst<T extends { layout: Pick<Layout, "family"> }>(ranked: T[]): T[] {
+  const first = ranked.findIndex((s) => s.layout.family !== "negative-space");
+  return first > 0 ? [ranked[first]!, ...ranked.slice(0, first), ...ranked.slice(first + 1)] : ranked;
+}
+
+/**
  * A scene for every layout that fits this many photos, best fit first (layouts the photos fill before ones
  * that leave much of the canvas plain, and more often exported layouts first among near-equal fits), with
- * photos assigned to cells.
+ * photos assigned to cells. See `openingFirst` for the first one.
  */
 export function rankedScenes(photos: CropSource[], style: Style = DEFAULT_STYLE, popularity: Record<string, number> = {}): Scene[] {
   const options = layoutsFor(photos.length).map((layout) => rankOption(layout, style));
-  return rankLayouts(options, photos, popularity).map(({ layout, assignment: { order, crops } }) => ({ layout, style, order, crops }));
+  return openingFirst(rankLayouts(options, photos, popularity).map(({ layout, assignment: { order, crops } }) => ({ layout, style, order, crops })));
 }
 
 /** A scene for one layout (a saved one, say), with the photos assigned to its cells the best way. */

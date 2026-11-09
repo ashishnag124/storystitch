@@ -10,6 +10,7 @@ import {
   borderOf,
   cellShapes,
   newScene,
+  openingFirst,
   rankedScenes,
   safeInsets,
   styleScale,
@@ -104,6 +105,21 @@ describe("rankedScenes", () => {
     const portrait = [{ width: 1080, height: 1920, detections: [] }];
     expect(rankedScenes(portrait)[0]!.layout.id).toBe("single-bleed");
     expect(rankedScenes(plain(1))[0]!.layout.id).toBe("single-framed");
+  });
+
+  describe("AC-RANK-07 opening layout", () => {
+    const ranked = (...families: string[]) => families.map((family, i) => ({ id: i, layout: { family } as Layout }));
+
+    it("moves the best layout that isn't negative-space to the front, keeping the rest in order", () => {
+      expect(openingFirst(ranked("negative-space", "negative-space", "grid", "circles")).map((s) => s.id)).toEqual([2, 0, 1, 3]);
+      expect(openingFirst(ranked("feature", "negative-space")).map((s) => s.id)).toEqual([0, 1]);
+      expect(openingFirst(ranked("negative-space")).map((s) => s.id)).toEqual([0]); // nothing else to open on
+    });
+
+    it("never opens on a negative-space layout for any photo count", () => {
+      const wide = { width: 6000, height: 2000, detections: [] };
+      for (let n = 2; n <= 8; n++) expect(rankedScenes(Array(n).fill(wide))[0]!.layout.family).not.toBe("negative-space");
+    });
   });
 
   it("AC-RANK-06 puts a layout the photos fill first for odd photo counts", () => {

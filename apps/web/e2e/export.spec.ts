@@ -199,7 +199,7 @@ test("AC-EXPORT-09 the StoryStitch mark is small, see-through and in from the lo
   expect(box.x1 - box.x0).toBeLessThanOrEqual(1080 / 4);
   expect(box.x0).toBeGreaterThan(540);
   expect(box.y0).toBeGreaterThan(960);
-  // In from the corner: clear of a layout's 28px outer margin and its photo's rounded corner, but not far.
+  // In from the corner: clear of a layout's 12px outer margin and its photo's rounded corner, but not far.
   expect(box.x1).toBeLessThan(1080 - 48);
   expect(box.x1).toBeGreaterThan(1080 - 100);
   expect(box.y1).toBeLessThan(1920 - 48);

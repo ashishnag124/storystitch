@@ -210,11 +210,11 @@ describe("AC-CUSTOM-03 corners", () => {
 
 describe("AC-CUSTOM-04 free cells", () => {
   it("moves a circle, and won't push it out of the canvas or into another circle", () => {
-    const five = byId("five-circles");
-    const moved = moveCell(five, 1, 0.02, 0.01)!;
-    expect(moved.cells[1]).toMatchObject({ cx: expect.closeTo(0.27), cy: expect.closeTo(0.22) });
-    expect(moveCell(five, 1, -0.5, 0)).toBeNull();
-    expect(moveCell(five, 1, 0.25, 0.27)).toBeNull(); // onto the big circle in the middle
+    const four = byId("four-circles");
+    const moved = moveCell(four, 1, 0.02, 0.01)!;
+    expect(moved.cells[1]).toMatchObject({ cx: expect.closeTo(0.69), cy: expect.closeTo(0.43) });
+    expect(moveCell(four, 1, -0.5, 0)).toBeNull();
+    expect(moveCell(four, 1, -0.34, -0.17)).toBeNull(); // onto the circle above it
   });
 
   it("slides along whatever is in the way", () => {
@@ -226,7 +226,7 @@ describe("AC-CUSTOM-04 free cells", () => {
 
   it("resizes a circle within the canvas", () => {
     const five = byId("five-circles");
-    expect(scaleCell(five, 0, 0.8)!.cells[0]).toMatchObject({ r: expect.closeTo(0.24) });
+    expect(scaleCell(five, 0, 0.8)!.cells[0]).toMatchObject({ r: expect.closeTo(0.304) });
     expect(scaleCell(five, 0, 3)).toBeNull();
     expect(scaleCell(five, 0, 0.1)).toBeNull(); // below the minimum size
   });

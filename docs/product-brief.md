@@ -84,6 +84,10 @@ replaces parts of it. Build order and status: see "Backend milestones" in `PROJE
 - **Domain.** `storystitch.ashishnag.com` (production) and `staging.storystitch.ashishnag.com`, with the API at
   `api.storystitch.ashishnag.com` and `api-staging.storystitch.ashishnag.com`. One parent domain, so sign-in cookies
   work in iPhone Safari.
+- **Fuller collages** (decided 2026-11-08). Collages fill the Story: layouts the photos fill rank first, the default
+  spacing is 8px with a 12px margin, and sparse shapes (hearts, circles, hexagons, prints, Polaroids, photo booths) are
+  drawn larger, overlapping slightly where that fills much more. Layouts with empty space for text and stickers stay,
+  but each has a filled alternative with the same arrangement, and the editor never opens on one.
 
 ## Accounts
 
