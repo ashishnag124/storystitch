@@ -194,6 +194,8 @@ Maestro reads the accessibility tree, so `ios` rows prove what a person can reac
 | AC-IOS-13 | On a real iPhone with VoiceOver on (the simulator doesn't have it), the layout editor's lines and handles move by swiping up and down, corners and the chosen photo in a free layout move with the Move actions, the preview's swipes still choose a photo, and each step is spoken. | manual |
 | AC-IOS-12 | Every layout draws the same with the iOS and web drawing code, from the same photos and crops, in several styles. | auto |
 | AC-IOS-14 | On a real iPhone with VoiceOver on (the simulator doesn't have it), swiping up or down on a slider, such as Spacing or a photo's zoom, changes its value and says the new one. | manual |
+| AC-IOS-17 | Every Share hands the share sheet the image at a new path, still named `storystitch.jpg` or `.png`, and removes the one shared before it. | auto |
+| AC-IOS-18 | On a real iPhone, sharing a collage to a Messages chat, editing it, then sharing again sends the edited collage, not the first one again. | manual |
 
 ## Accounts
 
