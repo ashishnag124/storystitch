@@ -123,27 +123,43 @@ function uncovered(layout: Layout): number[] {
   return inside.map((n, i) => (n ? shown[i]! / n : 1));
 }
 
-function cellTargets(layout: Layout, style: Style): CellTarget[] {
+/**
+ * What ranking needs to know about a styled layout: its cells, and the share of the canvas that shows plain
+ * fill rather than a photo: the background outside the cells, and Polaroid cards around their photos. A
+ * blurred photo background isn't plain, so on those layouts only the cards count (a lone landscape photo is
+ * still framed on blur rather than cropped hard to fill the canvas).
+ */
+function rankOption(layout: Layout, style: Style): { layout: Layout; cells: CellTarget[]; background: number } {
   const visible = uncovered(layout);
-  return cellShapes(layout, style, STORY_CANVAS).map(({ frame, outline, photo }, i) => ({
-    frame,
-    insets: safeInsets(frame),
-    fill: (outlineArea(photo ?? outline) / (frame.width * frame.height)) * visible[i]!,
-  }));
+  const shapes = cellShapes(layout, style, STORY_CANVAS);
+  const canvas = STORY_CANVAS.width * STORY_CANVAS.height;
+  const cellArea = shapes.reduce((s, { outline }, i) => s + outlineArea(outline) * visible[i]!, 0);
+  const photoArea = shapes.reduce((s, { outline, photo }, i) => s + outlineArea(photo ?? outline) * visible[i]!, 0);
+  const outside = layout.blurBackground ? 0 : Math.max(0, canvas - cellArea);
+  return {
+    layout,
+    cells: shapes.map(({ frame, outline, photo }, i) => ({
+      frame,
+      insets: safeInsets(frame),
+      fill: (outlineArea(photo ?? outline) / (frame.width * frame.height)) * visible[i]!,
+    })),
+    background: (outside + Math.max(0, cellArea - photoArea)) / canvas,
+  };
 }
 
 /**
- * A scene for every layout that fits this many photos, best fit first (more often exported layouts first
- * among near-equal fits), with photos assigned to cells.
+ * A scene for every layout that fits this many photos, best fit first (layouts the photos fill before ones
+ * that leave much of the canvas plain, and more often exported layouts first among near-equal fits), with
+ * photos assigned to cells.
  */
 export function rankedScenes(photos: CropSource[], style: Style = DEFAULT_STYLE, popularity: Record<string, number> = {}): Scene[] {
-  const options = layoutsFor(photos.length).map((layout) => ({ layout, cells: cellTargets(layout, style) }));
+  const options = layoutsFor(photos.length).map((layout) => rankOption(layout, style));
   return rankLayouts(options, photos, popularity).map(({ layout, assignment: { order, crops } }) => ({ layout, style, order, crops }));
 }
 
 /** A scene for one layout (a saved one, say), with the photos assigned to its cells the best way. */
 export function assignedScene(layout: Layout, photos: CropSource[], style: Style = DEFAULT_STYLE): Scene {
-  const { assignment } = rankLayouts([{ layout, cells: cellTargets(layout, style) }], photos)[0]!;
+  const { assignment } = rankLayouts([rankOption(layout, style)], photos)[0]!;
   return { layout, style, order: assignment.order, crops: assignment.crops };
 }
 
