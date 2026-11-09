@@ -18,7 +18,7 @@ export interface MarkLayout {
 
 /**
  * Lays out the mark in the lower right corner, far enough in to sit on the photo rather than on a layout's
- * outer margin (28px by default) and clear of the photo's rounded corner.
+ * outer margin (12px by default) and clear of the photo's rounded corner.
  * `textWidth` is the name's width at `markFontSize(size)`, measured by the renderer.
  */
 export function markLayout(size: Size, textWidth: number): MarkLayout {

@@ -1,4 +1,4 @@
-import { STORY_CANVAS, cellContains, cellPolygon, layoutProblems, layouts, type Cell, type Layout } from "@storystitch/shared";
+import { LayoutSchema, STORY_CANVAS, cellContains, cellPolygon, layoutProblems, layouts, type Cell, type Layout } from "@storystitch/shared";
 import { describe, expect, it } from "vitest";
 import {
   MIN_CELL,
@@ -209,8 +209,29 @@ describe("AC-CUSTOM-03 corners", () => {
 });
 
 describe("AC-CUSTOM-04 free cells", () => {
+  // Fixed copies of library layouts as first drawn, so redrawing the library doesn't move these cases.
+  const fixed = {
+    fiveCircles: LayoutSchema.parse({ id: "five-circles", name: "Circle with four around", family: "circles", cells: [
+      { shape: "circle", cx: 0.5, cy: 0.48, r: 0.3 },
+      { shape: "circle", cx: 0.25, cy: 0.21, r: 0.17 },
+      { shape: "circle", cx: 0.75, cy: 0.21, r: 0.17 },
+      { shape: "circle", cx: 0.25, cy: 0.76, r: 0.17 },
+      { shape: "circle", cx: 0.75, cy: 0.76, r: 0.17 },
+    ] }),
+    twoCircles: LayoutSchema.parse({ id: "two-circles", name: "Two circles", family: "circles", cells: [
+      { shape: "circle", cx: 0.4, cy: 0.31, r: 0.34 },
+      { shape: "circle", cx: 0.6, cy: 0.67, r: 0.3 },
+    ] }),
+    fourPolaroids: LayoutSchema.parse({ id: "four-polaroids", name: "Four Polaroids", family: "polaroid", allowOverlap: true, blurBackground: true, cells: [
+      { shape: "rect", x: 0.04, y: 0.12, w: 0.46, h: 0.3053, rotate: -5 },
+      { shape: "rect", x: 0.5, y: 0.16, w: 0.46, h: 0.3053, rotate: 4, z: 1 },
+      { shape: "rect", x: 0.05, y: 0.47, w: 0.46, h: 0.3053, rotate: 3, z: 2 },
+      { shape: "rect", x: 0.49, y: 0.5, w: 0.46, h: 0.3053, rotate: -4, z: 3 },
+    ] }),
+  };
+
   it("moves a circle, and won't push it out of the canvas or into another circle", () => {
-    const five = byId("five-circles");
+    const five = fixed.fiveCircles;
     const moved = moveCell(five, 1, 0.02, 0.01)!;
     expect(moved.cells[1]).toMatchObject({ cx: expect.closeTo(0.27), cy: expect.closeTo(0.22) });
     expect(moveCell(five, 1, -0.5, 0)).toBeNull();
@@ -218,31 +239,31 @@ describe("AC-CUSTOM-04 free cells", () => {
   });
 
   it("slides along whatever is in the way", () => {
-    const two = byId("two-circles");
+    const two = fixed.twoCircles;
     // Straight down would hit the other circle; across still fits.
     const moved = moveCell(two, 0, -0.04, 0.3)!;
     expect(moved.cells[0]).toMatchObject({ cy: two.cells[0]!.shape === "circle" ? two.cells[0]!.cy : 0 });
   });
 
   it("resizes a circle within the canvas", () => {
-    const five = byId("five-circles");
+    const five = fixed.fiveCircles;
     expect(scaleCell(five, 0, 0.8)!.cells[0]).toMatchObject({ r: expect.closeTo(0.24) });
     expect(scaleCell(five, 0, 3)).toBeNull();
     expect(scaleCell(five, 0, 0.1)).toBeNull(); // below the minimum size
   });
 
   it("turns prints, lets overlapping layouts overlap, and brings a moved print to the front", () => {
-    const prints = byId("four-polaroids");
+    const prints = fixed.fourPolaroids;
     expect(rotateCell(prints, 0, -8)!.cells[0]).toMatchObject({ rotate: -8 });
     expect(rotateCell(prints, 0, 40)).toBeNull(); // its corners would leave the canvas
     const onTop = moveCell(prints, 0, 0.3, 0)!;
     expect(onTop).not.toBeNull();
     expect(bringToFront(onTop, 0).cells[0]!.z).toBe(4);
-    expect(rotateCell(byId("five-circles"), 0, 10)).toBeNull();
+    expect(rotateCell(fixed.fiveCircles, 0, 10)).toBeNull();
   });
 
   it("adds a copy of a cell where it fits, and removes cells", () => {
-    const two = byId("two-circles");
+    const two = fixed.twoCircles;
     const added = duplicateCell(scaleCell(scaleCell(two, 0, 0.6)!, 1, 0.6)!, 0)!;
     expect(added.layout.cells).toHaveLength(3);
     expect(added.origin).toEqual([0, 1, null]);

@@ -67,6 +67,7 @@ reuse IDs.
 | AC-RANK-03 | The strip offers every layout for the photo count, each with every photo placed exactly once. | auto |
 | AC-RANK-04 | Among layouts that fit about equally well, the more often exported ones come first; popularity never lifts a clearly worse fit over a better one, and a handful of exports barely moves the order. | auto |
 | AC-RANK-06 | Layouts the photos fill rank above ones that leave much of the canvas plain (background color, or Polaroid cards), unless the sparse one fits the photos clearly better. A blurred photo background doesn't count as plain. | auto |
+| AC-RANK-07 | The layout the editor opens on is never a negative-space one; those stay in the strip for the user to pick. | auto |
 | AC-RANK-05 | In builds with accounts on, each Share or Download sends only the exported layout's id (no photo, account, cookie or body) and the API keeps just a running count per layout, which the app reads to rank. Builds with accounts off send nothing. | auto |
 
 ## Layout library
@@ -78,6 +79,7 @@ reuse IDs.
 | AC-LAYOUT-03 | The library covers every family: grids, feature, mosaic, diagonal, scattered prints, filmstrip, circles, negative space, shapes (arches, capsules, hearts, stars, hexagons, waves) and Polaroids. | auto |
 | AC-LAYOUT-04 | Layouts are data with unique ids, validated against the schema. | auto |
 | AC-LAYOUT-05 | Cell geometry is right: gaps inset every edge evenly (concave outlines too, and stacked waves stay a full gap apart), rotated cells, circles, arches, capsules, hearts and stars hit-test correctly, taps go to the topmost cell, and a Polaroid's photo sits in its card's window with the deeper margin below. | auto |
+| AC-LAYOUT-06 | Every negative-space layout has a filled alternative: a layout with the same arrangement of photos that runs the full height of the canvas. | auto |
 
 ## Editing
 

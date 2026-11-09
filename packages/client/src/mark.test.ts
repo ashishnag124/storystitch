@@ -12,7 +12,7 @@ describe("AC-EXPORT-09 markLayout", () => {
     expect(right - layout.logo.x).toBeLessThanOrEqual(W / 4);
   });
 
-  it("sits in from the lower right corner, clear of a layout's 28px outer margin and its photo's rounded corner", () => {
+  it("sits in from the lower right corner, clear of a layout's 12px outer margin and its photo's rounded corner", () => {
     const bottom = layout.text.y + layout.fontSize * 0.25;
     expect(right).toBeLessThan(W - 56);
     expect(right).toBeGreaterThan(W - 90);

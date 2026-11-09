@@ -188,9 +188,10 @@ test("AC-CUSTOM-04 AC-CUSTOM-07 moves and resizes a circle, then edits and delet
   await page.mouse.up();
   await saveAs(page, "Small circle");
   const [saved] = await savedLayouts(page);
-  expect(saved!.layout.cells[0]!.r).toBeLessThan(0.22);
-  expect(saved!.layout.cells[0]!.cy).toBeGreaterThan(0.25);
-  expect(saved!.layout.cells[0]!.cx).toBeLessThan(0.33);
+  // The first circle started at (0.3, 0.18) with r 0.27.
+  expect(saved!.layout.cells[0]!.r).toBeLessThan(0.27);
+  expect(saved!.layout.cells[0]!.cy).toBeGreaterThan(0.18);
+  expect(saved!.layout.cells[0]!.cx).toBeLessThan(0.3);
 
   // Editing a saved layout replaces it; deleting it takes it out of the strip and the account.
   await page.getByRole("button", { name: "Edit this layout" }).click();
