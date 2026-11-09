@@ -147,6 +147,14 @@ describe("style", () => {
     expect(backgroundOf(byId("four-polaroids"), DEFAULT_STYLE)).toEqual({ kind: "blur" });
   });
 
+  it("AC-STYLE-07 shows the photos' Auto color where a layout has no background of its own", () => {
+    const style = { ...DEFAULT_STYLE, auto: "#f2f6e5" };
+    expect(backgroundOf(byId("two-stack"), style)).toEqual({ kind: "color", color: "#f2f6e5" });
+    expect(backgroundOf(byId("three-scattered"), style)).toEqual({ kind: "color", color: "#f2f6e5" });
+    expect(backgroundOf(byId("four-polaroids"), style)).toEqual({ kind: "blur" });
+    expect(backgroundOf(byId("four-polaroids"), { ...style, background: { kind: "auto" } })).toEqual({ kind: "color", color: "#f2f6e5" });
+  });
+
   it("AC-STYLE-02 uses the user's picks over the layout's defaults", () => {
     const picked = { ...DEFAULT_STYLE, background: { kind: "color", color: "#111111" } as const, border: 0 };
     expect(backgroundOf(byId("single-framed"), picked)).toEqual({ kind: "color", color: "#111111" });

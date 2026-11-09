@@ -1,4 +1,4 @@
-import { assignedScene, cellShapes, newScene, rankedScenes, usageLayout, withCrop, withStyle, type Scene, type Start } from "@storystitch/client";
+import { DEFAULT_STYLE, assignedScene, autoColor, cellShapes, newScene, rankedScenes, usageLayout, withCrop, withStyle, type Scene, type Start } from "@storystitch/client";
 import { MAX_ZOOM, MIN_ZOOM, clampCrop } from "@storystitch/layout-engine";
 import { STORY_CANVAS, type Layout, type SavedLayout } from "@storystitch/shared";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -46,7 +46,10 @@ interface Props {
 
 export function Editor({ photos, summary, notices, privacy, popularity, onStartOver }: Props) {
   // Every layout with its own best photo assignment, best fit first. Picking one starts from that.
-  const options = useMemo(() => rankedScenes(photos, undefined, popularity), [photos, popularity]);
+  const options = useMemo(
+    () => rankedScenes(photos, { ...DEFAULT_STYLE, auto: autoColor(photos.map((p) => p.pixels)) }, popularity),
+    [photos, popularity],
+  );
   const [scene, setScene] = useState<Scene>(() => options[0]!);
   // The user's saved layouts (layout editor): a list, "signed-out", or null until known (or when the API is down).
   const [saved, setSaved] = useState<SavedLayout[] | "signed-out" | null>(null);
