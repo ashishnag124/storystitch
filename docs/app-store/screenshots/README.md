@@ -122,6 +122,24 @@ Before each capture, wait for the "Drag to move" hint to fade (about 6 seconds),
 - **The photo picker:** it shows the staging app's name, and the whole test library.
 - **"Yours":** an edited layout gets this badge in the strip. 09's share sheet covers it.
 
+## The 6.5-inch set, for link previews
+
+When someone shares the App Store link in Messages, the card shows the first screenshot of one set, at that screenshot's own shape. Messages' code (`LPiTunesMediaMetadataProviderSpecialization` in LinkPresentation, read on macOS 27 in November 2026) checks the sets in this order: `iphone_6_5`, `iphone_5_8`, `iphone6+`, `iphone6`, `iphone5`, `iphone`, then the iPad sets, then `appleVisionPro`. The 6.9-inch set (`iphone_d74`) isn't on the list, so it's only used when nothing else is uploaded. It also judges a set's shape by its first screenshot alone.
+
+So the 6.5-inch set starts with a landscape image, `../screenshots-6.5/01-collages.png` (2778 × 1284). It shows real captures 02, 03 and 07 beside the home screen's headline, on the app's colors. Rebuild it from the repo root after retaking any of those three:
+
+```bash
+swiftc -O docs/app-store/screenshots/landscape.swift -o /tmp/landscape && /tmp/landscape
+```
+
+The rest of the set is 02 to 09, resized to 1284 × 2778. Make them when you upload, because they're copies:
+
+```bash
+mkdir -p /tmp/six5 && for f in docs/app-store/screenshots/0[2-9]*.png; do sips --resampleWidth 1284 "$f" --out "/tmp/six5/$(basename "$f")" && sips -c 2778 1284 "/tmp/six5/$(basename "$f")"; done
+```
+
+The crop takes 6 pixels off the top and bottom. If App Store Connect won't take landscape and portrait images in one set, upload `01-collages.png` alone: one image is enough for a set.
+
 ## Sizes
 
 As of November 2026, [Apple's specifications](https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications/) accept 1320 × 2868 for the large Dynamic Island class, which includes iPhone 18 Pro Max. The same page names the medium class as the required one, and doesn't say outright that the large set covers it. If App Store Connect asks for that size, this makes it from a finished set, with the same order and no alpha:
