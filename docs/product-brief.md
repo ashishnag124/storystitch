@@ -131,11 +131,29 @@ replaces parts of it. Build order and status: see "Backend milestones" in `PROJE
 - Only accounts marked as admin can open it, signing in with email, password and an authenticator-app code. It's
   built for desktop; on a phone it says to open it on a desktop.
 
+## StoryStitch Plus: pay once to remove the mark
+
+Decided 2026-11-10; replaces the pay-what-you-want Supporter pass through Lemon Squeezy that "Later" used to plan.
+In-app purchase on iOS has fixed prices, so pay-what-you-want couldn't work there, and Lemon Squeezy is moving its
+sellers to Stripe Managed Payments.
+
+- **What it is.** A one-time $4.99 purchase, the same on web and iOS, not a subscription. For now its only perk is
+  turning off the "Made with StoryStitch" mark on exports. Without it, every export carries the mark.
+- **Where it's sold.** On iOS through Apple's in-app purchase (Guideline 3.1.1); on the web through Paddle, which is
+  the merchant of record and handles sales tax and VAT. RevenueCat joins the two into one Plus entitlement.
+- **Tied to the account.** On the web, buying needs an account. On iOS, people can buy without one (Apple doesn't let
+  an app make sign-up a condition of buying a perk like this); signing in later moves the purchase to their account,
+  and from then on it works everywhere they sign in. Restore purchases brings it back on a new install.
+- **Trust.** The app only unlocks the switch when the API says the account (or, signed out on iOS, the device's
+  purchase) has Plus, and the API believes only RevenueCat, never the app. A refund takes Plus away again.
+- **Upsell.** For people without Plus the switch stays on and locked, with a quiet "Remove the mark" link that
+  explains Plus and the price. No pop-ups after export.
+- **Privacy.** RevenueCat and Paddle see the account's ID and the purchase, never photos. The privacy policy names
+  them.
+
 ## Later (decided, not in this round)
 
-- **Payments: a Supporter pass.** A pay-what-you-want, one-time purchase ($3 minimum) through Lemon Squeezy as
-  merchant of record, offered in a dismissible card after export or share. It must deliver a real product, because
-  Lemon Squeezy prohibits donations with no product: e.g. a higher saved-collage limit and a supporter badge.
+- **More Plus perks**, e.g. a higher saved-collage limit once saved collages (B3) exist.
 - **Text-message sign-in** (phone number + 6-digit code, e.g. Twilio Verify with fraud protection).
 - **Google and Apple sign-in.**
 
