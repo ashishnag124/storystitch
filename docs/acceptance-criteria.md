@@ -269,7 +269,7 @@ flag is off, AC-EXPORT-09 describes the switch exactly.
 
 | ID | Criterion | Check |
 |---|---|---|
-| AC-PLUS-01 | Without Plus (free or signed out), the "Made with StoryStitch" switch shows on and can't be turned off, every export carries the mark, and a quiet "Remove the mark" link opens the upsell with the price, one primary "Get Plus" and quiet Restore purchases (iOS) and Not now. | planned |
+| AC-PLUS-01 | Without Plus (free or signed out), the "Made with StoryStitch" switch shows on and can't be turned off, every export carries the mark, and a quiet "Remove the mark" link opens the upsell with the price, one primary "Get Plus" and quiet Restore purchases (iOS) and Not now. | auto |
 | AC-PLUS-02 | With Plus, the switch works as AC-EXPORT-09 describes, on web and iOS. | planned |
 | AC-PLUS-03 | The API grants and revokes Plus only from what RevenueCat's own API reports: webhooks without the shared secret are refused, a repeated event changes nothing, and nothing the app sends can turn Plus on. With `PAYMENTS_ENABLED` off, the payment routes don't exist. | auto |
 | AC-PLUS-04 | A refund or revoked purchase takes Plus away: the switch locks again the next time the Export tool opens. | planned |

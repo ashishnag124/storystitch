@@ -7,6 +7,7 @@ import { AccountLink } from "./AccountLink";
 import { deleteSaved, listSaved, recordExport } from "./api";
 import { FIT_LAYOUTS_ENABLED, LAYOUT_EDITOR_ENABLED } from "./config";
 import { LayoutStrip } from "./LayoutStrip";
+import { PlusUpsell } from "./PlusUpsell";
 import { perfTimes, resetPerfPeak, timeLayoutSwitch } from "./PerfReadout";
 import { EXPORT_PAUSE_MS, canShareFiles, canWaitToShare, renderExport, shareOrDownload, type ExportFormat } from "./platform/exportImage";
 import { FormatSelect } from "./platform/FormatSelect";
@@ -21,6 +22,7 @@ import { Button } from "./ui/Button";
 import { Choice } from "./ui/Choice";
 import { Toast } from "./ui/Toast";
 import { upscaleWarnings } from "./upscale";
+import { usePlus } from "./usePlus";
 import { track } from "./usage";
 
 type Tool = "layouts" | "style" | "export";
@@ -68,8 +70,11 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
     ...(summary ? [{ text: summary, alert: false }] : []),
   ]);
   const [format, setFormat] = useState<ExportFormat>("image/jpeg");
-  /** Whether the export carries the "Made with StoryStitch" mark. */
-  const [mark, setMark] = useState(true);
+  const plus = usePlus(tool === "export");
+  const [upsell, setUpsell] = useState(false);
+  /** Whether the export carries the "Made with StoryStitch" mark. Without Plus (when Plus is on) it always does. */
+  const [markChosen, setMark] = useState(true);
+  const mark = markChosen || plus.locked;
   const [exported, setExported] = useState<{ scene: Scene; format: ExportFormat; mark: boolean; blob: Blob } | null>(null);
   const [exportError, setExportError] = useState(false);
   /** Share was tapped before the image was ready, and opens once it is. */
@@ -322,6 +327,7 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
                 aria-label="Made with StoryStitch"
                 value={mark}
                 onValueChange={setMark}
+                disabled={plus.locked}
                 trackColor={{ false: colors.border, true: colors.accent }}
                 thumbColor={colors.text}
                 ios_backgroundColor={colors.border}
@@ -329,6 +335,14 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
                 {...{ activeThumbColor: colors.text }}
               />
             </View>
+            {plus.locked &&
+              (upsell ? (
+                <PlusUpsell recheck={plus.recheck} onClose={() => setUpsell(false)} />
+              ) : (
+                <View style={styles.markRow}>
+                  <Button label="Remove the mark" quiet trackAs="plus_upsell" onPress={() => setUpsell(true)} />
+                </View>
+              ))}
             {warnings.length > 0 && (
               <View role="list" style={styles.warnings}>
                 {warnings.map((w) => (
