@@ -22,6 +22,14 @@ const EnvSchema = z
     MIN_IOS_APP_VERSION: AppVersionSchema.default("1.0.0"),
     /** Counts usage events. Also the emergency off switch: turning it off stops every write, with no app release. */
     USAGE_INGEST_ENABLED: flag,
+    /** StoryStitch Plus: adds the payment routes. Needs the three RevenueCat values below. */
+    PAYMENTS_ENABLED: flag,
+    /** A RevenueCat v2 secret key that can read customers and entitlements. */
+    REVENUECAT_SECRET_KEY: z.string().min(1).optional(),
+    /** The RevenueCat project's ID, e.g. proj1ab2c3d4. */
+    REVENUECAT_PROJECT_ID: z.string().min(1).optional(),
+    /** The Authorization header value set on RevenueCat's webhook (random, per environment). */
+    REVENUECAT_WEBHOOK_SECRET: z.string().min(32).optional(),
     /** Set by Railway on each deploy. */
     RAILWAY_GIT_COMMIT_SHA: z.string().optional(),
     /** Where this API is reachable from browsers; emailed links point here first. */
@@ -40,6 +48,10 @@ const EnvSchema = z
   .refine((e) => !e.DISABLE_RATE_LIMIT || e.ENABLE_TEST_ROUTES, {
     message: "DISABLE_RATE_LIMIT is for tests only and needs ENABLE_TEST_ROUTES",
     path: ["DISABLE_RATE_LIMIT"],
+  })
+  .refine((e) => !e.PAYMENTS_ENABLED || (!!e.REVENUECAT_SECRET_KEY && !!e.REVENUECAT_PROJECT_ID && !!e.REVENUECAT_WEBHOOK_SECRET), {
+    message: "PAYMENTS_ENABLED needs REVENUECAT_SECRET_KEY, REVENUECAT_PROJECT_ID and REVENUECAT_WEBHOOK_SECRET",
+    path: ["PAYMENTS_ENABLED"],
   })
   .refine((e) => e.EMAIL_TRANSPORT !== "resend" || !!e.RESEND_API_KEY, {
     message: "RESEND_API_KEY is required when EMAIL_TRANSPORT=resend",

@@ -5,6 +5,7 @@ import { createApp } from "./app";
 import { createAuth } from "./auth";
 import { createDb } from "./db/client";
 import { memoryMailer } from "./email";
+import type { PaymentsOptions } from "./payments";
 
 export const WEB = "https://storystitch.ashishnag.com";
 export const API = "https://api.storystitch.ashishnag.com";
@@ -38,7 +39,11 @@ const turnstileVerifyUrl = await new Promise<string>((resolve) => {
   });
 });
 
-export function testApi({ turnstileSecret = TURNSTILE_PASS, usageIngestEnabled = false } = {}) {
+export function testApi({
+  turnstileSecret = TURNSTILE_PASS,
+  usageIngestEnabled = false,
+  payments,
+}: { turnstileSecret?: string; usageIngestEnabled?: boolean; payments?: PaymentsOptions } = {}) {
   const { pool, db } = createDb(process.env.DATABASE_URL!);
   const mailer = memoryMailer();
   const auth = createAuth({
@@ -58,6 +63,7 @@ export function testApi({ turnstileSecret = TURNSTILE_PASS, usageIngestEnabled =
     version: "test-sha",
     minimumIosVersion: MINIMUM_IOS_VERSION,
     usageIngestEnabled,
+    payments,
     testEmails: mailer.sent,
   });
   /** A browser-like client with its own IP address (so rate limits don't leak between tests) and cookies. */
