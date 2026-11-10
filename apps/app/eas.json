@@ -39,7 +39,8 @@
         "EXPO_PUBLIC_WEB_URL": "https://storystitch.ashishnag.com",
         "EXPO_PUBLIC_FEATURE_ACCOUNTS": "true",
         "EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR": "true",
-        "EXPO_PUBLIC_FEATURE_USAGE": "true"
+        "EXPO_PUBLIC_FEATURE_USAGE": "true",
+        "EXPO_PUBLIC_FEATURE_FIT_LAYOUTS": "true"
       }
     }
   },

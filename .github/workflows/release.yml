@@ -134,4 +134,5 @@ jobs:
       accounts: true
       layout_editor: true
       usage: true
+      fit_layouts: true
     secrets: inherit
