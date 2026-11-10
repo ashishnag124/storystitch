@@ -20,7 +20,17 @@ export function errorMessage(error: { status?: number; code?: string; message?: 
     case "INVALID_TOKEN":
     case "TOKEN_EXPIRED":
       return "That link has expired or was already used. Ask for a new one.";
+    case "INVALID_EMAIL":
+      return "Enter a valid email address.";
+    case "VALIDATION_ERROR":
+      if (error.message?.includes("email")) return "Enter a valid email address.";
+      break;
+    case "VERIFICATION_FAILED":
+    case "MISSING_RESPONSE":
+      return "The bot check didn't go through. Please try again.";
+    // The API couldn't reach Cloudflare to check the token in time.
+    case "UNKNOWN_ERROR":
+      return "The bot check took too long. Please try again.";
   }
-  if (error.status === 400 || error.status === 403) return "The bot check didn't go through. Please try again.";
-  return error.message || "Something went wrong. Please try again.";
+  return "Something went wrong. Please try again.";
 }

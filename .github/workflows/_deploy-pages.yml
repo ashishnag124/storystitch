@@ -1,14 +1,10 @@
-# Reusable: build one Pages app (apps/web or apps/app) and deploy it to Cloudflare Pages.
+# Reusable: build the Expo app (apps/app) for the web and deploy it to Cloudflare Pages.
 # branch=main -> preview alias (staging); branch=production -> production.
 name: Deploy to Pages
 
 on:
   workflow_call:
     inputs:
-      app:
-        description: "web or app"
-        type: string
-        required: true
       project:
         description: "Cloudflare Pages project name"
         type: string
@@ -24,12 +20,12 @@ on:
         required: false
         default: ""
       accounts:
-        description: "Build with accounts switched on (VITE_FEATURE_ACCOUNTS, EXPO_PUBLIC_FEATURE_ACCOUNTS)"
+        description: "Build with accounts switched on (EXPO_PUBLIC_FEATURE_ACCOUNTS)"
         type: boolean
         required: false
         default: false
       layout_editor:
-        description: "Build with the layout editor switched on (VITE_FEATURE_LAYOUT_EDITOR, EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR; needs accounts)"
+        description: "Build with the layout editor switched on (EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR; needs accounts)"
         type: boolean
         required: false
         default: false
@@ -60,12 +56,8 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm turbo run build --filter="@storystitch/${{ inputs.app }}..."
+      - run: pnpm turbo run build --filter="@storystitch/app..."
         env:
-          VITE_API_URL: ${{ inputs.api_url }}
-          VITE_FEATURE_ACCOUNTS: ${{ inputs.accounts }}
-          VITE_FEATURE_LAYOUT_EDITOR: ${{ inputs.layout_editor }}
-          VITE_TURNSTILE_SITE_KEY: ${{ secrets.TURNSTILE_SITE_KEY }}
           EXPO_PUBLIC_API_URL: ${{ inputs.api_url }}
           EXPO_PUBLIC_FEATURE_ACCOUNTS: ${{ inputs.accounts }}
           EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR: ${{ inputs.layout_editor }}
@@ -77,5 +69,5 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           # run inside the app, which pins wrangler: the action can't install it at a pnpm workspace root
-          workingDirectory: apps/${{ inputs.app }}
+          workingDirectory: apps/app
           command: pages deploy dist --project-name=${{ inputs.project }} --branch=${{ inputs.branch }} --commit-hash=${{ inputs.ref }}

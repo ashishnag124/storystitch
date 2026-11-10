@@ -11,14 +11,14 @@ Product requirements: `docs/product-brief.md`. Acceptance criteria (what QA chec
 | Data shape / shared contract (layouts and their types) | `packages/shared/src/` (zod) first, then implement |
 | Cropping, assignment, ranking (pure functions) | `packages/layout-engine/src/` |
 | App logic with no UI or browser APIs (scene, layout editor drafts, API calls) | `packages/client/src/` |
-| Old web app UI (production's rollback only; new UI goes in `apps/app`) | `apps/web/src/` |
-| The Expo app (web and iOS), on staging and production since v1.0.0 | `apps/app/src/`; anything browser-only goes in a `*.web.ts(x)` file (lint enforces it) |
-| On-device subject detection (Web Worker, MediaPipe) | `apps/web/src/detect/`; models in `apps/web/public/models/` |
-| End-to-end tests (Playwright) | `apps/web/e2e/` |
+| The Expo app (web and iOS), the only app since `apps/web` was removed after v1.1.0 | `apps/app/src/`; anything browser-only goes in a `*.web.ts(x)` file (lint enforces it) |
+| On-device subject detection (Web Worker, MediaPipe) | web: `apps/app/src/platform/detect-worker.web.ts`, built by `apps/app/scripts/prepare-assets.mjs`; models in `apps/app/public/models/` |
+| End-to-end tests (Playwright) | `apps/app/e2e/` (against the Expo app's web build) |
 | iOS simulator tests (Maestro) | `apps/app/maestro/`: `core/` needs no API and is graded by `pnpm qa --target=ios` (a flow's `name:` starts with its `AC-IOS-*` ID); `local/` needs a signed-in account and the local API, and isn't graded |
 | API request/response shapes | `packages/shared/src/api.ts` (zod) first, then the API and its callers |
 | API routes, database access | `apps/api/src/` (Hono); tables in `apps/api/src/db/schema.ts` |
-| Accounts (sign-in, sessions, emails) | API: `apps/api/src/auth.ts` (Better Auth), `src/email.ts`; web: `apps/web/src/account/` (loaded only when `VITE_FEATURE_ACCOUNTS=true`) |
+| Payments (StoryStitch Plus) | entitlements, RevenueCat webhook and client: `apps/api/src/payments.ts`; buying: `apps/app/src/platform/purchases.{web,native}.ts`. Plus is only ever what the API says, never the app's own record |
+| Accounts (sign-in, sessions, emails) | API: `apps/api/src/auth.ts` (Better Auth), `src/email.ts`; app: `apps/app/src/Accounts.tsx` (only when `EXPO_PUBLIC_FEATURE_ACCOUNTS=true`) |
 | Database changes | edit `schema.ts`, then `pnpm db:generate`; commit the SQL in `apps/api/drizzle/`. Must keep working with the previous API version and every supported app version (`MIN_IOS_APP_VERSION` and up; iOS users stay on old versions for months): add first, remove in a later release. The `AC-API-02` test allows only new tables, indexes and optional columns. To go further, run the last tagged API against the new schema, then put `-- reviewed: <what you checked>` above the statement |
 
 A request that needs an app or service not in `project.json` (e.g. "add an iOS app", "send emails", "add a background job") → stop and propose `/add-app` or a plan. Don't bolt it on ad hoc.
@@ -27,12 +27,12 @@ A request that needs an app or service not in `project.json` (e.g. "add an iOS a
 
 - **Local** is the default for everything: `.env`, `pnpm dev`. Run, test and debug here.
 - **Staging** = whatever is on `main`, served by the Expo app (`apps/app`). You get there by promoting `dev` into `main` in a PR, nothing else.
-- **Production** = the `production` branch, moved only by `/release` after the user confirms. It serves the Expo app, because the `PRODUCTION_WEB_APP` variable is `app` (since v1.0.0, November 7, 2026). Deleting the variable switches the next release back to `apps/web` (see "Rollback" in `PROJECT_SETUP.md`). The production iOS app is built from a release tag by `mobile-release.yml`, and only the user submits it to Apple.
+- **Production** = the `production` branch, moved only by `/release` after the user confirms. It serves the Expo app (since v1.0.0, November 7, 2026). To undo a bad web release, roll back to an earlier deployment in Cloudflare (see "Rollback" in `PROJECT_SETUP.md`). The production iOS app is built from a release tag by `mobile-release.yml`, and only the user submits it to Apple.
 - Never deploy to or change settings on staging or production yourself. If debugging needs hosted logs, ask the user to run the command and paste the output.
 
 ## Commands
 
-- `pnpm dev` (local Postgres in Docker, web :5173, Expo app :5174, API :3001; this Mac has an SSH tunnel on :3000) · `pnpm db:generate` / `pnpm db:migrate` · `pnpm usage:report --days 30` (usage counts as Markdown tables; read-only) · `pnpm check` (lint + typecheck + test, run before saying done) · `pnpm build` · `pnpm e2e` (Playwright, Android Chrome + iPhone WebKit emulation) · `pnpm qa` (everything above, graded against the acceptance criteria for the Expo app; CI and every release run it; `--target=web` grades `apps/web` instead, while it's production's app or its rollback; `--target=ios` grades only the `ios` criteria, in the iOS workflow and on a booted simulator with the app installed)
+- `pnpm dev` (local Postgres in Docker, Expo app :5174, API :3001; this Mac has an SSH tunnel on :3000) · `pnpm db:generate` / `pnpm db:migrate` · `pnpm usage:report --days 30` (usage counts as Markdown tables; read-only) · `pnpm check` (lint + typecheck + test, run before saying done) · `pnpm build` · `pnpm e2e` (Playwright, Android Chrome + iPhone WebKit emulation) · `pnpm qa` (everything above, graded against the acceptance criteria for the Expo app; CI and every release run it; `--target=ios` grades only the `ios` criteria, in the iOS workflow and on a booted simulator with the app installed)
 
 ## iOS simulator
 

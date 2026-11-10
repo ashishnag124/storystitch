@@ -11,7 +11,7 @@ import { layouts } from "./layout";
 // rename or narrow one. To rename, add the new event and map both in the report.
 
 export const SCREENS = ["pick", "editor", "layout_editor", "account", "sign_up", "reset_password", "other"] as const;
-export const CONTROLS = ["share", "start_over", "edit_layout", "tool_layouts", "tool_style", "tool_export", "other"] as const;
+export const CONTROLS = ["share", "start_over", "edit_layout", "tool_layouts", "tool_style", "tool_export", "plus_upsell", "plus_buy", "plus_sign_in", "other"] as const;
 export const ERROR_CODES = ["photo_unreadable", "export_failed", "layout_save_failed", "layout_delete_failed", "other"] as const;
 export const USAGE_PLATFORMS = ["web", "ios", "android"] as const;
 

@@ -5,9 +5,9 @@ runs the whole test suite and checks each criterion here:
 
 - **auto** criteria pass only when at least one test names their ID in its title (or a `describe` around it),
   every such test passes, and at least one of them actually ran (not skipped in every browser). `pnpm qa` grades the
-  Expo app. `pnpm qa --target=web` grades `apps/web`, and leaves out criteria only the Expo app can prove.
+  Expo app's web build.
 - **ios** criteria are graded only by `pnpm qa --target=ios`, which runs the Maestro flows in `apps/app/maestro/core` on a
-  simulator. A flow proves a criterion by starting its `name:` with the ID. The other targets leave them out.
+  simulator. A flow proves a criterion by starting its `name:` with the ID. The default target leaves them out.
 - **manual** criteria are checked by hand on staging before running `/release`. `pnpm qa` lists them as reminders.
 - **planned** criteria belong to features that haven't shipped yet (the v2 sections at the end). `pnpm qa` lists them
   without failing; when the feature ships, switch each row to `auto` or `manual` in the same PR as its tests.
@@ -106,13 +106,13 @@ reuse IDs.
 
 | ID | Criterion | Check |
 |---|---|---|
-| AC-STYLE-01 | The Style tool offers labeled controls for color (Auto, presets, custom color, blurred photo), spacing, margin, corners, border width and color, and a reset; chips pick which one shows. | auto |
+| AC-STYLE-01 | The Style tool offers labeled controls for color (Auto, presets, custom color, blurred photo), spacing, margin, corners, border width and color, and a reset; a row of tool buttons, each with an icon, picks which one shows, and the whole row fits on screen without scrolling from 375 px wide (an iPhone SE). | auto |
 | AC-STYLE-02 | Defaults come from the layout until changed: white borders where photos overlap (scattered prints, insets), white Polaroid cards on a blurred photo, blur for "Framed on blur", Auto elsewhere. | auto |
 | AC-STYLE-03 | Style changes appear in the exported image. | auto |
 | AC-STYLE-04 | Changing the style keeps manual crops. | auto |
 | AC-STYLE-05 | Full-bleed layouts have no spacing, corners or border. | auto |
 | AC-STYLE-06 | Spacing and margin are even: neighbours are a full gap apart, every edge cell is one margin from the canvas edge, and both scale with the canvas. | auto |
-| AC-STYLE-07 | Auto, the default background, is a pale tint of the most common hue across the photos, each photo counting the same; near-black, near-white and grey are ignored, and with little color it fades toward white. Auto is the first choice in the Color tool and stays after Reset. | auto |
+| AC-STYLE-07 | Auto, the default background, is a pale tint of the most common hue across the photos, each photo counting the same; near-black, near-white and grey are ignored, and with little color it fades toward white. When no hue clearly wins (another hue at least 90° away is within 10% of the most common one, as with red, green and blue photos together), Auto is white. Auto is the first choice in the Color tool and stays after Reset. | auto |
 
 ## Export and sharing
 
@@ -160,7 +160,7 @@ reuse IDs.
 
 # v2 (planned)
 
-From the v2 section of `docs/product-brief.md`. Rows marked `auto` or `manual` have shipped (B1: the API; B2: accounts, behind the `VITE_FEATURE_ACCOUNTS` flag). The rest ship behind a feature flag too; while it's off, the v1 criteria above
+From the v2 section of `docs/product-brief.md`. Rows marked `auto` or `manual` have shipped (B1: the API; B2: accounts, behind the `EXPO_PUBLIC_FEATURE_ACCOUNTS` flag). The rest ship behind a feature flag too; while it's off, the v1 criteria above
 describe the app exactly. When saving ships, AC-SAVE-02 and AC-SAVE-07 replace AC-PRIV-01 and AC-PRIV-02.
 
 ## Platform
@@ -215,11 +215,12 @@ Maestro reads the accessibility tree, so `ios` rows prove what a person can reac
 | AC-AUTH-10 | On staging, a real verification email and password-reset email arrive, and sign-up and sign-in work on iPhone Safari and Android Chrome. | manual |
 | AC-AUTH-11 | When StoryStitch can't be reached, account forms say so and can be tried again, instead of waiting forever. | auto |
 | AC-AUTH-13 | The links in confirmation and password reset emails are Universal Links on the API's address: iOS opens the app for them, and they keep working in a browser. | auto |
+| AC-AUTH-14 | Account forms name the actual problem: an empty or invalid email asks for a valid email, a failed bot check says so, and a bot check the API couldn't confirm in time says it took too long and can be tried again. They never show the API's raw message. | auto |
 | AC-AUTH-12 | The Expo web app's /bot-check page holds only the bot check and passes its token to the iOS app that shows it. | auto |
 
 ## Layout editor
 
-Behind `VITE_FEATURE_LAYOUT_EDITOR` (needs accounts): on in staging and production.
+Behind `EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR` (needs accounts): on in staging and production.
 
 | ID | Criterion | Check |
 |---|---|---|
@@ -260,6 +261,22 @@ Behind `VITE_FEATURE_LAYOUT_EDITOR` (needs accounts): on in staging and producti
 | AC-USAGE-07 | Page views use fixed screen names, cover the pick, editor, layout editor and account screens, and never send a path or query string. `/bot-check` isn't counted. | auto |
 | AC-USAGE-08 | With tracking on, the iOS app sends usage events to a local API, and the whole core flow still works with the API unreachable. | manual |
 | AC-USAGE-09 | The privacy policy and App Store answers match what's tracked. | manual |
+
+## StoryStitch Plus
+
+From "StoryStitch Plus" in the brief, behind `EXPO_PUBLIC_FEATURE_PLUS` (app) and `PAYMENTS_ENABLED` (API). While the
+flag is off, AC-EXPORT-09 describes the switch exactly.
+
+| ID | Criterion | Check |
+|---|---|---|
+| AC-PLUS-01 | Without Plus (free or signed out), the "Made with StoryStitch" switch shows on and can't be turned off, every export carries the mark, and a quiet "Remove the mark" link opens the upsell with the price, one primary "Get Plus" and quiet Restore purchases (iOS) and Not now. | auto |
+| AC-PLUS-02 | With Plus, the switch works as AC-EXPORT-09 describes, on web and iOS. | planned |
+| AC-PLUS-03 | The API grants and revokes Plus only from what RevenueCat's own API reports: webhooks without the shared secret are refused, a repeated event changes nothing, and nothing the app sends can turn Plus on. With `PAYMENTS_ENABLED` off, the payment routes don't exist. | auto |
+| AC-PLUS-04 | A refund or revoked purchase takes Plus away: the switch locks again the next time the Export tool opens. | planned |
+| AC-PLUS-05 | Restore purchases on iOS brings Plus back on a new install or device with the same Apple ID. | planned |
+| AC-PLUS-06 | On iOS, Plus can be bought signed out; signing in moves it to the account, and it then works on the web with that account. On the web, buying asks the user to sign in first. | planned |
+| AC-PLUS-07 | A sandbox purchase on the web (Paddle sandbox) and in the iOS simulator (StoreKit testing) unlocks the switch on both platforms, and a sandbox refund locks it again. | planned |
+| AC-PLUS-08 | Deleting the account deletes its Plus record; the delete screen says deleting doesn't refund a purchase. | planned |
 
 ## Admin analytics
 

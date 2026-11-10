@@ -28,6 +28,31 @@ const PROPERTIES = [
 ] as const;
 type Property = (typeof PROPERTIES)[number]["id"];
 
+/** A small drawing of what each tool changes, so the row reads as tools and not as labels. */
+function Glyph({ property, ink, fill }: { property: Property; ink: string; fill: string }) {
+  switch (property) {
+    case "background":
+      return <View aria-hidden style={[glyphs.box, glyphs.dot, { backgroundColor: fill, borderColor: ink }]} />;
+    case "gap":
+      return (
+        <View aria-hidden style={[glyphs.box, glyphs.split]}>
+          <View style={[glyphs.bar, { backgroundColor: ink }]} />
+          <View style={[glyphs.bar, { backgroundColor: ink }]} />
+        </View>
+      );
+    case "margin":
+      return (
+        <View aria-hidden style={[glyphs.box, glyphs.frame, { borderColor: ink }]}>
+          <View style={[glyphs.inner, { backgroundColor: ink }]} />
+        </View>
+      );
+    case "radius":
+      return <View aria-hidden style={[glyphs.box, glyphs.corner, { borderColor: ink }]} />;
+    case "border":
+      return <View aria-hidden style={[glyphs.box, glyphs.thick, { borderColor: ink }]} />;
+  }
+}
+
 interface Props {
   layout: Layout;
   style: Style;
@@ -35,8 +60,8 @@ interface Props {
 }
 
 /**
- * Style as a compact tool, like a photo app's "Adjust": chips pick the property, and one control for it shows
- * below. The defaults should look good without touching anything.
+ * Style as a compact tool, like a photo app's "Adjust": a row of tool buttons picks the property, and one control
+ * for it shows below. The defaults should look good without touching anything.
  */
 export function StylePanel({ layout, style, onChange }: Props) {
   const [property, setProperty] = useState<Property>("background");
@@ -60,21 +85,31 @@ export function StylePanel({ layout, style, onChange }: Props) {
 
   return (
     <View style={styles.tool}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-        <View role="radiogroup" aria-label="Style property" style={styles.chips}>
+      {/* Every tool fits on one row, even on an SE, so none hides off the edge. */}
+      <View style={styles.tools}>
+        <View role="radiogroup" aria-label="Style property" style={styles.properties}>
           {PROPERTIES.map((p) => {
             const checked = property === p.id;
+            const ink = checked ? colors.accentText : colors.text;
             return (
-              <Choice key={p.id} role="radio" aria-checked={checked} aria-label={p.label} onPress={() => setProperty(p.id)} style={[styles.chip, checked && styles.chipChecked]}>
-                <Text style={[styles.chipLabel, checked && styles.chipLabelChecked]}>{p.label}</Text>
+              <Choice key={p.id} role="radio" aria-checked={checked} aria-label={p.label} onPress={() => setProperty(p.id)} style={[styles.toolButton, checked && styles.toolChecked]}>
+                <Glyph property={p.id} ink={ink} fill={background.kind === "color" ? background.color : colors.muted} />
+                <Text numberOfLines={1} style={[styles.toolLabel, { color: ink }, checked && styles.toolLabelChecked]}>
+                  {p.label}
+                </Text>
               </Choice>
             );
           })}
         </View>
-        <Pressable role="button" aria-label="Reset style" onPress={() => onChange({ ...DEFAULT_STYLE, auto: style.auto })} style={styles.chip}>
-          <Text style={styles.chipLabel}>Reset style</Text>
+        <Pressable role="button" aria-label="Reset style" onPress={() => onChange({ ...DEFAULT_STYLE, auto: style.auto })} style={[styles.toolButton, styles.reset]}>
+          <Text aria-hidden style={styles.resetGlyph}>
+            ↺
+          </Text>
+          <Text numberOfLines={1} style={[styles.toolLabel, { color: colors.muted }]}>
+            Reset
+          </Text>
         </Pressable>
-      </ScrollView>
+      </View>
 
       {property === "background" && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -137,11 +172,16 @@ export function StylePanel({ layout, style, onChange }: Props) {
 
 const styles = StyleSheet.create({
   tool: { gap: 6 },
-  chips: { flexDirection: "row", gap: 6 },
-  chip: { minHeight: MIN_TARGET, justifyContent: "center", paddingHorizontal: 14, borderWidth: 1, borderColor: colors.border, borderRadius: 999 },
-  chipChecked: { borderColor: colors.accent, backgroundColor: colors.accent },
-  chipLabel: { fontFamily, fontSize: 14, color: colors.text },
-  chipLabelChecked: { fontWeight: "800", color: colors.accentText },
+  tools: { flexDirection: "row", gap: 4 },
+  // Five tools and Reset, each about the same width.
+  properties: { flex: 5, flexDirection: "row", gap: 4 },
+  toolButton: { flex: 1, minHeight: 52, alignItems: "center", justifyContent: "center", gap: 3, paddingHorizontal: 2, borderRadius: 12, backgroundColor: "rgba(255, 244, 232, 0.08)" },
+  toolChecked: { backgroundColor: colors.accent },
+  toolLabel: { fontFamily, fontSize: 12, fontWeight: "600" },
+  toolLabelChecked: { fontWeight: "800" },
+  // Reset is an action, not a tool: quiet, with no fill.
+  reset: { flex: 0.8, backgroundColor: "transparent" },
+  resetGlyph: { fontFamily, fontSize: 18, lineHeight: 20, color: colors.muted },
   swatches: { flexDirection: "row", gap: 8, paddingVertical: 4, paddingLeft: 2, paddingRight: 4 },
   swatch: { width: MIN_TARGET, height: MIN_TARGET, borderWidth: 1, borderColor: colors.border, borderRadius: 22 },
   auto: { alignItems: "center", justifyContent: "center" },
@@ -150,4 +190,15 @@ const styles = StyleSheet.create({
   swatchPressed: { boxShadow: `0 0 0 2px ${colors.surface}, 0 0 0 4px ${colors.accent}` },
   borderRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   borderSlider: { flex: 1 },
+});
+
+const glyphs = StyleSheet.create({
+  box: { width: 20, height: 20 },
+  dot: { borderRadius: 10, borderWidth: 1.5 },
+  split: { flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 1 },
+  bar: { width: 7, height: 20, borderRadius: 2 },
+  frame: { alignItems: "center", justifyContent: "center", borderWidth: 1.5, borderRadius: 3 },
+  inner: { width: 10, height: 10, borderRadius: 1 },
+  corner: { borderTopWidth: 2.5, borderLeftWidth: 2.5, borderTopLeftRadius: 12 },
+  thick: { borderWidth: 4, borderRadius: 4 },
 });

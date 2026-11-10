@@ -5,6 +5,7 @@ import { createDb } from "./db/client";
 import { applyMigrations } from "./db/migrate";
 import { consoleMailer, memoryMailer, resendMailer, type Mailer } from "./email";
 import { loadEnv } from "./env";
+import { revenueCatApi } from "./revenuecat";
 
 const env = loadEnv();
 const { pool, db } = createDb(env.DATABASE_URL);
@@ -34,6 +35,12 @@ const app = createApp({
   version: env.RAILWAY_GIT_COMMIT_SHA ?? "dev",
   minimumIosVersion: env.MIN_IOS_APP_VERSION,
   usageIngestEnabled: env.USAGE_INGEST_ENABLED,
+  payments: env.PAYMENTS_ENABLED
+    ? {
+        revenueCat: revenueCatApi({ secretKey: env.REVENUECAT_SECRET_KEY!, projectId: env.REVENUECAT_PROJECT_ID! }),
+        webhookSecret: env.REVENUECAT_WEBHOOK_SECRET!,
+      }
+    : undefined,
   testEmails: env.ENABLE_TEST_ROUTES ? memory.sent : undefined,
 });
 

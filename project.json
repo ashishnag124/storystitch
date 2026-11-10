@@ -1,20 +1,12 @@
 {
   "name": "storystitch",
   "apps": {
-    "web": {
-      "path": "apps/web",
-      "stack": "vite-react",
-      "host": "cloudflare-pages",
-      "pagesProject": "storystitch-web",
-      "pagesProjectStaging": "storystitch-web-staging"
-    },
     "app": {
       "path": "apps/app",
       "stack": "expo",
       "host": "cloudflare-pages",
       "pagesProject": "storystitch-web",
-      "pagesProjectStaging": "storystitch-web-staging",
-      "replaces": "web"
+      "pagesProjectStaging": "storystitch-web-staging"
     },
     "api": {
       "path": "apps/api",
@@ -25,10 +17,15 @@
       "database": "railway-postgres"
     }
   },
-  "features": {},
+  "features": {
+    "payments": [
+      "revenuecat",
+      "paddle"
+    ]
+  },
   "environments": {
     "local": {
-      "web": "http://localhost:5173",
+      "web": "http://localhost:5174",
       "api": "http://localhost:3001"
     },
     "staging": {

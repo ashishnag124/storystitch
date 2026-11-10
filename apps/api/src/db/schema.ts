@@ -127,3 +127,20 @@ export const usageDaily = pgTable(
     index("usage_daily_event_day_idx").on(t.event, t.day),
   ],
 );
+
+/**
+ * Paid entitlements (StoryStitch Plus): a row means the account has it now. Written only by the RevenueCat sync in
+ * payments.ts, from what RevenueCat's own API reports; removed on a refund, and with the account.
+ */
+export const entitlement = pgTable(
+  "entitlement",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    /** Which entitlement, e.g. "plus" (PLUS_ENTITLEMENT). */
+    key: text("key").notNull(),
+    grantedAt: timestamp("granted_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.key] })],
+);
