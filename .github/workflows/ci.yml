@@ -117,6 +117,5 @@ jobs:
       accounts: true
       layout_editor: true
       usage: true
-      # Staging only, until it has been tried on a phone.
       fit_layouts: true
     secrets: inherit
