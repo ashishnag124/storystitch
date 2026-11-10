@@ -1,4 +1,4 @@
-import { DEFAULT_BACKGROUND, DEFAULT_STYLE, backgroundOf, borderOf, type Style } from "@storystitch/client";
+import { DEFAULT_BACKGROUND, DEFAULT_STYLE, backgroundOf, borderOf, pickedBackground, type Style } from "@storystitch/client";
 import type { Layout } from "@storystitch/shared";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -40,8 +40,9 @@ interface Props {
  */
 export function StylePanel({ layout, style, onChange }: Props) {
   const [property, setProperty] = useState<Property>("background");
+  const picked = pickedBackground(layout, style);
   const background = backgroundOf(layout, style);
-  const isPreset = background.kind === "color" && SWATCHES.some((s) => s.color === background.color);
+  const isPreset = picked.kind === "color" && SWATCHES.some((s) => s.color === picked.color);
   const set = (patch: Partial<Style>) => onChange({ ...style, ...patch });
 
   const slider = (key: keyof typeof RANGES, label: string, value: number) => (
@@ -70,7 +71,7 @@ export function StylePanel({ layout, style, onChange }: Props) {
             );
           })}
         </View>
-        <Pressable role="button" aria-label="Reset style" onPress={() => onChange(DEFAULT_STYLE)} style={styles.chip}>
+        <Pressable role="button" aria-label="Reset style" onPress={() => onChange({ ...DEFAULT_STYLE, auto: style.auto })} style={styles.chip}>
           <Text style={styles.chipLabel}>Reset style</Text>
         </Pressable>
       </ScrollView>
@@ -78,8 +79,18 @@ export function StylePanel({ layout, style, onChange }: Props) {
       {property === "background" && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View role="group" aria-label="Color" style={styles.swatches}>
+            <Pressable
+              role="button"
+              aria-label="Auto"
+              aria-pressed={picked.kind === "auto"}
+              accessibilityState={{ selected: picked.kind === "auto" }}
+              onPress={() => set({ background: { kind: "auto" } })}
+              style={[styles.swatch, styles.auto, { backgroundColor: style.auto }, picked.kind === "auto" && styles.swatchPressed]}
+            >
+              <Text style={styles.autoLabel}>Auto</Text>
+            </Pressable>
             {SWATCHES.map((s) => {
-              const pressed = background.kind === "color" && background.color === s.color;
+              const pressed = picked.kind === "color" && picked.color === s.color;
               return (
                 <Pressable
                   key={s.color}
@@ -95,16 +106,16 @@ export function StylePanel({ layout, style, onChange }: Props) {
             <Pressable
               role="button"
               aria-label="Blurred photo"
-              aria-pressed={background.kind === "blur"}
-              accessibilityState={{ selected: background.kind === "blur" }}
+              aria-pressed={picked.kind === "blur"}
+              accessibilityState={{ selected: picked.kind === "blur" }}
               onPress={() => set({ background: { kind: "blur" } })}
-              style={[styles.swatch, background.kind === "blur" && styles.swatchPressed]}
+              style={[styles.swatch, picked.kind === "blur" && styles.swatchPressed]}
             >
               <BlurFace />
             </Pressable>
             <CustomSwatch
               value={background.kind === "color" ? background.color : DEFAULT_BACKGROUND.color}
-              checked={background.kind === "color" && !isPreset}
+              checked={picked.kind === "color" && !isPreset}
               onChange={(color) => set({ background: { kind: "color", color } })}
             />
           </View>
@@ -133,6 +144,9 @@ const styles = StyleSheet.create({
   chipLabelChecked: { fontWeight: "800", color: colors.accentText },
   swatches: { flexDirection: "row", gap: 8, paddingVertical: 4, paddingLeft: 2, paddingRight: 4 },
   swatch: { width: MIN_TARGET, height: MIN_TARGET, borderWidth: 1, borderColor: colors.border, borderRadius: 22 },
+  auto: { alignItems: "center", justifyContent: "center" },
+  // Auto is always pale, so its label is always dark.
+  autoLabel: { fontFamily, fontSize: 11, fontWeight: "700", color: "#3d3a36" },
   swatchPressed: { boxShadow: `0 0 0 2px ${colors.surface}, 0 0 0 4px ${colors.accent}` },
   borderRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   borderSlider: { flex: 1 },

@@ -15,13 +15,15 @@ import {
   type Size,
 } from "@storystitch/shared";
 
-/** A solid color, or a heavily blurred copy of the photo in the first cell. */
-export type Background = { kind: "color"; color: string } | { kind: "blur" };
+/** A solid color, a heavily blurred copy of the photo in the first cell, or Auto: a pale tint from the photos (`Style.auto`). */
+export type Background = { kind: "color"; color: string } | { kind: "blur" } | { kind: "auto" };
 
 /** Lengths are pixels on the 1080-wide export and scale with the canvas. */
 export interface Style {
   /** Null until the user picks one: each layout then uses its own (see `backgroundOf`). */
   background: Background | null;
+  /** The color Auto stands for, measured from the photos (see `autoColor`). */
+  auto: string;
   gap: number;
   margin: number;
   radius: number;
@@ -37,11 +39,17 @@ export const PRINT_BORDER = 14;
 /** A Polaroid card's margins around its photo, as fractions of the card's width. */
 export const POLAROID = { side: 0.06, bottom: 0.24 } as const;
 
-export const DEFAULT_STYLE: Style = { background: null, gap: 8, margin: 12, radius: 20, border: null, borderColor: "#ffffff" };
+export const DEFAULT_STYLE: Style = { background: null, auto: "#ffffff", gap: 8, margin: 12, radius: 20, border: null, borderColor: "#ffffff" };
 
-/** The background a scene shows: the user's pick, else blur for "framed on blur" layouts, else the default color. */
-export function backgroundOf(layout: Layout, style: Style): Background {
-  return style.background ?? (layout.blurBackground ? { kind: "blur" } : DEFAULT_BACKGROUND);
+/** The background the user picked, else blur for "framed on blur" layouts, else Auto. */
+export function pickedBackground(layout: Layout, style: Style): Background {
+  return style.background ?? (layout.blurBackground ? { kind: "blur" } : { kind: "auto" });
+}
+
+/** The background a scene shows, with Auto as its color. */
+export function backgroundOf(layout: Layout, style: Style): Exclude<Background, { kind: "auto" }> {
+  const background = pickedBackground(layout, style);
+  return background.kind === "auto" ? { kind: "color", color: style.auto } : background;
 }
 
 /**
