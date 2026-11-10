@@ -1,9 +1,11 @@
 import {
+  EntitlementsSchema,
   LayoutPopularitySchema,
   MinimumVersionSchema,
   SaveLayoutSchema,
   SavedLayoutSchema,
   SavedLayoutsEnvelopeSchema,
+  type EntitlementCheck,
   type Layout,
   type MinimumVersion,
   type SaveLayout,
@@ -109,6 +111,39 @@ export function createApi({ apiUrl, popularity, sessionHeaders }: ApiOptions) {
       if (res.status === 409) throw new SaveError("Your account already has 20 saved layouts, the most it can hold. Delete one from the Layouts tool to save this one.");
       if (res.status === 400) throw new SaveError("This layout has a problem we couldn't fix. Try moving the photos apart.");
       throw new SaveError("Couldn't save. Please try again.");
+    },
+
+    /**
+     * Whether the API says this account has StoryStitch Plus. False when signed out, and when the API can't be reached:
+     * the export then keeps its mark.
+     */
+    async fetchPlus(): Promise<boolean> {
+      try {
+        const res = await fetch(`${apiUrl}/me/entitlements`, { credentials, headers: await sessionHeaders?.(), signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+        return res.ok && EntitlementsSchema.parse(await res.json()).plus;
+      } catch {
+        return false;
+      }
+    },
+
+    /** Asks the API to read the account's Plus from RevenueCat again, right after a purchase or restore. */
+    async refreshPlus(): Promise<boolean> {
+      const res = await fetch(`${apiUrl}/me/entitlements/refresh`, { method: "POST", credentials, headers: await sessionHeaders?.() });
+      if (!res.ok) throw new Error(`POST /me/entitlements/refresh: ${res.status}`);
+      return EntitlementsSchema.parse(await res.json()).plus;
+    },
+
+    /** Whether a signed-out iOS buyer's purchases (by RevenueCat's anonymous ID for the device) include Plus. */
+    async checkDevicePlus(appUserId: string): Promise<boolean> {
+      const body: EntitlementCheck = { appUserId };
+      const res = await fetch(`${apiUrl}/entitlements/check`, {
+        method: "POST",
+        credentials: "omit",
+        headers: { "Content-Type": "application/json", ...(await sessionHeaders?.()) },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error(`POST /entitlements/check: ${res.status}`);
+      return EntitlementsSchema.parse(await res.json()).plus;
     },
 
     async deleteSaved(id: string): Promise<void> {

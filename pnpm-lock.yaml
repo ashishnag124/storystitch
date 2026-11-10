@@ -265,6 +265,9 @@ importers:
       '@mediapipe/tasks-vision':
         specifier: ^1.2.0
         version: 1.2.0
+      '@revenuecat/purchases-js':
+        specifier: 1.74.0
+        version: 1.74.0
       '@shopify/react-native-skia':
         specifier: 2.14.0
         version: 2.14.0(react-native@0.88.1(@babel/core@7.29.7(supports-color@10.2.2))(@types/react@19.3.0)(react@19.3.0)(supports-color@10.2.2))(react@19.3.0)
@@ -2010,6 +2013,9 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
+
+  '@revenuecat/purchases-js@1.74.0':
+    resolution: {integrity: sha512-knhHEjVqnPEijdEtEFiIx1gkKHUfnpX+sPgPbPMF+/Vct+Vgya6pJaVg8UqRgdj42zRZygbjGb6ICoT7d/gD/A==}
 
   '@rolldown/binding-android-arm-eabi@1.2.16':
     resolution: {integrity: sha512-ia3DwAs0OsMGS7+IConptSiyk9pEXkOx/AbJ2n/lAGxH3QkWQus1t8d7gnAT38FCU2sQu8lUbeR6AiZFv4JxaA==}
@@ -6720,6 +6726,8 @@ snapshots:
       react-native: 0.88.1(@babel/core@7.29.7(supports-color@10.2.2))(@types/react@19.3.0)(react@19.3.0)(supports-color@10.2.2)
     optionalDependencies:
       '@types/react': 19.3.0
+
+  '@revenuecat/purchases-js@1.74.0': {}
 
   '@rolldown/binding-android-arm-eabi@1.2.16':
     optional: true
