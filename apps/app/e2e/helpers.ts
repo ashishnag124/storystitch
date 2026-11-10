@@ -1,7 +1,7 @@
 // Shared by the end-to-end specs. Tests name the acceptance criteria they prove (docs/acceptance-criteria.md).
 import { expect, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import { API_PORT } from "../playwright.config.js";
 
 /** Photo sizes cycled through for fixtures: landscape, portrait, square, small. */
@@ -65,7 +65,7 @@ export async function exportImage(page: Page) {
   return readFile(await download.path());
 }
 
-export const fixture = (name: string) => fileURLToPath(new URL(`fixtures/${name}`, import.meta.url));
+export const fixture = (name: string) => join(__dirname, "fixtures", name);
 
 /** Opens the app with browser warnings surfaced in the test output and the share sheet disabled. */
 export async function openApp(page: Page) {

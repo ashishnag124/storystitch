@@ -2,8 +2,8 @@
 import { DEFAULT_STYLE, newScene, type Scene, type Style } from "@storystitch/client";
 import { layouts } from "@storystitch/shared";
 import CanvasKitInit from "canvaskit-wasm";
-import * as onCanvas from "../../../app/src/platform/render.web";
-import * as onSkia from "../../../app/src/platform/render.native";
+import * as onCanvas from "../../src/platform/render.web";
+import * as onSkia from "../../src/platform/render.native";
 import { Skia, loadCanvasKit } from "./skia";
 
 const WIDTH = 270;

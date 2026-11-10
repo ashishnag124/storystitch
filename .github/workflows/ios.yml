@@ -64,7 +64,7 @@ jobs:
           xcrun simctl boot "$UDID"
           xcrun simctl bootstatus "$UDID" -b
           xcrun simctl install "$UDID" "$RUNNER_TEMP/build/Build/Products/Release-iphonesimulator/StoryStitchStaging.app"
-          xcrun simctl addmedia "$UDID" apps/web/e2e/fixtures/*.jpg apps/web/e2e/fixtures/*.heic
+          xcrun simctl addmedia "$UDID" apps/app/e2e/fixtures/*.jpg apps/app/e2e/fixtures/*.heic
       - run: pnpm qa --target=ios
         env:
           # This runner can take over 3 minutes to start Maestro's test driver. Maestro's default is 2.

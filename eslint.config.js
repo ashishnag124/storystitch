@@ -1,7 +1,6 @@
 import js from "@eslint/js";
 import globals from "globals";
 import reactHooks from "eslint-plugin-react-hooks";
-import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 import { defineConfig, globalIgnores } from "eslint/config";
 
@@ -30,17 +29,14 @@ export default defineConfig([
     },
   },
   {
-    files: ["apps/web/**/*.{ts,tsx}"],
-    extends: [reactHooks.configs.flat.recommended, reactRefresh.configs.vite],
-  },
-  {
     files: ["apps/app/**/*.{ts,tsx}"],
     extends: [reactHooks.configs.flat.recommended],
   },
   {
     // Shared screens run on iOS too, so anything browser-only goes in a *.web.ts(x) file.
     files: ["apps/app/**/*.{ts,tsx}"],
-    ignores: ["**/*.web.{ts,tsx}"],
+    // The end-to-end tests run in Node and the browser, never on iOS.
+    ignores: ["**/*.web.{ts,tsx}", "apps/app/e2e/**", "apps/app/playwright.config.ts"],
     rules: {
       "no-restricted-globals": ["error", ...BROWSER_ONLY.map((name) => ({ name, message: "Browser-only: move this to a *.web.ts(x) file." }))],
       "no-restricted-syntax": [

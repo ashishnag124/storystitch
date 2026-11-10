@@ -64,7 +64,6 @@ const savedLayouts = async (page: Page) =>
     .layouts;
 
 test.describe("without an account", () => {
-  test.skip(process.env.E2E_TARGET !== "app", "apps/web still asks for an account first");
 
   test("AC-CUSTOM-01 AC-CUSTOM-11 opens, and the edited layout goes in the collage and exports", async ({ page }) => {
     await pickPhotos(page, 3);
@@ -146,7 +145,6 @@ test("AC-CUSTOM-02 AC-CUSTOM-05 AC-CUSTOM-06 AC-CUSTOM-07 reworks a grid by remo
 });
 
 test("AC-CUSTOM-06 draws nothing over the photos", async ({ page }) => {
-  test.skip(process.env.E2E_TARGET !== "app", "apps/web keeps its bands until it's replaced");
   await signedIn(page);
   await pickPhotos(page, 3);
   await page.getByRole("button", { name: "Edit this layout" }).click();
@@ -225,7 +223,6 @@ async function expectActions(page: Page, primary: string, secondary: string, qui
 }
 
 test("AC-MOBILE-05 grouped actions keep to one hierarchy at phone width", async ({ page }) => {
-  test.skip(process.env.E2E_TARGET !== "app", "apps/web still asks for an account first, and is staying as it is until it's replaced");
   await page.setViewportSize({ width: 375, height: 812 });
   await pickPhotos(page, 3);
   await page.getByRole("radio", { name: "Three stacked", exact: true }).click();

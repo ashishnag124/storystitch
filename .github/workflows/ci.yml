@@ -40,7 +40,7 @@ jobs:
           --health-interval 2s --health-timeout 3s --health-retries 20
     env: &db
       DATABASE_URL: postgres://app:app@localhost:5432/app
-      CORS_ORIGIN: http://localhost:5173
+      CORS_ORIGIN: http://localhost:5174
     steps:
       - uses: actions/checkout@v4
         with:
@@ -58,17 +58,16 @@ jobs:
         timeout-minutes: 11
         run: |
           # `timeout` runs as root because apt does: run as the runner, it can't stop apt, which then blocks the retry.
-          install_deps() { sudo env "PATH=$PATH" timeout 5m apps/web/node_modules/.bin/playwright install-deps chromium webkit; }
+          install_deps() { sudo env "PATH=$PATH" timeout 5m apps/app/node_modules/.bin/playwright install-deps chromium webkit; }
           install_deps && exit 0
           echo "::warning::apt failed or took over 5 minutes. Trying again without the Azure mirror."
           sudo sed -i '/azure\.archive\.ubuntu\.com/d' /etc/apt/apt-mirrors.txt
           install_deps
       - name: Install Playwright's browsers
         timeout-minutes: 5
-        run: pnpm --filter @storystitch/web exec playwright install chromium webkit
-      # Lint, typecheck, unit + end-to-end tests, and every criterion in docs/acceptance-criteria.md. Staging runs the
-      # Expo app, so that's what's graded here. release.yml grades whichever app production serves.
-      - run: pnpm qa --target=app
+        run: pnpm --filter @storystitch/app exec playwright install chromium webkit
+      # Lint, typecheck, unit + end-to-end tests, and every criterion in docs/acceptance-criteria.md.
+      - run: pnpm qa
       # The Expo app's iOS bundle: shows it still builds, long before there's an iOS app to run it in.
       - run: pnpm --filter @storystitch/app run build:ios
       - uses: actions/upload-artifact@v4
@@ -106,7 +105,6 @@ jobs:
       deployments: write
     uses: ./.github/workflows/_deploy-pages.yml
     with:
-      app: app
       # A separate Pages project whose production branch is `main`, so staging.storystitch.ashishnag.com can point at it
       # with an ordinary CNAME (Pages routes custom domains to a branch only through Cloudflare-proxied DNS).
       project: ${{ vars.PAGES_PROJECT_STAGING }}

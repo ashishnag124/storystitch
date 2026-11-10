@@ -7,7 +7,6 @@ import { PASSWORD, emailedLink, exportImage, libraryInput, openApp, submit } fro
 // GET /me/entitlements themselves: the API's own side is covered by apps/api/src/payments.test.ts.
 test.use({ baseURL: `http://localhost:${ACCOUNTS_PORT}` });
 test.beforeEach(({ page }) => {
-  test.skip(process.env.E2E_TARGET !== "app", "Plus is only in the Expo app");
   return openApp(page);
 });
 

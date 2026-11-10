@@ -162,7 +162,6 @@ test("AC-EXPORT-05 Share hands a 1080×1920 image to the share sheet", async ({ 
 });
 
 test("AC-EXPORT-09 the StoryStitch mark is small, see-through and in from the lower right corner, and the switch removes it", async ({ page }) => {
-  test.skip(process.env.E2E_TARGET !== "app", "apps/web is staying as it is until it's replaced");
   await pickOne(page, await drawJpeg(page, 1080, 1920, "g.fillStyle='#808080';g.fillRect(0,0,w,h);"), "Full bleed");
   await page.getByRole("tab", { name: "Export" }).click();
   const toggle = page.getByRole("switch", { name: "Made with StoryStitch" });
