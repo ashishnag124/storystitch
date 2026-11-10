@@ -106,7 +106,7 @@ reuse IDs.
 
 | ID | Criterion | Check |
 |---|---|---|
-| AC-STYLE-01 | The Style tool offers labeled controls for color (Auto, presets, custom color, blurred photo), spacing, margin, corners, border width and color, and a reset; chips pick which one shows. | auto |
+| AC-STYLE-01 | The Style tool offers labeled controls for color (Auto, presets, custom color, blurred photo), spacing, margin, corners, border width and color, and a reset; a row of tool buttons, each with an icon, picks which one shows, and the whole row fits on screen without scrolling from 375 px wide (an iPhone SE). | auto |
 | AC-STYLE-02 | Defaults come from the layout until changed: white borders where photos overlap (scattered prints, insets), white Polaroid cards on a blurred photo, blur for "Framed on blur", Auto elsewhere. | auto |
 | AC-STYLE-03 | Style changes appear in the exported image. | auto |
 | AC-STYLE-04 | Changing the style keeps manual crops. | auto |

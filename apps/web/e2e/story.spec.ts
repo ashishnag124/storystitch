@@ -170,6 +170,17 @@ test.describe("editing", () => {
 
     // Each other property shows its own control when its chip is picked.
     const chip = (name: string) => page.getByRole("radio", { name, exact: true });
+    if (app) {
+      // On an iPhone SE's width, every tool and Reset are on screen, with no sideways scrolling.
+      const size = page.viewportSize()!;
+      await page.setViewportSize({ width: 375, height: 667 });
+      for (const tool of [...["Color", "Spacing", "Margin", "Corners", "Border"].map(chip), page.getByRole("button", { name: "Reset style" })]) {
+        const box = (await tool.boundingBox())!;
+        expect(box.x).toBeGreaterThanOrEqual(0);
+        expect(box.x + box.width).toBeLessThanOrEqual(375);
+      }
+      await page.setViewportSize(size);
+    }
     for (const name of ["Margin", "Corners", "Border"]) {
       await chip(name).click();
       await expect(page.getByRole("slider", { name })).toBeEnabled();
