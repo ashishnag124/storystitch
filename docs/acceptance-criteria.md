@@ -32,6 +32,7 @@ reuse IDs.
 | AC-PICK-09 | Each device gets one-tap sources and no camera button: Android "Photo library" and "Files"; iPhone one "Choose photos" (Safari routes library and files through one Apple menu); desktop "Upload photos" and a drag-and-drop area. | auto |
 | AC-PICK-10 | On desktop, dropping photos onto the drop area opens them like uploading. | auto |
 | AC-PICK-11 | On a real Android phone, "Photo library" and "Files" open the photo picker and the file browser directly. | manual |
+| AC-PICK-12 | On a real iPhone, "Getting your photos…" shows from the moment the picker closes until the photos start preparing, including while iOS downloads photos from iCloud. Cancelling the picker clears it. | manual |
 
 ## Subject detection
 

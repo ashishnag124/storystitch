@@ -1,4 +1,5 @@
 import { describeSubjects, screenFor } from "@storystitch/client";
+import type { Detection } from "@storystitch/layout-engine";
 import { Suspense, useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
@@ -34,10 +35,14 @@ export default function App() {
     if (picked.length > MAX_PHOTOS) notes.push(`StoryStitch uses up to ${MAX_PHOTOS} photos, so it took the first ${MAX_PHOTOS}.`);
     const files = picked.slice(0, MAX_PHOTOS);
     const loaded: Photo[] = [];
+    const detections: Promise<Detection[]>[] = [];
     setProgress({ step: "Preparing photos", done: 0, total: files.length });
     for (const [i, file] of files.entries()) {
       try {
-        loaded.push(await loadPhoto(file));
+        const photo = await loadPhoto(file);
+        loaded.push(photo);
+        // Detection runs off the JS thread, so it works on this photo while the next one decodes.
+        detections.push(analyzePhoto(photo));
       } catch (err) {
         if (!(err instanceof UnsupportedPhotoError)) console.error(err);
         notes.push(`Couldn't open ${file.name}. Try a JPEG, PNG, WebP or HEIC photo.`);
@@ -47,7 +52,7 @@ export default function App() {
     }
     for (const [i, photo] of loaded.entries()) {
       setProgress({ step: "Finding subjects", done: i, total: loaded.length });
-      photo.detections = await analyzePhoto(photo);
+      photo.detections = await detections[i]!;
     }
     setPopularity(await popular);
     setProgress(null);
