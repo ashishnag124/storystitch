@@ -131,3 +131,27 @@ describe("authFetch", () => {
     expect((await authFetch("https://api.example/api/auth/sign-in/email")).status).toBe(401);
   });
 });
+
+describe("StoryStitch Plus", () => {
+  it("AC-PLUS-01 counts as no Plus when signed out or when the API can't be reached, so the mark stays", async () => {
+    respondWith({ plus: true });
+    expect(await api.fetchPlus()).toBe(true);
+    respondWith({ error: "x" }, 500);
+    expect(await api.fetchPlus()).toBe(false);
+    respondWith({ plus: "yes" });
+    expect(await api.fetchPlus()).toBe(false);
+    vi.stubGlobal("fetch", vi.fn(async () => Promise.reject(new TypeError("offline"))));
+    expect(await api.fetchPlus()).toBe(false);
+  });
+
+  it("refreshes and checks a device through the API, and fails loudly so the app can say so", async () => {
+    respondWith({ plus: true });
+    expect(await api.refreshPlus()).toBe(true);
+    expect(vi.mocked(fetch).mock.calls[0]![0]).toBe("https://api.example/me/entitlements/refresh");
+    respondWith({ plus: false });
+    expect(await api.checkDevicePlus("$RCAnonymousID:0123456789abcdef0123456789abcdef")).toBe(false);
+    expect(JSON.parse(vi.mocked(fetch).mock.calls[0]![1]!.body as string)).toEqual({ appUserId: "$RCAnonymousID:0123456789abcdef0123456789abcdef" });
+    respondWith({ error: "TOO_MANY" }, 429);
+    await expect(api.refreshPlus()).rejects.toThrow(/429/);
+  });
+});

@@ -2,7 +2,7 @@ import { createApi } from "@storystitch/client";
 import { ACCOUNTS_ENABLED, API_URL } from "./config";
 import { sessionHeaders } from "./platform/session";
 
-export const { fetchPopularity, recordExport, listSaved, saveLayout, deleteSaved } = createApi({
+export const { fetchPopularity, recordExport, listSaved, saveLayout, deleteSaved, fetchPlus, refreshPlus, checkDevicePlus } = createApi({
   apiUrl: API_URL,
   popularity: ACCOUNTS_ENABLED && !!API_URL,
   sessionHeaders,

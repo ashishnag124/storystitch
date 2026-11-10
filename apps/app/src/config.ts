@@ -14,3 +14,12 @@ export const USAGE_ENABLED = process.env.EXPO_PUBLIC_FEATURE_USAGE === "true" &&
 export const FIT_LAYOUTS_ENABLED = process.env.EXPO_PUBLIC_FEATURE_FIT_LAYOUTS === "true";
 /** The layout editor saves to accounts, so it needs them too. */
 export const LAYOUT_EDITOR_ENABLED = ACCOUNTS_ENABLED && process.env.EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR === "true";
+/**
+ * StoryStitch Plus: the mark can be turned off only with Plus, which is bought with RevenueCat. Off unless
+ * EXPO_PUBLIC_FEATURE_PLUS=true; it needs the API (which says who has Plus) and accounts. With it off, anyone can turn
+ * the mark off, as before.
+ */
+export const PLUS_ENABLED = ACCOUNTS_ENABLED && API_URL !== "" && process.env.EXPO_PUBLIC_FEATURE_PLUS === "true";
+/** RevenueCat's public keys (safe in the app): the web app's, which sells through Paddle, and the iOS app's. */
+export const REVENUECAT_WEB_KEY: string = process.env.EXPO_PUBLIC_REVENUECAT_WEB_KEY ?? "";
+export const REVENUECAT_IOS_KEY: string = process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY ?? "";
