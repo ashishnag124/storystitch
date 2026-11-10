@@ -53,11 +53,9 @@ test.describe("performance targets", () => {
     const photos = await phonePhotos(page);
     await pickPhotos(page, photos);
     await page.getByRole("button", { name: "Start over" }).click();
-    await libraryInput(page).setInputFiles(photos);
-    await expect(page.getByRole("status")).toHaveText(/Finding subjects/, {
-      timeout: 60_000,
-    });
+    // Timed from the pick: detection runs while the photos decode, so it has no step of its own to time.
     const start = Date.now();
+    await libraryInput(page).setInputFiles(photos);
     await expect(page.getByRole("application")).toBeVisible({ timeout: 60_000 });
     const analysis = Date.now() - start;
 
