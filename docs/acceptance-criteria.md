@@ -275,7 +275,7 @@ flag is off, AC-EXPORT-09 describes the switch exactly.
 | AC-PLUS-04 | A refund or revoked purchase takes Plus away: the switch locks again the next time the Export tool opens. | planned |
 | AC-PLUS-05 | Restore purchases on iOS brings Plus back on a new install or device with the same Apple ID. | planned |
 | AC-PLUS-06 | On iOS, Plus can be bought signed out; signing in moves it to the account, and it then works on the web with that account. On the web, buying asks the user to sign in first. | planned |
-| AC-PLUS-07 | A sandbox purchase on the web (Paddle sandbox) and in the iOS simulator (StoreKit testing) unlocks the switch on both platforms, and a sandbox refund locks it again. | planned |
+| AC-PLUS-07 | A sandbox purchase on the web (Paddle sandbox) and on iOS (RevenueCat's Test Store in the simulator, and Apple's sandbox in TestFlight) unlocks the switch on both platforms, and a sandbox refund locks it again. | planned |
 | AC-PLUS-08 | Deleting the account deletes its Plus record; the delete screen says deleting doesn't refund a purchase. | planned |
 
 ## Admin analytics

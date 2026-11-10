@@ -61,3 +61,8 @@ export async function restorePlus(): Promise<void> {}
 export async function deviceBuyerId(): Promise<string | null> {
   return null;
 }
+
+/** Web purchases are made under the account already: nothing to move at sign-in. */
+export async function linkBuyer(userId: string | null): Promise<void> {
+  void userId;
+}

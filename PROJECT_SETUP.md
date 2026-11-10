@@ -227,6 +227,10 @@ and test keys; nothing here can be done from Claude Code. Use sandbox and test m
    - A Web app with **Paddle** as the billing engine. If RevenueCat's Web SDK can't sell through Paddle when we get
      there, Claude will say so and the fallback is RevenueCat Web Billing on Stripe.
    - Entitlement `plus`, attached to the iOS and web products; an offering `default` holding both.
+   - A **Test Store** (Apps and providers) with a `plus_lifetime` product in the same offering. Its API key, as
+     `EXPO_PUBLIC_REVENUECAT_IOS_KEY` in a local `.env`, lets Claude buy Plus in the simulator with no App Store
+     setup. Apple's own sandbox is tested in TestFlight, with a sandbox tester.
+   - Restore behavior "Transfer to new App User ID", so a purchase made signed out moves to the account at sign-in.
    - A webhook to `https://api-staging.storystitch.ashishnag.com/payments/revenuecat` (and the production API later),
      with an Authorization header value you generate (`openssl rand -hex 32`).
 3. **Paddle**: an account (sandbox first), website verification (Paddle checks the site has terms, a refund policy,
