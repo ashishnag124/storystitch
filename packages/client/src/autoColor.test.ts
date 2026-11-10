@@ -42,6 +42,17 @@ describe("AC-STYLE-07 autoColor", () => {
     expect(spread(autoColor([mostlyGrey]))).toBeLessThan(spread(autoColor([green])));
   });
 
+  it("is white when no hue clearly wins", () => {
+    const blue = photo([40, 70, 190, 100]);
+    expect(autoColor([red, green, blue])).toBe("#ffffff");
+    expect(autoColor([red, green])).toBe("#ffffff");
+    const [r, g] = rgb(autoColor([red, red, green]));
+    expect(r).toBeGreaterThan(g);
+    // Neighbouring hues aren't rivals: red and orange make a warm tint.
+    const [r2, , b2] = rgb(autoColor([photo([217, 38, 38, 100]), photo([217, 166, 38, 100])]));
+    expect(r2 - b2).toBeGreaterThan(4);
+  });
+
   it("is white with no photos", () => {
     expect(autoColor([])).toBe("#ffffff");
   });
