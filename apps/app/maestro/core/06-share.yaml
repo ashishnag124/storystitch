@@ -13,8 +13,17 @@ name: AC-IOS-06 Share opens the share sheet with a JPEG or a PNG
     visible: "(storystitch\\.jpg|JPEG Image.*)"
     timeout: 60000
 # Tapping outside the sheet closes it, and the tap also reaches the app, so use the empty part of the header.
-- tapOn:
-    point: "40%,10%"
+# The caption can show while the sheet is still sliding in, and iOS ignores a tap outside until it has settled
+# (that's what made this flaky), so tap until it has gone. Once it has, another tap lands harmlessly in the header.
+- retry:
+    maxRetries: 4
+    commands:
+      - tapOn:
+          point: "40%,10%"
+      - extendedWaitUntil:
+          notVisible:
+            id: ActivityListView
+          timeout: 3000
 # Share doesn't wait for the new image: a tap straight away still gets the PNG.
 - tapOn: PNG
 - tapOn: Share
