@@ -112,7 +112,7 @@ reuse IDs.
 | AC-STYLE-04 | Changing the style keeps manual crops. | auto |
 | AC-STYLE-05 | Full-bleed layouts have no spacing, corners or border. | auto |
 | AC-STYLE-06 | Spacing and margin are even: neighbours are a full gap apart, every edge cell is one margin from the canvas edge, and both scale with the canvas. | auto |
-| AC-STYLE-07 | Auto, the default background, is a pale tint of the most common hue across the photos, each photo counting the same; near-black, near-white and grey are ignored, and with little color it fades toward white. Auto is the first choice in the Color tool and stays after Reset. | auto |
+| AC-STYLE-07 | Auto, the default background, is a pale tint of the most common hue across the photos, each photo counting the same; near-black, near-white and grey are ignored, and with little color it fades toward white. When no hue clearly wins (another hue at least 90° away is within 10% of the most common one, as with red, green and blue photos together), Auto is white. Auto is the first choice in the Color tool and stays after Reset. | auto |
 
 ## Export and sharing
 

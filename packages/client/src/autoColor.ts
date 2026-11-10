@@ -21,6 +21,9 @@ const GREY = 0.03;
 /** When at least this share of the pixels has color, the tint is at full strength; below it, it fades toward white. */
 const FULL_SHARE = 0.4;
 const MIN_STRENGTH = 0.15;
+/** No hue wins when another one at least this many buckets (90°) away scores this close to the winner. */
+const RIVAL_GAP = 9;
+const TIE = 0.9;
 
 const linear = (c: number) => ((c /= 255) <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
 const encode = (c: number) => 255 * (c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055);
@@ -55,7 +58,8 @@ function oklchToHex(L: number, C: number, h: number): string {
 /**
  * The "Auto" background: a pale tint of the most common hue across the photos. Each photo counts the same.
  * Near-black, near-white and grey pixels are skipped, the rest go into hue buckets, and the fullest bucket
- * (with its neighbours) wins. When few pixels have any color, the tint fades toward white.
+ * (with its neighbours) wins. When few pixels have any color, the tint fades toward white. When another hue
+ * far from the winner is nearly as common (red, green and blue photos together), no hue wins and it's white.
  */
 export function autoColor(photos: Pixels[]): string {
   const weight = new Float64Array(BINS);
@@ -80,8 +84,13 @@ export function autoColor(photos: Pixels[]): string {
   if (colored === 0) return "#ffffff";
   const at = (i: number) => (i + BINS) % BINS;
   const near = (arr: Float64Array, i: number) => arr[at(i - 1)]! + arr[i]! + arr[at(i + 1)]!;
+  const score = (i: number) => near(weight, i) + weight[i]!;
   let best = 0;
-  for (let i = 1; i < BINS; i++) if (near(weight, i) + weight[i]! > near(weight, best) + weight[best]!) best = i;
+  for (let i = 1; i < BINS; i++) if (score(i) > score(best)) best = i;
+  for (let i = 0; i < BINS; i++) {
+    const apart = Math.min((i - best + BINS) % BINS, (best - i + BINS) % BINS);
+    if (apart >= RIVAL_GAP && score(i) >= TIE * score(best)) return "#ffffff";
+  }
   const hue = Math.atan2(near(sumB, best), near(sumA, best));
   const strength = Math.min(1, Math.max(MIN_STRENGTH, colored / counted / FULL_SHARE));
   return oklchToHex(AUTO_LIGHTNESS, AUTO_CHROMA * strength, hue);
