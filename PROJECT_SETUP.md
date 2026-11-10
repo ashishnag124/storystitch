@@ -77,7 +77,7 @@ What and why: the v2 section of `docs/product-brief.md`. Acceptance criteria: th
 | B1 | API + Postgres on Railway (staging, production), custom domains, CI/release/QA wiring | in progress: staging API live; checklist below |
 | B2 | Optional email and password accounts (Better Auth, Resend, Turnstile), account deletion, behind `VITE_FEATURE_ACCOUNTS` | on in staging and production |
 | B3 | Save collages to Cloudflare R2, "My stories", storage limits | not started |
-| B4 | Supporter pass (Lemon Squeezy) | deferred: see "Later" in the brief |
+| B4 | StoryStitch Plus: pay once ($4.99) to remove the mark, through RevenueCat (Apple in-app purchase on iOS, Paddle on web), behind `EXPO_PUBLIC_FEATURE_PLUS` and `PAYMENTS_ENABLED` | in progress; checklist below |
 | B5 | Admin analytics (`/admin`, desktop, admin login with authenticator code) | not started |
 
 ### B0 checklist (yours)
@@ -206,6 +206,38 @@ Until this is done, email can only go to the address on your Resend account.
 When parts 1 to 3 are done, tell Claude. Claude opens a PR that builds production with accounts on and, once you
 approve, merges it. Then run `/release`, and sign up on https://storystitch.ashishnag.com from a real phone to check
 the verification email arrives.
+
+### B4 checklist: StoryStitch Plus (yours)
+
+What and why: "StoryStitch Plus" in `docs/product-brief.md`. Claude builds it behind the flags and tests it with fakes
+and test keys; nothing here can be done from Claude Code. Use sandbox and test modes until the last part.
+
+1. **App Store Connect** (the production app, and the staging app for TestFlight):
+   - Business → sign the Paid Applications Agreement and add banking and tax details. Purchases fail until it's active.
+   - The app → Monetization → In-App Purchases → a **Non-Consumable**, product ID `plus_lifetime`, $4.99, with a
+     display name, description and a review screenshot of the upsell. It's submitted together with the next build.
+   - Users and Access → Integrations: an **In-App Purchase key** and an **App Store Connect API key**, for RevenueCat.
+   - App Privacy: add **Purchases** (purchase history, linked to the user, not used for tracking).
+   - Sandbox testers: one tester account, for TestFlight.
+2. **RevenueCat** (one project, two apps):
+   - An App Store app (bundle IDs `com.ashishnag.storystitch` and `.staging` as separate apps) with the keys above and
+     App Store Server Notifications pointed at RevenueCat.
+   - A Web app with **Paddle** as the billing engine. If RevenueCat's Web SDK can't sell through Paddle when we get
+     there, Claude will say so and the fallback is RevenueCat Web Billing on Stripe.
+   - Entitlement `plus`, attached to the iOS and web products; an offering `default` holding both.
+   - A webhook to `https://api-staging.storystitch.ashishnag.com/payments/revenuecat` (and the production API later),
+     with an Authorization header value you generate (`openssl rand -hex 32`).
+3. **Paddle**: an account (sandbox first), website verification (Paddle checks the site has terms, a refund policy,
+   pricing and contact details; Claude can draft the terms and refund pages), a $4.99 one-time product, and the
+   connection to RevenueCat.
+4. **Config**: the values Claude adds to "Where config lives" as each part lands. Staging gets sandbox keys; production
+   gets live keys only when you're ready to sell.
+5. **Privacy policy**: name RevenueCat and Paddle as processors (Claude drafts the change).
+6. **App Review note** for the build that adds the purchase: Plus is a one-time purchase that removes the export's
+   mark; it can be bought without an account, and Restore purchases is in the upsell.
+7. **Turning it on in production** locks a switch that's been free since v1.1.0. Say so in the release notes.
+
+The iOS purchase needs a new build: it adds native code, so an over-the-air update can't deliver it.
 
 ### iOS delivery checklist (yours)
 

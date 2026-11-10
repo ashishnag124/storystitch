@@ -25,7 +25,9 @@
       "database": "railway-postgres"
     }
   },
-  "features": {},
+  "features": {
+    "payments": ["revenuecat", "paddle"]
+  },
   "environments": {
     "local": {
       "web": "http://localhost:5173",
