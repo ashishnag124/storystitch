@@ -3,7 +3,7 @@
     "name": "StoryStitch",
     "slug": "storystitch",
     "scheme": "storystitch",
-    "version": "1.0.0",
+    "version": "1.1.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "runtimeVersion": { "policy": "fingerprint" },
