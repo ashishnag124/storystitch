@@ -5,7 +5,7 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import { AppState, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { AccountLink } from "./AccountLink";
 import { deleteSaved, listSaved, recordExport } from "./api";
-import { LAYOUT_EDITOR_ENABLED } from "./config";
+import { FIT_LAYOUTS_ENABLED, LAYOUT_EDITOR_ENABLED } from "./config";
 import { LayoutStrip } from "./LayoutStrip";
 import { perfTimes, resetPerfPeak, timeLayoutSwitch } from "./PerfReadout";
 import { EXPORT_PAUSE_MS, canShareFiles, canWaitToShare, renderExport, shareOrDownload, type ExportFormat } from "./platform/exportImage";
@@ -47,7 +47,7 @@ interface Props {
 export function Editor({ photos, summary, notices, privacy, popularity, onStartOver }: Props) {
   // Every layout with its own best photo assignment, best fit first. Picking one starts from that.
   const options = useMemo(
-    () => rankedScenes(photos, { ...DEFAULT_STYLE, auto: autoColor(photos.map((p) => p.pixels)) }, popularity),
+    () => rankedScenes(photos, { ...DEFAULT_STYLE, auto: autoColor(photos.map((p) => p.pixels)) }, popularity, FIT_LAYOUTS_ENABLED),
     [photos, popularity],
   );
   const [scene, setScene] = useState<Scene>(() => options[0]!);

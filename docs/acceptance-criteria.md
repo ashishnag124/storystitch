@@ -67,6 +67,7 @@ reuse IDs.
 | AC-RANK-03 | The strip offers every layout for the photo count, each with every photo placed exactly once. | auto |
 | AC-RANK-04 | Among layouts that fit about equally well, the more often exported ones come first; popularity never lifts a clearly worse fit over a better one, and a handful of exports barely moves the order. | auto |
 | AC-RANK-06 | Layouts the photos fill rank above ones that leave much of the canvas plain (background color, or Polaroid cards), unless the sparse one fits the photos clearly better. A blurred photo background doesn't count as plain. | auto |
+| AC-RANK-08 | With the fit-layouts flag on (`EXPO_PUBLIC_FEATURE_FIT_LAYOUTS`), grid, mosaic and stack layouts move the lines between cells, each at most 12% of the canvas, so each cell's shape suits its photo's subject. Fitted layouts stay valid built-in layouts (cells clear of Instagram's bands), and on the sample photo sets in `fit.test.ts` less of the subjects is cropped than without fitting. Saved and edited layouts are never moved. With the flag off, ranking is unchanged. | auto |
 | AC-RANK-07 | The layout the editor opens on is never a negative-space one; those stay in the strip for the user to pick. | auto |
 | AC-RANK-05 | In builds with accounts on, each Share or Download sends only the exported layout's id (no photo, account, cookie or body) and the API keeps just a running count per layout, which the app reads to rank. Builds with accounts off send nothing. | auto |
 

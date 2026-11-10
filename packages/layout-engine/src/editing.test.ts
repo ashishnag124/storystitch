@@ -1,6 +1,7 @@
 import { LayoutSchema, STORY_CANVAS, cellContains, cellPolygon, layoutProblems, layouts, type Cell, type Layout } from "@storystitch/shared";
 import { describe, expect, it } from "vitest";
 import {
+  FIT_MAX_SHIFT,
   MIN_CELL,
   bringToFront,
   cornerLines,
@@ -9,6 +10,7 @@ import {
   cornersOf,
   duplicateCell,
   editModeOf,
+  fitGrid,
   gridDividers,
   gridLayout,
   gridOf,
@@ -275,6 +277,32 @@ describe("AC-CUSTOM-04 free cells", () => {
   it("keeps a moved heart's photo inside it", () => {
     const heart = moveCell(byId("one-heart"), 0, 0, 0.05)!;
     expect(cellContains(heart.cells[0]!, { x: W / 2, y: 0.53 * H })).toBe(true);
+  });
+});
+
+describe("AC-RANK-08 fitGrid", () => {
+  const stack = byId("two-stack");
+  const line = (layout: Layout) => gridDividers(gridOf(layout)!)[0]!.at;
+  const topHeight = (target: number) => (l: Layout) => Math.abs((l.cells[0] as Extract<Cell, { shape: "rect" }>).h - target);
+
+  it("moves a line to lower the cost, at most FIT_MAX_SHIFT from where it was", () => {
+    const fitted = fitGrid(stack, topHeight(0.95));
+    expect(line(fitted)).toBeCloseTo(line(stack) + FIT_MAX_SHIFT, 3);
+    expect(fitted.id).toBe(stack.id);
+    valid(fitted);
+  });
+
+  it("never pushes a cell under Instagram's bands", () => {
+    const fitted = fitGrid(stack, topHeight(0));
+    expect(line(fitted)).toBeLessThan(line(stack));
+    valid(fitted);
+  });
+
+  it("keeps the layout as drawn when moving gains too little, or it isn't a grid", () => {
+    expect(fitGrid(stack, () => 1)).toBe(stack);
+    expect(fitGrid(stack, (l) => topHeight(0.5)(l) * 0.01)).toBe(stack);
+    const circles = layouts.find((l) => l.family === "circles")!;
+    expect(fitGrid(circles, () => 0)).toBe(circles);
   });
 });
 

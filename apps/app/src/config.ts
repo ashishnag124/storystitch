@@ -10,5 +10,7 @@ export const WEB_URL: string = process.env.EXPO_PUBLIC_WEB_URL ?? "";
 export const TURNSTILE_SITE_KEY: string = process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 /** Usage counts ship dark, and go to the API, so they need one. */
 export const USAGE_ENABLED = process.env.EXPO_PUBLIC_FEATURE_USAGE === "true" && API_URL !== "";
+/** Grid layouts move their lines to suit the photos' subjects (see `fittedLayout`). Off unless EXPO_PUBLIC_FEATURE_FIT_LAYOUTS=true. */
+export const FIT_LAYOUTS_ENABLED = process.env.EXPO_PUBLIC_FEATURE_FIT_LAYOUTS === "true";
 /** The layout editor saves to accounts, so it needs them too. */
 export const LAYOUT_EDITOR_ENABLED = ACCOUNTS_ENABLED && process.env.EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR === "true";
