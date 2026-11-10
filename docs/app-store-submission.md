@@ -1,4 +1,6 @@
-# App Store submission: version 1.0.0
+# App Store submission
+
+The store version is `version` in `apps/app/app.json`. Raise it before each App Store build once the previous version is approved: App Store Connect turns down a build whose version was already approved. It isn't part of the iOS fingerprint, so raising it doesn't stop over-the-air updates.
 
 Everything to enter in App Store Connect for the production app, `com.ashishnag.storystitch`. Do this after production has moved to the Expo app, because the review team will open the privacy and support URLs and may sign in.
 
@@ -67,12 +69,39 @@ You can make, edit and share collages without signing up. A free account is opti
 First release.
 ```
 
+## Version 1.1.1
+
+Built from release v1.1.1. Promotional text, keywords and description stay as above. Everything below goes in the new 1.1.1 version in App Store Connect.
+
+### What's new
+
+```text
+• Layouts now shape themselves around your photos, so faces and subjects get cut off less.
+• Fuller collages with less empty space, and a soft background color picked from your photos.
+• A small "Made with StoryStitch" mark in the corner, which you can turn off on the Export tab.
+• The Style tools now sit in one row with icons, so they're easier to find.
+• "Getting your photos…" shows while your photos come in from the library.
+• Clearer messages when signing up, signing in or resetting a password.
+• Sharing again after editing a collage now sends the edited one.
+```
+
+### TestFlight: what to test
+
+```text
+Pick a mix of portrait and landscape photos and check that the suggested layouts fit them, with faces in view. Try photos in very different colors (for example red, green and blue together): the Auto background should be white. Open the Style tab: Color, Spacing, Margin, Corners, Border and Reset should all be on one row. Export and share with the "Made with StoryStitch" mark on and off.
+```
+
+### App Review
+
+The notes for the reviewer below still apply as they are, with the same demo account and Sign-in required. There's still nothing to buy: StoryStitch Plus is switched off in this build.
+
 ## Review history
 
 | Date | Build | Result |
 |---|---|---|
 | November 7, 2026 | 1.0.0 (2), from v1.0.1 | Submitted, with manual release |
 | By November 7, 2026 | 1.0.0 (2) | Rejected under Guideline 2.1, Information Needed. Apple asked for a screen recording, plus the notes below. Nothing was wrong with the app itself |
+| By November 10, 2026 | 1.0.0 | Approved (as the owner reported on November 10) |
 
 To resubmit after 2.1, Apple wants all of the following in App Review Information:
 
