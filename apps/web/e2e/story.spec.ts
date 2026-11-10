@@ -33,9 +33,10 @@ test("AC-PICK-05 opens a HEIC photo", async ({ page }) => {
 });
 
 test("AC-PICK-06 shows progress while photos are analyzed", async ({ page }) => {
-  // Hold the detection worker back so the analysis step is on screen long enough to see.
-  await page.route(/\/worker[-.]/, async (route) => {
-    await new Promise((r) => setTimeout(r, 1500));
+  // Hold the detection worker back (apps/web's worker-*.js, the Expo app's detect-worker.js) so the analysis step is
+  // on screen long enough to see. The Expo app starts it after the first photo decodes, so it must outlast the rest.
+  await page.route(/\/(detect-)?worker[-.]/, async (route) => {
+    await new Promise((r) => setTimeout(r, 3000));
     await route.continue();
   });
   await libraryInput(page).setInputFiles(await makePhotos(page, 3));
