@@ -6,6 +6,8 @@
 // - free: everything else (circles, hearts, stars, tilted or overlapping prints). Cells move, resize and rotate.
 // Positions are normalized to the canvas (0–1), as in layouts.json, unless a name says px (export pixels).
 import {
+  MIN_CELL_SAFE_FRACTION,
+  SAFE_ZONE,
   STORY_CANVAS,
   cellBounds,
   cellContains,
@@ -305,6 +307,64 @@ export function moveDivider(grid: Grid, path: string, at: number): Grid {
   if (!d) return grid;
   const clamped = Math.min(Math.max(at, d.min), d.max);
   return { ...grid, root: mapNode(grid.root, path, (n) => (n.kind === "split" ? { ...n, at: clamped } : n)) };
+}
+
+/** How far fitting may move each line between cells from where the layout draws it (normalized), so the layout stays recognizable. */
+export const FIT_MAX_SHIFT = 0.12;
+/** Fitting moves a line only when that lowers the cost by at least this much, so near-ties keep the layout as drawn. */
+export const FIT_MIN_GAIN = 0.02;
+/** Positions tried for each line per pass, spread evenly over the range it may move in. */
+const FIT_STEPS = 8;
+const FIT_PASSES = 2;
+
+/** The bands' complement: where Instagram draws nothing over a Story (normalized). */
+const SAFE: Box = { x: SAFE_ZONE.sides, y: SAFE_ZONE.top, w: 1 - 2 * SAFE_ZONE.sides, h: 1 - SAFE_ZONE.top - SAFE_ZONE.bottom };
+
+/**
+ * What `layoutProblems` asks of a built-in layout that moving grid lines can break, checked on each cell's bounds
+ * (exact for rectangles, close for arches, capsules and waves), which is much faster than sampling the canvas:
+ * enough of every cell clear of the bands, and every arch taller than its curved top.
+ */
+function fitAllowed(layout: Layout): boolean {
+  return (layout.cells as GridShape[]).every((c) => {
+    const w = Math.min(c.x + c.w, SAFE.x + SAFE.w) - Math.max(c.x, SAFE.x);
+    const h = Math.min(c.y + c.h, SAFE.y + SAFE.h) - Math.max(c.y, SAFE.y);
+    const safe = w > 0 && h > 0 ? (w * h) / (c.w * c.h) : 0;
+    return safe >= MIN_CELL_SAFE_FRACTION && (c.shape !== "arch" || c.h * H >= (c.w * W) / 2);
+  });
+}
+
+/**
+ * A grid layout with its lines between cells moved to lower `cost`, which scores a whole layout: each line at most
+ * FIT_MAX_SHIFT from where it started, every cell at least MIN_CELL and still clear enough of Instagram's bands. Each
+ * line in turn goes to its cheapest tried position, over a couple of passes. Returns the same layout when it isn't a
+ * grid or nothing moved.
+ */
+export function fitGrid(layout: Layout, cost: (layout: Layout) => number): Layout {
+  const start = gridOf(layout);
+  if (!start) return layout;
+  const origin = gridDividers(start).map((d) => ({ path: d.path, at: d.at }));
+  let grid = start;
+  let best = cost(layout);
+  for (let pass = 0; pass < FIT_PASSES; pass++) {
+    let moved = false;
+    for (const { path, at: from } of origin) {
+      const d = gridDividers(grid).find((x) => x.path === path)!;
+      const lo = Math.max(d.min, from - FIT_MAX_SHIFT);
+      const hi = Math.min(d.max, from + FIT_MAX_SHIFT);
+      for (let k = 0; k <= FIT_STEPS; k++) {
+        const next = moveDivider(grid, path, lo + ((hi - lo) * k) / FIT_STEPS);
+        const candidate = gridLayout(layout, next).layout;
+        if (!fitAllowed(candidate)) continue;
+        const c = cost(candidate);
+        if (c < best - FIT_MIN_GAIN) {
+          [grid, best, moved] = [next, c, true];
+        }
+      }
+    }
+    if (!moved) break;
+  }
+  return grid === start ? layout : gridLayout(layout, grid).layout;
 }
 
 /** The path to the cell with this id, or null. */

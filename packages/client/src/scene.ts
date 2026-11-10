@@ -1,4 +1,12 @@
-import { clampCrop, rankLayouts, smartCrop, type CellTarget, type Crop, type Detection, type SafeInsets } from "@storystitch/layout-engine";
+import {
+  assignPhotos,
+  clampCrop,
+  fitGrid,
+  gridOf,
+  placement,
+  rankLayouts,
+  smartCrop,
+  type CellTarget, type Crop, type Detection, type SafeInsets } from "@storystitch/layout-engine";
 import {
   SAFE_ZONE,
   STORY_CANVAS,
@@ -137,7 +145,7 @@ function uncovered(layout: Layout): number[] {
  * blurred photo background isn't plain, so on those layouts only the cards count (a lone landscape photo is
  * still framed on blur rather than cropped hard to fill the canvas).
  */
-function rankOption(layout: Layout, style: Style): { layout: Layout; cells: CellTarget[]; background: number } {
+export function rankOption(layout: Layout, style: Style): { layout: Layout; cells: CellTarget[]; background: number } {
   const visible = uncovered(layout);
   const shapes = cellShapes(layout, style, STORY_CANVAS);
   const canvas = STORY_CANVAS.width * STORY_CANVAS.height;
@@ -165,12 +173,23 @@ export function openingFirst<T extends { layout: Pick<Layout, "family"> }>(ranke
 }
 
 /**
+ * A grid layout with its lines between cells moved so each cell's shape suits the photo it gets with its best
+ * assignment (see `fitGrid`). Other layouts come back as they are.
+ */
+export function fittedLayout(layout: Layout, style: Style, photos: CropSource[]): Layout {
+  if (!gridOf(layout)) return layout;
+  const { order } = assignPhotos(photos, rankOption(layout, style).cells);
+  return fitGrid(layout, (l) => rankOption(l, style).cells.reduce((sum, cell, i) => sum + placement(photos[order[i]!]!, cell).cost, 0));
+}
+
+/**
  * A scene for every layout that fits this many photos, best fit first (layouts the photos fill before ones
  * that leave much of the canvas plain, and more often exported layouts first among near-equal fits), with
- * photos assigned to cells. See `openingFirst` for the first one.
+ * photos assigned to cells. See `openingFirst` for the first one. With `fit`, grid layouts first move their lines
+ * to suit the photos (`fittedLayout`).
  */
-export function rankedScenes(photos: CropSource[], style: Style = DEFAULT_STYLE, popularity: Record<string, number> = {}): Scene[] {
-  const options = layoutsFor(photos.length).map((layout) => rankOption(layout, style));
+export function rankedScenes(photos: CropSource[], style: Style = DEFAULT_STYLE, popularity: Record<string, number> = {}, fit = false): Scene[] {
+  const options = layoutsFor(photos.length).map((layout) => rankOption(fit ? fittedLayout(layout, style, photos) : layout, style));
   return openingFirst(rankLayouts(options, photos, popularity).map(({ layout, assignment: { order, crops } }) => ({ layout, style, order, crops })));
 }
 
