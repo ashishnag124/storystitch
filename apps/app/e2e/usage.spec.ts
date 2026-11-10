@@ -3,9 +3,6 @@ import { randomUUID } from "node:crypto";
 import { ACCOUNTS_PORT, PORT } from "../playwright.config.js";
 import { PASSWORD, emailedLink, exportImage, libraryInput, makePhotos, openApp, submit } from "./helpers.js";
 
-// Only the Expo app tracks usage. apps/web is being replaced, so it gets none.
-test.skip(process.env.E2E_TARGET !== "app", "Only the Expo app tracks usage");
-
 const isUsage = (req: Request) => req.url().endsWith("/usage/events");
 
 /** Leaves the page, which sends what's waiting, and comes back. */

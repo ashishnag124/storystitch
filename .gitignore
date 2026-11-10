@@ -24,15 +24,10 @@ playwright-report/
 # Wrangler local state
 .wrangler/
 
-# Copied from node_modules by apps/web/scripts/copy-mediapipe.mjs
-apps/web/public/mediapipe/
-
 # pnpm qa output
 qa-results/
 
 # End-to-end test builds
-apps/web/dist-e2e/
-apps/web/dist-e2e-accounts/
 apps/app/dist-e2e/
 apps/app/dist-e2e-accounts/
 
@@ -43,9 +38,5 @@ apps/app/dist-ios/
 apps/app/ios/
 apps/app/public/fonts/
 apps/app/public/mediapipe/
-apps/app/public/models/
 apps/app/public/detect-worker.js
 apps/app/public/encode-worker.js
-apps/app/public/privacy.html
-apps/app/public/support.html
-apps/app/public/legal.css

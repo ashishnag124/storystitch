@@ -49,7 +49,6 @@ test("AC-AUTH-05 AC-AUTH-06 sign up, confirm by email, stay signed in across rel
 });
 
 test("AC-A11Y-03 the account screens' links are at least 44 px tall", async ({ page }) => {
-  test.skip(process.env.E2E_TARGET !== "app", "apps/web is staying as it is until it's replaced");
   for (const [path, names] of [
     ["/account", ["Back to StoryStitch", "Forgot your password?", "Create an account", "Privacy policy", "Support"]],
     ["/sign-up", ["Sign in"]],
@@ -134,7 +133,6 @@ test("AC-PRIV-03 the privacy and support pages are public, and the Account scree
 });
 
 test("AC-AUTH-12 the bot check page holds only the check and passes its token to the iOS app", async ({ page }) => {
-  test.skip(process.env.E2E_TARGET !== "app", "apps/web has no /bot-check page");
   // Stands in for the iOS app's WebView.
   await page.addInitScript(() => {
     const sent: string[] = [];
@@ -147,7 +145,6 @@ test("AC-AUTH-12 the bot check page holds only the check and passes its token to
 });
 
 test("AC-AUTH-04 a second try waits for a new bot check token", async ({ page }) => {
-  test.skip(process.env.E2E_TARGET !== "app", "apps/web is staying as it is until it's replaced");
   // Cloudflare's test key always gives the same token, so this stands in for Turnstile with a new one each time.
   await page.route("**/turnstile/v0/api.js*", (route) =>
     route.fulfill({

@@ -1,6 +1,6 @@
 // Puts what the web build serves from public/ in place. Metro can't bundle the font files a CSS file points to, so
 // the font's stylesheet and files go in public/ and index.html links them. The detection worker is built here too:
-// Metro's own worker support is experimental. MediaPipe's runtime and the models are served from our own origin.
+// Metro's own worker support is experimental. MediaPipe's runtime is served from our own origin, like the models in public/models.
 import { build } from "esbuild";
 import { cpSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -19,8 +19,6 @@ writeFileSync(join(out, "bricolage-grotesque.css"), readFileSync(join(font, "ind
 const pub = fileURLToPath(new URL("../public/", import.meta.url));
 const wasm = join(dirname(createRequire(import.meta.url).resolve("@mediapipe/tasks-vision")), "wasm");
 mkdirSync(join(pub, "mediapipe"), { recursive: true });
-for (const file of ["privacy.html", "support.html", "legal.css"]) cpSync(fileURLToPath(new URL(`../../web/public/${file}`, import.meta.url)), join(pub, file));
-cpSync(fileURLToPath(new URL("../../web/public/models/", import.meta.url)), join(pub, "models"), { recursive: true });
 for (const file of ["vision_wasm_module_internal.js", "vision_wasm_module_internal.wasm"]) cpSync(join(wasm, file), join(pub, "mediapipe", file));
 await build({
   entryPoints: {

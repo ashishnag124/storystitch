@@ -5,9 +5,9 @@ runs the whole test suite and checks each criterion here:
 
 - **auto** criteria pass only when at least one test names their ID in its title (or a `describe` around it),
   every such test passes, and at least one of them actually ran (not skipped in every browser). `pnpm qa` grades the
-  Expo app. `pnpm qa --target=web` grades `apps/web`, and leaves out criteria only the Expo app can prove.
+  Expo app's web build.
 - **ios** criteria are graded only by `pnpm qa --target=ios`, which runs the Maestro flows in `apps/app/maestro/core` on a
-  simulator. A flow proves a criterion by starting its `name:` with the ID. The other targets leave them out.
+  simulator. A flow proves a criterion by starting its `name:` with the ID. The default target leaves them out.
 - **manual** criteria are checked by hand on staging before running `/release`. `pnpm qa` lists them as reminders.
 - **planned** criteria belong to features that haven't shipped yet (the v2 sections at the end). `pnpm qa` lists them
   without failing; when the feature ships, switch each row to `auto` or `manual` in the same PR as its tests.
@@ -160,7 +160,7 @@ reuse IDs.
 
 # v2 (planned)
 
-From the v2 section of `docs/product-brief.md`. Rows marked `auto` or `manual` have shipped (B1: the API; B2: accounts, behind the `VITE_FEATURE_ACCOUNTS` flag). The rest ship behind a feature flag too; while it's off, the v1 criteria above
+From the v2 section of `docs/product-brief.md`. Rows marked `auto` or `manual` have shipped (B1: the API; B2: accounts, behind the `EXPO_PUBLIC_FEATURE_ACCOUNTS` flag). The rest ship behind a feature flag too; while it's off, the v1 criteria above
 describe the app exactly. When saving ships, AC-SAVE-02 and AC-SAVE-07 replace AC-PRIV-01 and AC-PRIV-02.
 
 ## Platform
@@ -220,7 +220,7 @@ Maestro reads the accessibility tree, so `ios` rows prove what a person can reac
 
 ## Layout editor
 
-Behind `VITE_FEATURE_LAYOUT_EDITOR` (needs accounts): on in staging and production.
+Behind `EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR` (needs accounts): on in staging and production.
 
 | ID | Criterion | Check |
 |---|---|---|

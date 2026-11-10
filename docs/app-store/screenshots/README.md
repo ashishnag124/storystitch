@@ -35,7 +35,7 @@ Every photo is from Wikimedia Commons, marked CC0 by the person who took it. Eac
 - **The labrador:** the blurred shapes behind it include someone's lower legs, with nothing identifiable.
 - **Commons' own warning:** CC0 covers the photographer's copyright. It doesn't cover other rights, such as a person's likeness or a trademark, so these photos were also checked by eye for people, logos and readable text.
 
-Don't use the photos already in the simulator or `apps/web/e2e/fixtures`. Three of the simulator's waterfalls credit a photographer in their metadata, with no license. The others have no license information, or show a person who hasn't signed a release.
+Don't use the photos already in the simulator or `apps/app/e2e/fixtures`. Three of the simulator's waterfalls credit a photographer in their metadata, with no license. The others have no license information, or show a person who hasn't signed a release.
 
 ## Recreate the set
 

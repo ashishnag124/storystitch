@@ -3,8 +3,8 @@ import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
-const here = import.meta.dirname;
-const fromApp = createRequire(join(here, "../../app/package.json"));
+const here = __dirname;
+const fromApp = createRequire(join(here, "../package.json"));
 const fromSkia = createRequire(fromApp.resolve("@shopify/react-native-skia/package.json"));
 const skiaDir = dirname(fromApp.resolve("@shopify/react-native-skia/package.json"));
 const canvasKitDir = dirname(fromSkia.resolve("canvaskit-wasm/package.json"));

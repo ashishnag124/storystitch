@@ -6,10 +6,9 @@
 // one actually ran. Writes qa-results/report.md (also to the GitHub Actions job summary) and exits non-zero on
 // any failure, missing test, unknown ID or failed step.
 //
-// By default the end-to-end tests run against apps/app, the Expo app. `pnpm qa --target=web` runs them against apps/web,
-// which stays as production's rollback for one release. A criterion only the Expo app can prove counts as another target's.
+// The end-to-end tests run against apps/app, the Expo app, in the browser.
 // `pnpm qa --target=ios` runs only the Maestro flows in apps/app/maestro/core and grades only the `ios` criteria.
-// It needs a booted simulator with the app installed, so the other two targets leave those criteria out.
+// It needs a booted simulator with the app installed, so the default target leaves those criteria out.
 import { spawnSync } from "node:child_process";
 import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
@@ -62,8 +61,7 @@ if (workspaces.some((w) => w.scripts["db:migrate"])) {
   if (!process.env.CI) run("Start local Postgres", "docker", ["compose", "up", "-d", "--wait"]);
   run("Database migrations", "pnpm", ["db:migrate"]);
 }
-// A criterion must be proved by the app being graded, so each app's own unit tests count only for that app.
-for (const ws of workspaces.filter((w) => w.scripts.test && (target === "web" ? w.name !== "app" : w.name !== "web"))) {
+for (const ws of workspaces.filter((w) => w.scripts.test)) {
   run(
     `Unit tests: ${ws.name}`,
     "pnpm",
@@ -88,7 +86,7 @@ for (const ws of workspaces.filter((w) => w.scripts.e2e)) {
   const reporter = process.env.CI ? "github,json" : "list,json";
   run(`End-to-end tests: ${app.name}`, "pnpm", ["exec", "playwright", "test", `--reporter=${reporter}`], {
     cwd: ws.path,
-    env: { E2E_TARGET: app.name, PLAYWRIGHT_JSON_OUTPUT_FILE: join(out, `e2e-${app.name}.json`) },
+    env: { PLAYWRIGHT_JSON_OUTPUT_FILE: join(out, `e2e-${app.name}.json`) },
   });
 }
 
@@ -158,7 +156,7 @@ const graded = criteria.map((c) => {
   else if (c.check === "planned") result = "PLANNED";
   else if (!tests.length) result = "NO TEST";
   else if (failed) result = "FAIL";
-  else if (!passed) result = target === "web" ? "NOT THIS TARGET" : "SKIPPED";
+  else if (!passed) result = "SKIPPED";
   else result = "PASS";
   return {
     ...c,

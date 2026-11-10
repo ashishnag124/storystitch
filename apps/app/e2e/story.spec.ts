@@ -33,9 +33,9 @@ test("AC-PICK-05 opens a HEIC photo", async ({ page }) => {
 });
 
 test("AC-PICK-06 shows progress while photos are analyzed", async ({ page }) => {
-  // Hold the detection worker back (apps/web's worker-*.js, the Expo app's detect-worker.js) so the analysis step is
+  // Hold the detection worker (detect-worker.js) back so the analysis step is
   // on screen long enough to see. The Expo app starts it after the first photo decodes, so it must outlast the rest.
-  await page.route(/\/(detect-)?worker[-.]/, async (route) => {
+  await page.route(/\/detect-worker\./, async (route) => {
     await new Promise((r) => setTimeout(r, 3000));
     await route.continue();
   });
@@ -105,7 +105,7 @@ test.describe("error states", () => {
   });
 
   test("AC-DETECT-04 works when the detection worker can't start", async ({ page }) => {
-    await page.route(/\/(detect-)?worker[-.]/, (route) => route.abort());
+    await page.route(/\/detect-worker\./, (route) => route.abort());
     await libraryInput(page).setInputFiles(await makePhotos(page, 3));
     expect(jpegSize(await exportImage(page))).toEqual({
       width: 1080,
@@ -160,8 +160,7 @@ test.describe("editing", () => {
     await page.getByRole("radio", { name: "Two stacked" }).click();
     await page.getByRole("tab", { name: "Style" }).click();
     // Color is the first property: swatches, blurred photo and a custom color.
-    const app = process.env.E2E_TARGET === "app";
-    for (const name of [...(app ? ["Auto"] : []), "Cream", "White", "Black", "Sage", "Blush", "Navy", "Blurred photo", "Reset style"]) {
+    for (const name of ["Auto", "Cream", "White", "Black", "Sage", "Blush", "Navy", "Blurred photo", "Reset style"]) {
       await expect(page.getByRole("button", { name, exact: true })).toBeVisible();
     }
     await expect(page.getByLabel("Custom background color")).toBeAttached();
@@ -170,17 +169,15 @@ test.describe("editing", () => {
 
     // Each other property shows its own control when its chip is picked.
     const chip = (name: string) => page.getByRole("radio", { name, exact: true });
-    if (app) {
-      // On an iPhone SE's width, every tool and Reset are on screen, with no sideways scrolling.
-      const size = page.viewportSize()!;
-      await page.setViewportSize({ width: 375, height: 667 });
-      for (const tool of [...["Color", "Spacing", "Margin", "Corners", "Border"].map(chip), page.getByRole("button", { name: "Reset style" })]) {
-        const box = (await tool.boundingBox())!;
-        expect(box.x).toBeGreaterThanOrEqual(0);
-        expect(box.x + box.width).toBeLessThanOrEqual(375);
-      }
-      await page.setViewportSize(size);
+    // On an iPhone SE's width, every tool and Reset are on screen, with no sideways scrolling.
+    const size = page.viewportSize()!;
+    await page.setViewportSize({ width: 375, height: 667 });
+    for (const tool of [...["Color", "Spacing", "Margin", "Corners", "Border"].map(chip), page.getByRole("button", { name: "Reset style" })]) {
+      const box = (await tool.boundingBox())!;
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(375);
     }
+    await page.setViewportSize(size);
     for (const name of ["Margin", "Corners", "Border"]) {
       await chip(name).click();
       await expect(page.getByRole("slider", { name })).toBeEnabled();
@@ -192,7 +189,7 @@ test.describe("editing", () => {
     await page.getByRole("button", { name: "Reset style" }).click();
     await expect(page.getByRole("slider", { name: "Spacing" })).toHaveValue("8");
     await chip("Color").click();
-    await expect(page.getByRole("button", { name: app ? "Auto" : "White", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("button", { name: "Auto", exact: true })).toHaveAttribute("aria-pressed", "true");
   });
 
   test("AC-EDIT-10 a selected photo gets a floating Fit / Done tooltip, and Fit restores the automatic crop", async ({ page }) => {
@@ -306,7 +303,6 @@ test.describe("editing", () => {
   });
 
   test("AC-STYLE-07 the background defaults to a pale tint of the photos", async ({ page }) => {
-    test.skip(process.env.E2E_TARGET !== "app", "apps/web is staying as it is until it's replaced");
     // The fixtures are red and orange.
     await openTwoStacked(page);
     const corner = await page.evaluate(async (b64) => {
