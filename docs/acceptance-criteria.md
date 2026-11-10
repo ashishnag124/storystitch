@@ -215,6 +215,7 @@ Maestro reads the accessibility tree, so `ios` rows prove what a person can reac
 | AC-AUTH-10 | On staging, a real verification email and password-reset email arrive, and sign-up and sign-in work on iPhone Safari and Android Chrome. | manual |
 | AC-AUTH-11 | When StoryStitch can't be reached, account forms say so and can be tried again, instead of waiting forever. | auto |
 | AC-AUTH-13 | The links in confirmation and password reset emails are Universal Links on the API's address: iOS opens the app for them, and they keep working in a browser. | auto |
+| AC-AUTH-14 | Account forms name the actual problem: an empty or invalid email asks for a valid email, a failed bot check says so, and a bot check the API couldn't confirm in time says it took too long and can be tried again. They never show the API's raw message. | auto |
 | AC-AUTH-12 | The Expo web app's /bot-check page holds only the bot check and passes its token to the iOS app that shows it. | auto |
 
 ## Layout editor
