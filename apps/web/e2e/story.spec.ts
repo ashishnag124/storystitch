@@ -159,7 +159,8 @@ test.describe("editing", () => {
     await page.getByRole("radio", { name: "Two stacked" }).click();
     await page.getByRole("tab", { name: "Style" }).click();
     // Color is the first property: swatches, blurred photo and a custom color.
-    for (const name of ["Cream", "White", "Black", "Sage", "Blush", "Navy", "Blurred photo", "Reset style"]) {
+    const app = process.env.E2E_TARGET === "app";
+    for (const name of [...(app ? ["Auto"] : []), "Cream", "White", "Black", "Sage", "Blush", "Navy", "Blurred photo", "Reset style"]) {
       await expect(page.getByRole("button", { name, exact: true })).toBeVisible();
     }
     await expect(page.getByLabel("Custom background color")).toBeAttached();
@@ -179,7 +180,7 @@ test.describe("editing", () => {
     await page.getByRole("button", { name: "Reset style" }).click();
     await expect(page.getByRole("slider", { name: "Spacing" })).toHaveValue("8");
     await chip("Color").click();
-    await expect(page.getByRole("button", { name: "White" })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("button", { name: app ? "Auto" : "White", exact: true })).toHaveAttribute("aria-pressed", "true");
   });
 
   test("AC-EDIT-10 a selected photo gets a floating Fit / Done tooltip, and Fit restores the automatic crop", async ({ page }) => {
@@ -290,6 +291,23 @@ test.describe("editing", () => {
       return [...ctx.getImageData(0, 0, 1, 1).data.slice(0, 3)];
     }, jpeg.toString("base64"));
     for (const channel of corner) expect(channel).toBeLessThan(40);
+  });
+
+  test("AC-STYLE-07 the background defaults to a pale tint of the photos", async ({ page }) => {
+    test.skip(process.env.E2E_TARGET !== "app", "apps/web is staying as it is until it's replaced");
+    // The fixtures are red and orange.
+    await openTwoStacked(page);
+    const corner = await page.evaluate(async (b64) => {
+      const bitmap = await createImageBitmap(await (await fetch(`data:image/jpeg;base64,${b64}`)).blob());
+      const ctx = new OffscreenCanvas(1, 1).getContext("2d")!;
+      ctx.drawImage(bitmap, 4, 4, 1, 1, 0, 0, 1, 1);
+      return [...ctx.getImageData(0, 0, 1, 1).data.slice(0, 3)];
+    }, (await exportImage(page)).toString("base64"));
+    const [r, g, b] = corner as [number, number, number];
+    expect(Math.min(r, g, b)).toBeGreaterThan(220);
+    expect(r - b).toBeGreaterThan(4);
+    await page.getByRole("tab", { name: "Style" }).click();
+    await expect(page.getByRole("button", { name: "Auto", exact: true })).toHaveAttribute("aria-pressed", "true");
   });
 });
 

@@ -1,3 +1,4 @@
+import { AUTO_SAMPLE_SIDE, type Pixels } from "@storystitch/client";
 import type { Detection } from "@storystitch/layout-engine";
 import { detect } from "./detect.web";
 import { heicToJpeg, isHeic } from "./heic.web";
@@ -19,6 +20,8 @@ export interface Photo {
   width: number;
   height: number;
   preview: ImageBitmap;
+  /** A tiny copy's pixels, for the Auto background color. */
+  pixels: Pixels;
   /** What subject detection found; empty until analyzed or when nothing was found. */
   detections: Detection[];
 }
@@ -34,6 +37,16 @@ export class UnsupportedPhotoError extends Error {
 /** Decodes a full-resolution image with its EXIF orientation applied. */
 export function decodeFull(source: Blob): Promise<ImageBitmap> {
   return createImageBitmap(source, { imageOrientation: "from-image" });
+}
+
+function samplePixels(image: ImageBitmap): Pixels {
+  const scale = Math.min(1, AUTO_SAMPLE_SIDE / Math.max(image.width, image.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(image.width * scale));
+  canvas.height = Math.max(1, Math.round(image.height * scale));
+  const ctx = canvas.getContext("2d")!;
+  ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+  return ctx.getImageData(0, 0, canvas.width, canvas.height);
 }
 
 export async function downscale(full: ImageBitmap, longSide: number): Promise<ImageBitmap> {
@@ -67,7 +80,7 @@ export async function loadPhoto(file: File): Promise<Photo> {
   }
   try {
     const preview = await downscale(full, PREVIEW_LONG_SIDE);
-    return { name: file.name, source, width: full.width, height: full.height, preview, detections: [] };
+    return { name: file.name, source, width: full.width, height: full.height, preview, pixels: samplePixels(preview), detections: [] };
   } finally {
     full.close();
   }

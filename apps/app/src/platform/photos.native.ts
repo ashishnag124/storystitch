@@ -1,5 +1,6 @@
 import type { Detection } from "@storystitch/layout-engine";
-import { Skia, type SkImage } from "@shopify/react-native-skia";
+import { AlphaType, ColorType, Skia, type SkImage } from "@shopify/react-native-skia";
+import { AUTO_SAMPLE_SIDE, type Pixels } from "@storystitch/client";
 import StoryVision from "../../modules/story-vision";
 
 /** Long side of the working copies used for previews. Exports always use the originals. */
@@ -19,6 +20,8 @@ export interface Photo {
   width: number;
   height: number;
   preview: SkImage;
+  /** A tiny copy's pixels, for the Auto background color. */
+  pixels: Pixels;
   /** What subject detection found; empty until analyzed or when nothing was found. */
   detections: Detection[];
 }
@@ -42,11 +45,23 @@ function downscale(full: SkImage, longSide: number): SkImage {
   return surface.makeImageSnapshot();
 }
 
+function samplePixels(image: SkImage): Pixels {
+  const small = downscale(image, AUTO_SAMPLE_SIDE);
+  try {
+    const [width, height] = [small.width(), small.height()];
+    const data = small.readPixels(0, 0, { width, height, colorType: ColorType.RGBA_8888, alphaType: AlphaType.Unpremul });
+    return { data: data ?? [], width, height };
+  } finally {
+    small.dispose();
+  }
+}
+
 /** Decodes one picked photo. One at a time: a full-resolution decode of a 48 MP photo takes about 190 MB. */
 export async function loadPhoto({ name, uri }: PickedPhoto): Promise<Photo> {
   const full = await decodeFull(uri);
   try {
-    return { name, source: uri, width: full.width(), height: full.height(), preview: downscale(full, PREVIEW_LONG_SIDE), detections: [] };
+    const preview = downscale(full, PREVIEW_LONG_SIDE);
+    return { name, source: uri, width: full.width(), height: full.height(), preview, pixels: samplePixels(preview), detections: [] };
   } finally {
     full.dispose();
   }

@@ -104,12 +104,13 @@ reuse IDs.
 
 | ID | Criterion | Check |
 |---|---|---|
-| AC-STYLE-01 | The Style tool offers labeled controls for color (presets, custom color, blurred photo), spacing, margin, corners, border width and color, and a reset; chips pick which one shows. | auto |
-| AC-STYLE-02 | Defaults come from the layout until changed: white borders where photos overlap (scattered prints, insets), white Polaroid cards on a blurred photo, blur for "Framed on blur", white elsewhere. | auto |
+| AC-STYLE-01 | The Style tool offers labeled controls for color (Auto, presets, custom color, blurred photo), spacing, margin, corners, border width and color, and a reset; chips pick which one shows. | auto |
+| AC-STYLE-02 | Defaults come from the layout until changed: white borders where photos overlap (scattered prints, insets), white Polaroid cards on a blurred photo, blur for "Framed on blur", Auto elsewhere. | auto |
 | AC-STYLE-03 | Style changes appear in the exported image. | auto |
 | AC-STYLE-04 | Changing the style keeps manual crops. | auto |
 | AC-STYLE-05 | Full-bleed layouts have no spacing, corners or border. | auto |
 | AC-STYLE-06 | Spacing and margin are even: neighbours are a full gap apart, every edge cell is one margin from the canvas edge, and both scale with the canvas. | auto |
+| AC-STYLE-07 | Auto, the default background, is a pale tint of the most common hue across the photos, each photo counting the same; near-black, near-white and grey are ignored, and with little color it fades toward white. Auto is the first choice in the Color tool and stays after Reset. | auto |
 
 ## Export and sharing
 
