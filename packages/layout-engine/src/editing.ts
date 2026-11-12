@@ -738,29 +738,6 @@ export function bringToFront(base: Layout, i: number): Layout {
   return replaced(base, i, { ...base.cells[i]!, z: top + 1 });
 }
 
-/** Adds a copy of cell `i` wherever it fits first (near it, then anywhere). Null when there's no room. */
-export function duplicateCell(base: Layout, i: number): Edited | null {
-  const cell = { ...base.cells[i]!, z: Math.max(...base.cells.map((c) => c.z)) + 1 };
-  const steps = [0.08, 0.16, 0.24, 0.32, 0.4, 0.5, 0.6, 0.7];
-  const tries = steps.flatMap((d) => [
-    [d, 0],
-    [0, d],
-    [-d, 0],
-    [0, -d],
-    [d, d],
-    [-d, d],
-    [d, -d],
-    [-d, -d],
-  ]);
-  for (const k of [1, 0.8, 0.6]) {
-    for (const [dx, dy] of tries) {
-      const layout = { ...base, cells: [...base.cells, translated(scaled(cell, k), dx!, dy!)] };
-      if (cellsFit(layout, [base.cells.length])) return { layout, origin: [...same(base), null] };
-    }
-  }
-  return null;
-}
-
 /** Shapes the editor can add to a free layout: all of them move and resize, and rectangles turn too. */
 export const ADD_SHAPES = ["rect", "circle", "heart", "star"] as const;
 export type AddShape = (typeof ADD_SHAPES)[number];

@@ -420,7 +420,7 @@ test("AC-CUSTOM-18 a blank canvas has no size or turn buttons, keeps the palette
 
   await page.mouse.click(...(await canvasAt(page, ...SPOTS.middle))); // choose the rectangle
   await expect(e.getByRole("status")).toHaveText("Drag to move. Pinch to resize, twist to turn.");
-  for (const name of ["Shape", "Add copy", "Remove"]) await expect(e.getByRole("button", { name, exact: true })).toBeVisible();
+  for (const name of ["Shape", "Remove"]) await expect(e.getByRole("button", { name, exact: true })).toBeVisible();
   for (const name of ["Bigger", "Smaller", "Turn left", "Turn right"]) await expect(e.getByRole("button", { name, exact: true })).toHaveCount(0);
   for (const name of [/^Resize photo/, /^Turn photo/]) {
     const handle = e.getByRole("button", { name });
