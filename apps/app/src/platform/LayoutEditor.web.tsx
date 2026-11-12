@@ -5,8 +5,10 @@ import { useCallback, useEffect, useLayoutEffect, useRef, type KeyboardEvent, ty
 import type { Photo } from "./photos";
 import { drawBlurredBackground, drawCell, fillBackground, hasBlurredBackground, outlinePath, previewOf } from "./render";
 import { cellShapes, styleScale, type Scene, type Start, type Style } from "@storystitch/client";
-import { BlankChoice, DrawOutline, SaveActions, UseActions } from "../LayoutSheetActions";
+import { DrawOutline, SaveActions, UseActions } from "../LayoutSheetActions";
 import { ToolGrid } from "../ui/Actions";
+import { PhotoTray } from "./PhotoTray";
+import { ShapePalette } from "./ShapePalette";
 import { Button } from "../ui/Button";
 import { useLayoutEditor, type Handle } from "../useLayoutEditor";
 import "./builder.css";
@@ -18,6 +20,8 @@ const ARROW_STEPS: Record<string, [number, number]> = { ArrowLeft: [-1, 0], Arro
 /** The highlight on the selected cell and on cells with a problem. */
 const SELECTED_COLOR = "#ffc24b";
 const PROBLEM_COLOR = "#ff8f8f";
+/** The shape a dragged photo would land in. */
+const DROP_COLOR = "#7dffb0";
 
 interface Props {
   photos: Photo[];
@@ -39,7 +43,7 @@ export default function LayoutEditor({ photos, style, start, signedIn, onCancel,
     return { x: rect.left, y: rect.top };
   };
   const editor = useLayoutEditor({ photos, style, start, onUse, onSaved, frameOrigin });
-  const { layout, order, crops, selected, problems, view, fit, handles, tools, finishDrag, countText, saving, setSaving } = editor;
+  const { layout, order, crops, selected, dropTarget, fade, problems, view, fit, handles, tools, finishDrag, countText, saving, setSaving } = editor;
   const imageFor = useCallback((i: number) => previewOf(photos[i]!), [photos]);
 
   useEffect(() => heading.current?.focus(), []);
@@ -72,12 +76,29 @@ export default function LayoutEditor({ photos, style, start, signedIn, onCancel,
     fillBackground(ctx, STORY_CANVAS, scene);
     if (hasBlurredBackground(scene)) drawBlurredBackground(ctx, STORY_CANVAS, imageFor(first));
     for (const i of drawOrder(layout.cells)) {
+      // A shape dragged toward the edge fades to say it will go.
+      ctx.globalAlpha = fade?.cell === i ? fade.alpha : 1;
       const crop = crops[i];
       if (crop) drawCell(ctx, shapes[i]!, imageFor(order[i]!), crop, radius, border, style.borderColor);
       else {
         ctx.fillStyle = "rgb(43 19 64 / 0.5)";
         ctx.fill(outlinePath(shapes[i]!.photo ?? shapes[i]!.outline, radius));
+        // A plus, to say a photo goes here.
+        const { cx, cy, width, height } = shapes[i]!.frame;
+        const arm = Math.min(width, height) * 0.18;
+        ctx.save();
+        ctx.strokeStyle = "rgb(255 244 232 / 0.85)";
+        ctx.lineWidth = 10;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(cx - arm, cy);
+        ctx.lineTo(cx + arm, cy);
+        ctx.moveTo(cx, cy - arm);
+        ctx.lineTo(cx, cy + arm);
+        ctx.stroke();
+        ctx.restore();
       }
+      ctx.globalAlpha = 1;
     }
     const outline = (i: number, color: string, dash: number[]) => {
       if (!shapes[i]) return;
@@ -90,7 +111,8 @@ export default function LayoutEditor({ photos, style, start, signedIn, onCancel,
     };
     for (const p of problems) for (const c of p.cells) outline(c, PROBLEM_COLOR, [28, 18]);
     if (selected !== null) outline(selected, SELECTED_COLOR, []);
-  }, [layout, order, style, crops, imageFor, selected, problems]);
+    if (dropTarget !== null) outline(dropTarget, DROP_COLOR, []);
+  }, [layout, order, style, crops, imageFor, selected, dropTarget, fade, problems]);
 
   // --- Pointers on the preview.
 
@@ -188,8 +210,8 @@ export default function LayoutEditor({ photos, style, start, signedIn, onCancel,
         <p className="builder-status" role="status">
           {editor.status}
         </p>
-        {editor.blankKind && <BlankChoice editor={editor} />}
-        {tools.length > 0 && <ToolGrid tools={tools} />}
+        {editor.tray && <PhotoTray photos={photos} tray={editor.tray} />}
+        {editor.palette ? <ShapePalette palette={editor.palette} /> : tools.length > 0 && <ToolGrid tools={tools} scroll={editor.toolsScroll} />}
       </section>
 
       {saving && (

@@ -1,18 +1,23 @@
 // The layout editor on iOS: a full-screen view for changing a layout, to use in the collage or save to an account.
 // useLayoutEditor does the work; this draws it with Skia and feeds it touches.
 import { Canvas, Picture, createPicture, type SkImage } from "@shopify/react-native-skia";
+import type { PaletteShape } from "@storystitch/layout-engine";
 import type { Layout, Point, SavedLayout } from "@storystitch/shared";
 import { STORY_CANVAS } from "@storystitch/shared";
 import type { Start, Style } from "@storystitch/client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AccessibilityInfo, KeyboardAvoidingView, PanResponder, StyleSheet, Text, TextInput, View, type AccessibilityActionEvent, type GestureResponderEvent } from "react-native";
+import { AccessibilityInfo, KeyboardAvoidingView, PanResponder, StyleSheet, Text, TextInput, View, type AccessibilityActionEvent, type GestureResponderEvent, type HostInstance } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, fontFamily, type as typography } from "../theme";
-import { BlankChoice, DrawOutline, SaveActions, UseActions } from "../LayoutSheetActions";
+import { DrawOutline, SaveActions, UseActions } from "../LayoutSheetActions";
 import { ToolGrid } from "../ui/Actions";
 import { Button } from "../ui/Button";
 import { useLayoutEditor, type CellMover, type Handle, type Move } from "../useLayoutEditor";
 import type { Photo } from "./photos.native";
+import { haptic } from "./motion.native";
+import { PhotoTray, THUMB, Thumb } from "./PhotoTray.native";
+import { SHAPE_BUTTON, ShapePalette } from "./ShapePalette.native";
+import { ShapeGlyph } from "../ui/ShapeGlyph";
 import { blurredImage, drawDraft, hasBlurredBackground, previewOf } from "./render.native";
 
 interface Props {
@@ -112,8 +117,19 @@ export default function LayoutEditor({ photos, style, start, signedIn, onCancel,
   const insets = useSafeAreaInsets();
   const origin = useRef<Point>({ x: 0, y: 0 });
   const editor = useLayoutEditor({ photos, style, start, onUse, onSaved, frameOrigin: () => origin.current });
-  const { layout, order, crops, selected, problems, view, fit, handles, tools, finishDrag, countText, saving, setSaving } = editor;
+  const { layout, order, crops, selected, dropTarget, fade, problems, view, fit, handles, tools, finishDrag, countText, saving, setSaving } = editor;
   const [fingerCount, setFingerCount] = useState(0);
+  const root = useRef<HostInstance>(null);
+  // A light tick when something snaps, or a photo lifts out of its shape.
+  const { snapTicks } = editor;
+  const ticked = useRef(snapTicks);
+  useEffect(() => {
+    if (snapTicks !== ticked.current) haptic();
+    ticked.current = snapTicks;
+  }, [snapTicks]);
+  const previewBox = useRef<HostInstance>(null);
+  /** Where the editor's top left is on screen: the photo being dragged is placed by page coordinates. */
+  const [rootOrigin, setRootOrigin] = useState<Point>({ x: 0, y: 0 });
 
   const imageFor = useCallback((i: number) => previewOf(photos[i]!), [photos]);
   const first = order.find((o) => o >= 0) ?? 0;
@@ -125,15 +141,28 @@ export default function LayoutEditor({ photos, style, start, signedIn, onCancel,
     () =>
       createPicture((canvas) => {
         canvas.scale(view.width / STORY_CANVAS.width, view.width / STORY_CANVAS.width);
-        drawDraft(canvas, STORY_CANVAS, scene, crops, order, imageFor, blurred, selected, problems.flatMap((p) => p.cells));
+        drawDraft(canvas, STORY_CANVAS, scene, crops, order, imageFor, blurred, selected, problems.flatMap((p) => p.cells), dropTarget, fade);
       }),
-    [view.width, scene, crops, order, imageFor, blurred, selected, problems],
+    [view.width, scene, crops, order, imageFor, blurred, selected, problems, dropTarget, fade],
   );
 
   /** Where the preview is on screen, from a touch on something `at` this far into it. Its size changes with the tools. */
   function findOrigin(e: GestureResponderEvent, at: Point) {
     const { pageX, pageY, locationX, locationY } = e.nativeEvent;
     origin.current = { x: pageX - locationX - at.x, y: pageY - locationY - at.y };
+  }
+  /** A photo dragged from the tray lands by where the preview is, which isn't known from touches on the tray. */
+  function measureForDrag() {
+    root.current?.measureInWindow((rx, ry) => setRootOrigin({ x: rx, y: ry }));
+    previewBox.current?.measureInWindow((px, py) => (origin.current = { x: px, y: py }));
+  }
+  function grabPhoto(photo: number, x: number, y: number) {
+    measureForDrag();
+    editor.tray!.grab(photo, x, y);
+  }
+  function grabShape(shape: PaletteShape, x: number, y: number) {
+    measureForDrag();
+    editor.palette!.grab(shape, x, y);
   }
   function grabHandle(handle: Handle, e: GestureResponderEvent) {
     findOrigin(e, { x: handle.box.left, y: handle.box.top });
@@ -143,6 +172,8 @@ export default function LayoutEditor({ photos, style, start, signedIn, onCancel,
   const preview = useFingers({
     down: (e) => {
       findOrigin(e, { x: 0, y: 0 });
+      // A photo lifted out of a shape follows the finger by where the editor is on screen.
+      root.current?.measureInWindow((rx, ry) => setRootOrigin({ x: rx, y: ry }));
       setFingerCount(1);
       editor.pressPreview(fingersOf(e));
     },
@@ -162,7 +193,7 @@ export default function LayoutEditor({ photos, style, start, signedIn, onCancel,
   const picking = useVoiceOverMoves(editor.pickMoves, editor.pickValue);
 
   return (
-    <View role="dialog" aria-modal aria-label="Layout editor" style={[StyleSheet.absoluteFill, styles.editor]}>
+    <View ref={root} role="dialog" aria-modal aria-label="Layout editor" style={[StyleSheet.absoluteFill, styles.editor]}>
       <View style={styles.bar}>
         <Button label="Cancel" quiet onPress={onCancel} />
         <Text role="heading" aria-level={2} style={styles.count}>
@@ -174,7 +205,14 @@ export default function LayoutEditor({ photos, style, start, signedIn, onCancel,
 
       <View style={styles.stage} onLayout={(e) => fit(e.nativeEvent.layout.width, e.nativeEvent.layout.height)}>
         <View style={{ width: view.width, height: view.height }}>
-          <View aria-label={`Layout being edited: ${countText}`} style={styles.preview} {...picking} {...preview.panHandlers}>
+          <View
+            ref={previewBox}
+            aria-label={`Layout being edited: ${countText}`}
+            style={styles.preview}
+            {...picking}
+            onAccessibilityTap={editor.putPickedInChosen}
+            {...preview.panHandlers}
+          >
             <Canvas pointerEvents="none" style={{ width: view.width, height: view.height }}>
               <Picture picture={picture} />
             </Canvas>
@@ -191,9 +229,24 @@ export default function LayoutEditor({ photos, style, start, signedIn, onCancel,
         <Text role="status" style={styles.status}>
           {editor.status}
         </Text>
-        {editor.blankKind && <BlankChoice editor={editor} />}
-        {tools.length > 0 && <ToolGrid tools={tools} />}
+        {editor.tray && <PhotoTray photos={photos} tray={{ ...editor.tray, grab: grabPhoto }} />}
+        {editor.palette ? <ShapePalette palette={{ ...editor.palette, grab: grabShape }} /> : tools.length > 0 && <ToolGrid tools={tools} scroll={editor.toolsScroll} />}
       </View>
+
+      {editor.tray?.ghost && (
+        <View pointerEvents="none" style={[styles.ghost, { left: editor.tray.ghost.x - rootOrigin.x - THUMB / 2, top: editor.tray.ghost.y - rootOrigin.y - THUMB / 2 }]}>
+          <Thumb photo={photos[editor.tray.ghost.photo]!} />
+        </View>
+      )}
+
+      {editor.palette?.ghost && (
+        <View
+          pointerEvents="none"
+          style={[styles.ghost, styles.shapeGhost, { left: editor.palette.ghost.x - rootOrigin.x - SHAPE_BUTTON / 2, top: editor.palette.ghost.y - rootOrigin.y - SHAPE_BUTTON / 2 }]}
+        >
+          <ShapeGlyph shape={editor.palette.ghost.shape} />
+        </View>
+      )}
 
       {saving && (
         // The editor starts below the status bar, so the keyboard needs that much more room.
@@ -245,6 +298,8 @@ const styles = StyleSheet.create({
   grip: { borderWidth: 3, borderColor: colors.bg, borderRadius: 999, backgroundColor: colors.accent },
   tools: { minHeight: 128, justifyContent: "center", gap: 8, paddingTop: 10, paddingBottom: 14, paddingHorizontal: 12, borderTopLeftRadius: 20, borderTopRightRadius: 20, backgroundColor: colors.surface },
   status: { fontFamily, fontSize: 15, color: colors.muted, textAlign: "center" },
+  ghost: { position: "absolute", width: THUMB, height: THUMB, overflow: "hidden", borderRadius: 12, borderWidth: 2, borderColor: colors.accent, opacity: 0.9 },
+  shapeGhost: { width: SHAPE_BUTTON, height: SHAPE_BUTTON, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface },
   backdrop: { ...StyleSheet.absoluteFill, justifyContent: "flex-end", backgroundColor: "rgba(0, 0, 0, 0.5)" },
   sheet: { gap: 12, paddingTop: 20, paddingBottom: 28, paddingHorizontal: 16, borderTopLeftRadius: 20, borderTopRightRadius: 20, backgroundColor: colors.surface },
   input: { minHeight: 44, paddingHorizontal: 12, borderWidth: 1, borderColor: colors.border, borderRadius: 10, backgroundColor: colors.bg, color: colors.text, fontSize: 16 },

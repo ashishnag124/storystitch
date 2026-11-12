@@ -148,7 +148,7 @@ export interface Grid {
 
 const NEW_ID = 1000;
 
-const isGridCell = (c: Cell): c is GridShape => (c.shape === "rect" && !c.rotate) || c.shape === "arch" || c.shape === "pill" || c.shape === "wave";
+const isGridCell = (c: Cell): c is GridShape => (c.shape === "rect" && !c.rotate && !c.turn) || ((c.shape === "arch" || c.shape === "pill") && !c.turn) || c.shape === "wave";
 
 /** The layout as a grid of rows and columns, or null when it isn't one (overlap, rotation, other shapes). */
 export function gridOf(layout: Layout): Grid | null {
@@ -700,8 +700,28 @@ export function scaleCell(base: Layout, i: number, k: number): Layout | null {
   return cellsFit(layout, [i]) ? layout : null;
 }
 
-/** Whether a cell can be turned: rectangles (prints, Polaroids) can. */
-export const canRotate = (cell: Cell) => cell.shape === "rect";
+/** Whether a cell can be turned: every shape but a circle (whose turn would show nothing), polygons and waves. */
+export const canRotate = (cell: Cell) => cell.shape === "rect" || cell.shape === "arch" || cell.shape === "pill" || cell.shape === "heart" || cell.shape === "star";
+
+/** An angle in degrees as -180 to 180, tenths of a degree. */
+const wrapTurn = (degrees: number) => {
+  const v = Math.round((((((degrees + 180) % 360) + 360) % 360) - 180) * 10) / 10;
+  return v === -180 ? 180 : v;
+};
+
+/**
+ * Turns cell `i` so it points `degrees` clockwise in all (a full turn either way, wrapping), by writing `turn`; a rect's
+ * `rotate` stays as it was. Null for a cell that can't turn, or when it wouldn't fit.
+ */
+export function turnCell(base: Layout, i: number, degrees: number): Layout | null {
+  const cell = base.cells[i]!;
+  if (!canRotate(cell)) return null;
+  const turn = wrapTurn(degrees - (cell.shape === "rect" ? cell.rotate : 0));
+  const next = { ...cell, turn } as Cell & { turn?: number };
+  if (!turn) delete next.turn;
+  const layout = replaced(base, i, next);
+  return cellsFit(layout, [i]) ? layout : null;
+}
 
 /** Sets a rectangle's rotation (degrees, kept within the schema's ±45); null when it wouldn't fit. */
 export function rotateCell(base: Layout, i: number, degrees: number): Layout | null {
@@ -718,32 +738,13 @@ export function bringToFront(base: Layout, i: number): Layout {
   return replaced(base, i, { ...base.cells[i]!, z: top + 1 });
 }
 
-/** Adds a copy of cell `i` wherever it fits first (near it, then anywhere). Null when there's no room. */
-export function duplicateCell(base: Layout, i: number): Edited | null {
-  const cell = { ...base.cells[i]!, z: Math.max(...base.cells.map((c) => c.z)) + 1 };
-  const steps = [0.08, 0.16, 0.24, 0.32, 0.4, 0.5, 0.6, 0.7];
-  const tries = steps.flatMap((d) => [
-    [d, 0],
-    [0, d],
-    [-d, 0],
-    [0, -d],
-    [d, d],
-    [-d, d],
-    [d, -d],
-    [-d, -d],
-  ]);
-  for (const k of [1, 0.8, 0.6]) {
-    for (const [dx, dy] of tries) {
-      const layout = { ...base, cells: [...base.cells, translated(scaled(cell, k), dx!, dy!)] };
-      if (cellsFit(layout, [base.cells.length])) return { layout, origin: [...same(base), null] };
-    }
-  }
-  return null;
-}
-
 /** Shapes the editor can add to a free layout: all of them move and resize, and rectangles turn too. */
 export const ADD_SHAPES = ["rect", "circle", "heart", "star"] as const;
 export type AddShape = (typeof ADD_SHAPES)[number];
+
+/** The shapes of a blank canvas's palette. Arches and capsules move and resize like any free cell; only rectangles turn. */
+export const PALETTE_SHAPES = ["rect", "square", "circle", "heart", "star", "arch", "pill"] as const;
+export type PaletteShape = (typeof PALETTE_SHAPES)[number];
 
 /** Most cells a layout can have (the schema's limit). */
 const MAX_CELLS = 8;
@@ -753,23 +754,130 @@ const SPOTS: Point[] = [
   ...[0.26, 0.74, 0.5, 0.12, 0.88].flatMap((y) => [0.26, 0.74].map((x) => ({ x, y }))),
 ];
 
+/** A new cell of `shape` at its default size, centered on (x, y) (canvas units). */
+function shapeCell(shape: PaletteShape, x: number, y: number, z: number): Cell {
+  const box = (w: number, h: number) => ({ x: round4(x - w / 2), y: round4(y - h / 2), w, h });
+  switch (shape) {
+    case "rect":
+      return { shape, ...box(0.36, 0.2), rotate: 0, z };
+    case "square":
+      return { shape: "rect", ...box(0.28, round4((0.28 * W) / H)), rotate: 0, z };
+    case "arch":
+      return { shape, ...box(0.28, 0.2), z };
+    case "pill":
+      return { shape, ...box(0.4, 0.12), z };
+    default:
+      return { shape, cx: x, cy: y, r: 0.18, z };
+  }
+}
+
 /**
  * Adds one cell of `shape` at a default size, in the middle if that spot is clear of the other cells, otherwise at
  * the first clear spot. It looks for a clear spot even when the layout lets cells overlap, so new cells don't hide
  * each other. Gets the next photo (see withOrigin). Null at 8 cells or when there's no room.
  */
-export function addCell(base: Layout, shape: AddShape): Edited | null {
+export function addCell(base: Layout, shape: PaletteShape): Edited | null {
   if (base.cells.length >= MAX_CELLS) return null;
-  const z = Math.max(...base.cells.map((c) => c.z)) + 1;
-  const r = 0.18;
-  const [w, h] = [0.36, 0.2];
+  const z = Math.max(-1, ...base.cells.map((c) => c.z)) + 1;
   const strict = { ...base, allowOverlap: false };
   for (const { x, y } of SPOTS) {
-    const cell: Cell = shape === "rect" ? { shape, x: round4(x - w / 2), y: round4(y - h / 2), w, h, rotate: 0, z } : { shape, cx: x, cy: y, r, z };
-    const layout = { ...base, cells: [...base.cells, cell] };
+    const layout = { ...base, cells: [...base.cells, shapeCell(shape, x, y, z)] };
     if (cellsFit({ ...strict, cells: layout.cells }, [base.cells.length])) return { layout, origin: [...same(base), null] };
   }
   return null;
+}
+
+/** A cell moved just far enough to lie inside the canvas, if it can. */
+function insideCanvas(cell: Cell): Cell {
+  const b = cellBounds(cell);
+  const dx = Math.max(0, -b.x) - Math.max(0, b.x + b.w - W);
+  const dy = Math.max(0, -b.y) - Math.max(0, b.y + b.h - H);
+  return dx || dy ? translated(cell, dx / W, dy / H) : cell;
+}
+
+/** Adds one cell of `shape` centered on `point` (canvas units, 0–1), moved in if that would leave the canvas. Null at 8 cells or when it doesn't fit. */
+export function addCellAt(base: Layout, shape: PaletteShape, point: Point): Edited | null {
+  if (base.cells.length >= MAX_CELLS) return null;
+  const z = Math.max(-1, ...base.cells.map((c) => c.z)) + 1;
+  const cell = insideCanvas(shapeCell(shape, point.x, point.y, z));
+  const layout = { ...base, cells: [...base.cells, cell] };
+  return cellsFit(layout, [base.cells.length]) ? { layout, origin: [...same(base), null] } : null;
+}
+
+const isRound = (c: Cell): c is Extract<Cell, { shape: "circle" | "heart" | "star" }> => c.shape === "circle" || c.shape === "heart" || c.shape === "star";
+
+/**
+ * Cell `i` turned into `shape`, keeping its center, its overall size and its z. Round shapes (circle, heart, star)
+ * take a radius of half the shorter side; coming back from one gives a square of its diameter. Null when the result
+ * wouldn't fit (an arch needs height for its curve).
+ */
+export function reshapeFreeCell(base: Layout, i: number, shape: PaletteShape): Layout | null {
+  const cell = base.cells[i]!;
+  if (cell.shape === "polygon" || cell.shape === "wave") return null;
+  const [w, h] = isRound(cell) ? [2 * cell.r * W, 2 * cell.r * W] : [cell.w * W, cell.h * H];
+  const [cx, cy] = isRound(cell) ? [cell.cx * W, cell.cy * H] : [cell.x * W + w / 2, cell.y * H + h / 2];
+  const side = Math.min(w, h);
+  let next: Cell;
+  const turn = "turn" in cell ? cell.turn : undefined;
+  if (shape === "circle") next = { shape, cx: round4(cx / W), cy: round4(cy / H), r: round4(side / 2 / W), z: cell.z };
+  else if (shape === "heart" || shape === "star") next = { shape, cx: round4(cx / W), cy: round4(cy / H), r: round4(side / 2 / W), ...(turn ? { turn } : {}), z: cell.z };
+  else {
+    const [nw, nh] = isRound(cell) || shape === "square" ? [side, side] : [w, h];
+    const box = { x: round4((cx - nw / 2) / W), y: round4((cy - nh / 2) / H), w: round4(nw / W), h: round4(nh / H) };
+    next =
+      shape === "rect" || shape === "square"
+        ? { shape: "rect", ...box, rotate: cell.shape === "rect" && shape === "rect" ? cell.rotate : 0, ...(turn ? { turn } : {}), z: cell.z }
+        : { shape, ...box, ...(turn ? { turn } : {}), z: cell.z };
+  }
+  const layout = replaced(base, i, next);
+  return cellsFit(layout, [i]) ? layout : null;
+}
+
+/** How far `p` (canvas px) is from cell `c`: 0 inside it, else the distance to its edge. */
+function distanceTo(c: Cell, p: Point): number {
+  if (c.shape === "circle") return Math.max(0, Math.hypot(p.x - c.cx * W, p.y - c.cy * H) - c.r * W);
+  if (cellContains(c, p)) return 0;
+  const pts = cellPolygon(c);
+  let best = Infinity;
+  pts.forEach((a, k) => {
+    const b = pts[(k + 1) % pts.length]!;
+    const [dx, dy] = [b.x - a.x, b.y - a.y];
+    const t = dx || dy ? Math.min(1, Math.max(0, ((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy))) : 0;
+    best = Math.min(best, Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy)));
+  });
+  return best;
+}
+
+/** The cell nearest `p` (canvas px) when its edge is within `tolerance` px (inside counts), or -1. The topmost wins a tie. */
+export function cellNear(layout: Layout, p: Point, tolerance: number): number {
+  let best = -1;
+  let distance = tolerance;
+  layout.cells.forEach((c, i) => {
+    const d = distanceTo(c, p);
+    if (d < distance || (d === distance && best >= 0 && c.z >= layout.cells[best]!.z)) {
+      best = i;
+      distance = d;
+    }
+  });
+  return best;
+}
+
+/** The longest side of a cell made by dropping a photo, as a fraction of the canvas width. */
+const PHOTO_CELL_LONG = 0.4;
+
+/**
+ * A new rectangle holding a dropped photo: centered on `point` (canvas units), in the photo's proportions (`aspect` is
+ * width over height) kept between 1:2 and 2:1, its longer side 0.4 of the canvas width, moved in if that would
+ * leave the canvas. Null at 8 cells or when it doesn't fit.
+ */
+export function addPhotoCell(base: Layout, aspect: number, point: Point): Edited | null {
+  if (base.cells.length >= MAX_CELLS) return null;
+  const a = Math.min(Math.max(aspect, 0.5), 2);
+  const [wpx, hpx] = a >= 1 ? [PHOTO_CELL_LONG * W, (PHOTO_CELL_LONG * W) / a] : [PHOTO_CELL_LONG * W * a, PHOTO_CELL_LONG * W];
+  const z = Math.max(-1, ...base.cells.map((c) => c.z)) + 1;
+  const cell = insideCanvas({ shape: "rect", x: round4(point.x - wpx / 2 / W), y: round4(point.y - hpx / 2 / H), w: round4(wpx / W), h: round4(hpx / H), rotate: 0, z });
+  const layout = { ...base, cells: [...base.cells, cell] };
+  return cellsFit(layout, [base.cells.length]) ? { layout, origin: [...same(base), null] } : null;
 }
 
 /** How close (as a fraction of the canvas width) a drawn edge must be to a snap target to jump to it. */
@@ -790,15 +898,258 @@ export function drawCell(base: Layout, from: Point, to: Point, snap = DRAW_SNAP)
   const ys = [0, 1, ...DRAW_FRACTIONS, ...edges.flatMap((b) => [b.y / H, (b.y + b.h) / H])];
   const [x0, x1] = [from.x, to.x].map((v) => snapTo(clamp(v), xs, snap)).sort((a, b) => a - b) as [number, number];
   const [y0, y1] = [from.y, to.y].map((v) => snapTo(clamp(v), ys, (snap * W) / H)).sort((a, b) => a - b) as [number, number];
-  const z = Math.max(...base.cells.map((c) => c.z)) + 1;
+  const z = Math.max(-1, ...base.cells.map((c) => c.z)) + 1;
   const cell: Cell = { shape: "rect", x: round4(x0), y: round4(y0), w: round4(x1 - x0), h: round4(y1 - y0), rotate: 0, z };
   const layout = { ...base, cells: [...base.cells, cell] };
   return cellsFit(layout, [base.cells.length]) ? { layout, origin: [...same(base), null] } : null;
 }
 
-/** Removes cell `i`. Null for the last cell. */
-export function removeCell(base: Layout, i: number): Edited | null {
-  if (base.cells.length < 2) return null;
+/** Removes cell `i`. Null for the last cell, unless `last` says the layout may be left with none (a blank canvas). */
+export function removeCell(base: Layout, i: number, last = false): Edited | null {
+  if (base.cells.length < 2 && !last) return null;
   const keep = base.cells.map((_, k) => k).filter((k) => k !== i);
   return { layout: { ...base, cells: keep.map((k) => base.cells[k]!) }, origin: keep };
 }
+
+// ---------------------------------------------------------------------------------------------------------------
+// Tidy
+
+/** Sizes of the same shape within this ratio of each other become one size. */
+const TIDY_SIZE = 1.15;
+/** Centers this close (canvas units, each way) share a line; edges this close snap together. */
+const TIDY_CENTER = 0.05;
+const TIDY_EDGE = 0.03;
+/** Neighbors on one line closer than this get the default spacing between them. */
+const TIDY_GAP = 0.08;
+/** Lines closer than this are the same line. */
+const TIDY_SAME = 0.002;
+
+export interface TidyOptions {
+  /** The space between neighbors, in canvas units. The style's gap is applied when drawing, so cells that touch show it: 0. */
+  gap?: number;
+  /** How far in from the canvas edge shapes stay, in canvas units. The style's margin is applied when drawing too: 0. */
+  margin?: number;
+}
+
+type Nb = { l: number; t: number; r: number; b: number };
+const nbox = (c: Cell): Nb => {
+  const b = cellBounds(c);
+  return { l: b.x / W, t: b.y / H, r: (b.x + b.w) / W, b: (b.y + b.h) / H };
+};
+
+/** Groups of indices whose values lie within `near` of the group's smallest. */
+function clusters(indices: number[], value: (i: number) => number, near: number): number[][] {
+  const sorted = [...indices].sort((a, b) => value(a) - value(b));
+  const out: number[][] = [];
+  for (const i of sorted) {
+    const last = out.at(-1);
+    if (last && value(i) - value(last[0]!) <= near) last.push(i);
+    else out.push([i]);
+  }
+  return out;
+}
+
+const sizeOf = (c: Cell): [number, number] | null => (c.shape === "polygon" ? null : isRound(c) ? [c.r * W, c.r * W] : [c.w * W, c.h * H]);
+
+/** A cell given a new size (see sizeOf) about its center. */
+function sized(c: Cell, [a, b]: [number, number]): Cell {
+  if (isRound(c)) return { ...c, r: round4(a / W) };
+  if (c.shape === "polygon") return c;
+  const [cx, cy] = [c.x + c.w / 2, c.y + c.h / 2];
+  return { ...c, x: round4(cx - a / W / 2), y: round4(cy - b / H / 2), w: round4(a / W), h: round4(b / H) };
+}
+
+/**
+ * Lines shapes up that are nearly lined up already, in this order: shapes of one kind with nearly equal sizes get
+ * one size; centers and then edges that are nearly the same are made the same; neighbors on one line sit a set gap
+ * apart; and nothing sits closer to the canvas edge than the margin. It only ever aligns: shapes that overlap are
+ * left alone (and nothing is moved into an overlap), rotation is never touched, and nothing leaves the canvas or
+ * gets smaller than MIN_CELL. Doing it again changes nothing. Photos stay with their shapes: the cells keep their order.
+ */
+export function tidyCells(layout: Layout, { gap = 0, margin = 0 }: TidyOptions = {}): Layout {
+  const n = layout.cells.length;
+  const all = layout.cells.map((_, i) => i);
+  const pairs = (cells: Cell[]) => {
+    const out = new Set<string>();
+    for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) if (overlaps(cells[i]!, cells[j]!)) out.add(`${i}-${j}`);
+    return out;
+  };
+  const before = pairs(layout.cells);
+  const frozen = new Set(all.filter((i) => all.some((j) => j !== i && before.has(i < j ? `${i}-${j}` : `${j}-${i}`))));
+  const free = all.filter((i) => !frozen.has(i));
+  const inside = (cells: Cell[]) => cellsFit({ ...layout, allowOverlap: true, cells }, all);
+  const noNewOverlap = (cells: Cell[]) => [...pairs(cells)].every((p) => before.has(p));
+  const moved = (c: Cell, dx: number, dy: number) => (Math.abs(dx) < 1e-9 && Math.abs(dy) < 1e-9 ? c : translated(c, dx, dy));
+
+  type Step = (cells: Cell[]) => Cell[];
+
+  const sizes: Step = (cells) => {
+    const out = [...cells];
+    for (const shape of new Set(free.map((i) => cells[i]!.shape))) {
+      const widthOf = (i: number) => sizeOf(cells[i]!)![0];
+      const sorted = free.filter((i) => cells[i]!.shape === shape && sizeOf(cells[i]!)).sort((x, y) => widthOf(x) - widthOf(y));
+      // Runs where each size is within the ratio of the run's first, both ways.
+      for (let start = 0; start < sorted.length; ) {
+        const first = sizeOf(cells[sorted[start]!]!)!;
+        const run = [sorted[start]!];
+        for (const i of sorted.slice(start + 1)) {
+          const [w, h] = sizeOf(cells[i]!)!;
+          if (w / first[0] > TIDY_SIZE || Math.max(h / first[1], first[1] / h) > TIDY_SIZE) break;
+          run.push(i);
+        }
+        if (run.length > 1) {
+          const avg = (d: 0 | 1) => run.reduce((sum, i) => sum + sizeOf(cells[i]!)![d], 0) / run.length;
+          for (const i of run) out[i] = sized(cells[i]!, [avg(0), avg(1)]);
+        }
+        start += run.length;
+      }
+    }
+    return out;
+  };
+
+  /** Moves cells so every group of nearly equal `value`s shares one, the average. `axis` says which way cells move. */
+  const together = (cells: Cell[], near: number, axis: "x" | "y", value: (b: Nb) => number): Cell[] => {
+    const out = [...cells];
+    for (const group of clusters(free, (i) => value(nbox(cells[i]!)), near)) {
+      if (group.length < 2) continue;
+      const avg = group.reduce((s, i) => s + value(nbox(cells[i]!)), 0) / group.length;
+      for (const i of group) {
+        const d = avg - value(nbox(cells[i]!));
+        out[i] = axis === "x" ? moved(out[i]!, d, 0) : moved(out[i]!, 0, d);
+      }
+    }
+    return out;
+  };
+
+  const align: Step = (cells) => {
+    let out = together(cells, TIDY_CENTER, "x", (b) => (b.l + b.r) / 2);
+    out = together(out, TIDY_CENTER, "y", (b) => (b.t + b.b) / 2);
+    out = together(out, TIDY_EDGE, "x", (b) => b.l);
+    out = together(out, TIDY_EDGE, "x", (b) => b.r);
+    out = together(out, TIDY_EDGE, "y", (b) => b.t);
+    return together(out, TIDY_EDGE, "y", (b) => b.b);
+  };
+
+  const gaps: Step = (cells) => {
+    const out = [...cells];
+    for (const axis of ["x", "y"] as const) {
+      const [lo, hi] = axis === "x" ? (["l", "r"] as const) : (["t", "b"] as const);
+      const mid = (b: Nb) => (axis === "x" ? (b.t + b.b) / 2 : (b.l + b.r) / 2);
+      for (const i of [...free].sort((a, b) => nbox(out[a]!)[lo] - nbox(out[b]!)[lo])) {
+        const a = nbox(out[i]!);
+        // The nearest neighbor after it on the same line.
+        let next = -1;
+        for (const j of free) {
+          const b = nbox(out[j]!);
+          if (j === i || Math.abs(mid(b) - mid(a)) > TIDY_SAME || b[lo] < a[hi] - 1e-9) continue;
+          if (next < 0 || b[lo] < nbox(out[next]!)[lo]) next = j;
+        }
+        if (next < 0) continue;
+        const space = nbox(out[next]!)[lo] - a[hi];
+        if (space <= 1e-9 || space >= TIDY_GAP || Math.abs(space - gap) < 1e-6) continue;
+        const d = gap - space;
+        out[next] = axis === "x" ? moved(out[next]!, d, 0) : moved(out[next]!, 0, d);
+      }
+    }
+    return out;
+  };
+
+  const margins: Step = (cells) =>
+    cells.map((c, i) => {
+      if (frozen.has(i)) return c;
+      const b = nbox(c);
+      // In from an edge it's too close to, unless it's too big to have room on both sides.
+      const shift = (lo: number, hi: number) => (hi - lo > 1 - 2 * margin ? 0 : lo < margin ? margin - lo : hi > 1 - margin ? 1 - margin - hi : 0);
+      return moved(c, shift(b.l, b.r), shift(b.t, b.b));
+    });
+
+  const round = (cells: Cell[]) => JSON.stringify(cells);
+  let cells = layout.cells;
+  for (let pass = 0; pass < 12; pass++) {
+    const start = round(cells);
+    for (const [step, strict] of [[sizes, true], [align, true], [gaps, true], [margins, false]] as const) {
+      const next = step(cells);
+      if (round(next) !== round(cells) && noNewOverlap(next) && (!strict || inside(next))) cells = next;
+    }
+    if (round(cells) === start) break;
+  }
+  return round(cells) === round(layout.cells) ? layout : { ...layout, cells };
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Direct manipulation on a blank canvas: pinch, twist and dragging off the edge
+
+/** A turn within this many degrees of a multiple of 90 sticks to it (the schema allows ±45, so in practice 0). */
+const TURN_SNAP_RIGHT = 5;
+/** A turn within this many degrees of a multiple of 15 sticks to it. */
+const TURN_SNAP_STEP = 2;
+/** A size within this share of another shape's of the same kind becomes exactly that size. */
+const SIZE_SNAP = 0.04;
+
+/** `degrees`, stuck to 0° and every 90° within about 5°, and to 15° steps within about 2°. */
+export function snapRotation(degrees: number): { value: number; snapped: boolean } {
+  for (const [step, near] of [
+    [90, TURN_SNAP_RIGHT],
+    [15, TURN_SNAP_STEP],
+  ] as const) {
+    const target = Math.round(degrees / step) * step;
+    if (Math.abs(degrees - target) <= near) return { value: target || 0, snapped: true };
+  }
+  return { value: degrees, snapped: false };
+}
+
+/** Cell `i` given exactly the size of another cell of its shape when it's within 4% of it both ways (and not already that size). */
+export function snapSize(base: Layout, i: number): { layout: Layout; snapped: boolean } {
+  const cell = base.cells[i]!;
+  const mine = sizeOf(cell);
+  if (!mine) return { layout: base, snapped: false };
+  let best: [number, number] | null = null;
+  let distance = Infinity;
+  base.cells.forEach((other, j) => {
+    const theirs = j === i || other.shape !== cell.shape ? null : sizeOf(other);
+    if (!theirs) return;
+    const off = [Math.abs(mine[0] / theirs[0] - 1), Math.abs(mine[1] / theirs[1] - 1)];
+    const far = Math.max(off[0]!, off[1]!);
+    if (far <= SIZE_SNAP && far < distance) {
+      best = theirs;
+      distance = far;
+    }
+  });
+  if (!best || distance < 1e-6) return { layout: base, snapped: false };
+  const layout = replaced(base, i, sized(cell, best));
+  return cellsFit(layout, [i]) ? { layout, snapped: true } : { layout: base, snapped: false };
+}
+
+/**
+ * What two fingers do to cell `i`: size it by `scale` and, where it can turn, turn it by `turn` degrees from `rotate0` (its angle now),
+ * both with gentle snapping. `size` and `angle` say which of them stuck. Null when it wouldn't fit.
+ */
+export function pinchCell(base: Layout, i: number, scale: number, turn: number, rotate0: number): { layout: Layout; size: boolean; angle: boolean } | null {
+  const scaled = scaleCell(base, i, scale);
+  if (!scaled) return null;
+  const { layout: sized, snapped: size } = snapSize(scaled, i);
+  if (!canRotate(sized.cells[i]!)) return { layout: sized, size, angle: false };
+  const snap = snapRotation(rotate0 + turn);
+  const turned = turnCell(sized, i, snap.value) ?? turnCell(scaled, i, rotate0 + turn);
+  return { layout: turned ?? sized, size, angle: snap.snapped && turned !== null };
+}
+
+/** A cell moved by (dx, dy) (normalized) with no regard for the canvas edge, for dragging it off. */
+export function moveCellLoose(base: Layout, i: number, dx: number, dy: number): Layout {
+  return replaced(base, i, translated(base.cells[i]!, dx, dy));
+}
+
+/** A cell moved by (dx, dy) and then in just far enough to lie inside the canvas. */
+export function moveCellInside(base: Layout, i: number, dx: number, dy: number): Layout {
+  return replaced(base, i, insideCanvas(translated(base.cells[i]!, dx, dy)));
+}
+
+/** The share (0–1) of a cell's bounding box that lies past the canvas edge. */
+export function offCanvas(cell: Cell): number {
+  const b = cellBounds(cell);
+  const inside = Math.max(0, Math.min(b.x + b.w, W) - Math.max(b.x, 0)) * Math.max(0, Math.min(b.y + b.h, H) - Math.max(b.y, 0));
+  return 1 - inside / (b.w * b.h);
+}
+
+/** A cell dragged this far off the canvas (share of it) and let go of is removed. */
+export const REMOVE_OFF_CANVAS = 0.6;

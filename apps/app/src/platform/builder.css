@@ -213,3 +213,113 @@
 .builder-sheet p {
   margin: 0;
 }
+
+/* Photo tray of a blank canvas: thumbnails to drag onto shapes. */
+.builder-tray {
+  display: flex;
+  flex: none;
+  gap: 8px;
+  padding: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.builder-thumb {
+  position: relative;
+  display: block;
+  flex: none;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  overflow: hidden;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  background: none;
+  cursor: grab;
+  /* Sideways scrolls the tray; up and down drags the photo. */
+  touch-action: pan-x;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.builder-thumb.picked {
+  border-color: var(--accent);
+}
+
+.builder-thumb.placed .builder-thumb-image {
+  opacity: 0.4;
+}
+
+.builder-thumb-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.builder-check {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  display: flex;
+  width: 20px;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--bg);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.builder-ghost {
+  position: fixed;
+  z-index: 40;
+  width: 56px;
+  height: 56px;
+  overflow: hidden;
+  border: 2px solid var(--accent);
+  border-radius: 12px;
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+/* Shape palette of a blank canvas. */
+.builder-palette {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  padding: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.builder-shape {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: none;
+  cursor: grab;
+  touch-action: pan-x;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.builder-shape:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.builder-ghost.shape {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+}

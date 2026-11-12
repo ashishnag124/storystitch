@@ -50,8 +50,6 @@ name: Layout editor tools
 - tapOn: Bigger
 - tapOn: Turn left
 - tapOn: Turn right
-- tapOn: Add copy
-- assertVisible: "5 of 4 photos"
 - tapOn: Remove
-- assertVisible: "4 of 4 photos"
+- assertVisible: "3 of 4 photos"
 - tapOn: Cancel
