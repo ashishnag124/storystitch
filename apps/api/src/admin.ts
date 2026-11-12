@@ -42,7 +42,8 @@ export function adminStats(rows: UsageRow[], days: number, layoutExports: { layo
 /**
  * The admin dashboard's data. Registered only when ADMIN_ENABLED is on. Needs an account marked `is_admin` (by hand in
  * SQL; no API sets it) that has two-factor on. Better Auth hands a two-factor account a session only after its
- * authenticator code is verified, so a session here means the code was entered.
+ * authenticator code is verified, and auth.ts deletes the account's other sessions when enrollment finishes, so a
+ * session here means the code was entered.
  */
 export function adminRoutes(app: Hono, { pool, auth, corsOrigins }: { pool: pg.Pool; auth: Auth; corsOrigins: string[] }) {
   app.get("/admin/stats", async (c) => {

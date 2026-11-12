@@ -48,6 +48,7 @@ Web app on Cloudflare Pages, plus an API with Postgres on Railway (from v2). All
 | `TURNSTILE_SITE_KEY` (public), plus the Cloudflare and Resend keys | GitHub secrets, synced with `gh secret set -f ~/.config/new-project/secrets.env` | web builds (`EXPO_PUBLIC_TURNSTILE_SITE_KEY`) |
 | Accounts flag (`EXPO_PUBLIC_FEATURE_ACCOUNTS`) | `accounts:` input to `_deploy-pages.yml`: `true` in `ci.yml` (staging) and `release.yml` (production) | web builds |
 | Layout editor flag (`EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR`, needs accounts) | `layout_editor:` input to `_deploy-pages.yml`: `true` in `ci.yml` (staging) and `release.yml` (production) | web builds |
+| Blank layout flag (`EXPO_PUBLIC_FEATURE_BLANK_LAYOUT`, optional, default `false`; needs the layout editor) | Not wired into hosted builds yet, so it is off on staging and production; locally from `.env`; the E2E build turns it on in `apps/app/package.json` | Expo app builds: "Start from blank" in the Layouts tool |
 | Local values (`DATABASE_URL`, `PORT`, `CORS_ORIGIN`, `EXPO_PUBLIC_API_URL`) | `.env` (copy of `.env.example`) | `pnpm dev`, tests |
 
 ## Reading usage numbers

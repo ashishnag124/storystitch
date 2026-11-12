@@ -1,6 +1,7 @@
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { expo } from "@better-auth/expo";
 import { betterAuth } from "better-auth";
+import { createAuthMiddleware } from "better-auth/api";
 import { captcha, twoFactor } from "better-auth/plugins";
 import type { Db } from "./db/client";
 import * as schema from "./db/schema";
@@ -93,6 +94,29 @@ export function createAuth(options: AuthOptions) {
       // entries), so attempt limits are per visitor rather than one shared bucket.
       ipAddress: { ipAddressHeaders: ["x-real-ip"] },
     },
+    // Finishing two-factor enrollment signs the account out everywhere else: the plugin swaps in a new session for the one
+    // that verified the code and leaves the user's other sessions, which never entered a code, untouched.
+    ...(adminEnabled
+      ? {
+          hooks: {
+            after: createAuthMiddleware(async (ctx) => {
+              if (ctx.path !== "/two-factor/verify-totp") return;
+              const created = ctx.context.newSession;
+              // A request that arrives with a session is enrollment; signing in with a code arrives with none, and must
+              // leave the account's other devices alone.
+              const hadSession = await ctx.getSignedCookie(ctx.context.authCookies.sessionToken.name, ctx.context.secret);
+              if (!created || !hadSession) return;
+              await ctx.context.adapter.deleteMany({
+                model: "session",
+                where: [
+                  { field: "userId", value: created.user.id },
+                  { field: "token", operator: "ne", value: created.session.token },
+                ],
+              });
+            }),
+          },
+        }
+      : {}),
     plugins: [
       // The app has no browser Origin. This reads its expo-origin header instead, only when a request has no Origin.
       expo(),

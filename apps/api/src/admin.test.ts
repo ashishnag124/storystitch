@@ -66,6 +66,36 @@ describe("AC-ADMIN-03 admin access", () => {
     expect((await stats(next.c)).status).toBe(200);
   });
 
+  it("signs out the account's other sessions when enrollment finishes, but not when a code is entered at sign-in", async () => {
+    const admin = await verifiedUser(api);
+    await makeAdmin(admin.email);
+    // A second session that knows the password but never enters a code.
+    const other = api.client();
+    expect((await other.call("/api/auth/sign-in/email", { body: { email: admin.email, password: admin.password }, headers: CAPTCHA })).status).toBe(200);
+    const secret = await enroll(admin.c, admin.password);
+    expect((await stats(other)).status).toBe(401);
+    expect((await stats(admin.c)).status).toBe(200);
+
+    // Signing in with a code on one device leaves the other device signed in.
+    const first = await signIn(admin.email, admin.password, secret);
+    expect((await first.finish()).status).toBe(200);
+    const second = await signIn(admin.email, admin.password, secret);
+    expect((await second.finish()).status).toBe(200);
+    expect((await stats(first.c)).status).toBe(200);
+    expect((await stats(second.c)).status).toBe(200);
+  });
+
+  it("asks an admin to set up an authenticator again after turning it off", async () => {
+    const admin = await verifiedUser(api);
+    await makeAdmin(admin.email);
+    await enroll(admin.c, admin.password);
+    expect((await stats(admin.c)).status).toBe(200);
+    expect((await admin.c.call("/api/auth/two-factor/disable", { body: { password: admin.password } })).status).toBe(200);
+    const res = await stats(admin.c);
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: "TWO_FACTOR_REQUIRED" });
+  });
+
   it("is refused to a non-admin who turned on an authenticator", async () => {
     const user = await verifiedUser(api);
     await enroll(user.c, user.password);
