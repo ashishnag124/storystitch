@@ -96,18 +96,20 @@ function compare(a: ArrayLike<number>, b: ArrayLike<number>) {
 
 declare global {
   interface Window {
-    compareRenderers: (styles: Partial<Style>[]) => Promise<{ id: string; styled: number; differentPct: number; meanDiff: number; canvas: string; skia: string }[]>;
+    compareRenderers: (styles: Partial<Style>[], zoom?: number) => Promise<{ id: string; styled: number; differentPct: number; meanDiff: number; canvas: string; skia: string }[]>;
   }
 }
 
-window.compareRenderers = async (styles) => {
+window.compareRenderers = async (styles, zoom) => {
   loadCanvasKit((await CanvasKitInit({ locateFile: () => "/canvaskit.wasm" })) as never);
   const photos = await loadPhotos();
   const sources = photos.map((p) => p.source);
   const results = [];
   for (const [styled, overrides] of styles.entries()) {
     for (const layout of layouts) {
-      const scene = newScene(layout, sources.slice(0, layout.cells.length), { ...DEFAULT_STYLE, ...overrides });
+      const made = newScene(layout, sources.slice(0, layout.cells.length), { ...DEFAULT_STYLE, ...overrides });
+      // Every photo zoomed out, so the blurred fill (when the build has it on) shows in every cell.
+      const scene = zoom === undefined ? made : { ...made, crops: made.crops.map((c) => ({ ...c, zoom })) };
       const web = drawOnCanvas(scene, photos);
       const native = drawOnSkia(scene, photos);
       results.push({

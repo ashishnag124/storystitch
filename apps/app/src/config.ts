@@ -18,6 +18,8 @@ export const FIT_LAYOUTS_ENABLED = process.env.EXPO_PUBLIC_FEATURE_FIT_LAYOUTS =
 export const LAYOUT_EDITOR_ENABLED = ACCOUNTS_ENABLED && process.env.EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR === "true";
 /** "Start from blank" in the Layouts tool opens the layout editor on an empty frame. Needs the layout editor; off unless set to true. */
 export const BLANK_LAYOUT_ENABLED = LAYOUT_EDITOR_ENABLED && process.env.EXPO_PUBLIC_FEATURE_BLANK_LAYOUT === "true";
+/** Where a photo doesn't cover its cell, the rest of the cell shows a blurred copy of the photo. Off unless EXPO_PUBLIC_FEATURE_BLUR_FILL=true. */
+export const BLUR_FILL_ENABLED = process.env.EXPO_PUBLIC_FEATURE_BLUR_FILL === "true";
 /** "Describe a layout" in the Layouts tool (iOS only, on the iPhone's own model). Needs the layout editor; off unless set to true. */
 export const DESCRIBE_LAYOUT_ENABLED = LAYOUT_EDITOR_ENABLED && process.env.EXPO_PUBLIC_FEATURE_DESCRIBE_LAYOUT === "true";
 /**

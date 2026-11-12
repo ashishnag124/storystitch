@@ -13,8 +13,9 @@ import {
   type Outline,
   type Scene,
 } from "@storystitch/client";
-import { CENTER_CROP, sourceRect, type Crop } from "@storystitch/layout-engine";
+import { CENTER_CROP, leavesUncovered, sourceRect, type Crop } from "@storystitch/layout-engine";
 import { drawOrder, type Size } from "@storystitch/shared";
+import { BLUR_FILL_ENABLED } from "../config";
 import type { Photo } from "./photos";
 
 /** Anything drawable with its pixel size: a preview copy or a decoded original. */
@@ -73,6 +74,7 @@ export function drawCell(ctx: CanvasRenderingContext2D, shape: CellShape, img: D
   ctx.save();
   ctx.translate(frame.cx, frame.cy);
   ctx.rotate((frame.rotate * Math.PI) / 180);
+  if (BLUR_FILL_ENABLED && leavesUncovered(img, frame, crop)) drawBlurFill(ctx, img, frame);
   ctx.drawImage(
     img.image,
     x0,
@@ -95,28 +97,56 @@ export function drawCell(ctx: CanvasRenderingContext2D, shape: CellShape, img: D
 }
 
 /**
- * Fills the canvas with a heavily blurred copy of the photo. Shrinking to a few pixels and
+ * A heavily blurred copy of the photo, cropped to the shape of `size`. Shrinking to a few pixels and
  * scaling back up blurs the same in every browser (Safari's canvas `filter` support is unreliable).
  */
-export function drawBlurredBackground(ctx: CanvasRenderingContext2D, size: Size, img: Drawable) {
+function blurredCopy(img: Drawable, size: Size): HTMLCanvasElement {
   const src = sourceRect(img, size, CENTER_CROP);
   let from: CanvasImageSource = img.image;
   let rect = [src.x, src.y, src.width, src.height] as const;
   for (const width of [18, 72]) {
     const step = document.createElement("canvas");
     step.width = width;
-    step.height = Math.round((width * size.height) / size.width);
+    step.height = Math.max(1, Math.round((width * size.height) / size.width));
     const sctx = step.getContext("2d")!;
     sctx.imageSmoothingQuality = "high";
     sctx.drawImage(from, ...rect, 0, 0, step.width, step.height);
     from = step;
     rect = [0, 0, step.width, step.height];
   }
+  return from as HTMLCanvasElement;
+}
+
+/** Fills the canvas with a heavily blurred copy of the photo. */
+export function drawBlurredBackground(ctx: CanvasRenderingContext2D, size: Size, img: Drawable) {
+  const blurred = blurredCopy(img, size);
   ctx.save();
   ctx.imageSmoothingQuality = "high";
-  ctx.drawImage(from, ...rect, 0, 0, size.width, size.height);
+  ctx.drawImage(blurred, 0, 0, size.width, size.height);
   ctx.fillStyle = "rgb(0 0 0 / 0.12)";
   ctx.fillRect(0, 0, size.width, size.height);
+  ctx.restore();
+}
+
+/** Blurred copies by photo and cell shape, so dragging a photo around doesn't blur it again on every frame. */
+const blurCache = new WeakMap<object, Map<string, HTMLCanvasElement>>();
+
+/** Fills a frame (drawn centered on the origin) with the photo, blurred, in the same look as the blurred background. */
+function drawBlurFill(ctx: CanvasRenderingContext2D, img: Drawable, frame: Size) {
+  const copies = blurCache.get(img.image) ?? new Map<string, HTMLCanvasElement>();
+  blurCache.set(img.image, copies);
+  const key = (frame.width / frame.height).toFixed(3);
+  let blurred = copies.get(key);
+  if (!blurred) {
+    if (copies.size >= 16) copies.clear();
+    blurred = blurredCopy(img, frame);
+    copies.set(key, blurred);
+  }
+  ctx.save();
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(blurred, -frame.width / 2, -frame.height / 2, frame.width, frame.height);
+  ctx.fillStyle = "rgb(0 0 0 / 0.12)";
+  ctx.fillRect(-frame.width / 2, -frame.height / 2, frame.width, frame.height);
   ctx.restore();
 }
 
