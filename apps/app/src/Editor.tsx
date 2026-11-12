@@ -35,6 +35,39 @@ const TOOLS: { id: Tool; label: string }[] = [
   { id: "export", label: "Export" },
 ];
 
+/** A small drawing of each tool, so the tab bar reads as tabs at a glance. The tab's label is its name. */
+function TabGlyph({ tool, ink }: { tool: Tool; ink: string }) {
+  switch (tool) {
+    case "layouts":
+      return (
+        <View aria-hidden testID="tab-icon-layouts" style={glyphs.grid}>
+          {[0, 1, 2, 3].map((i) => (
+            <View key={i} style={[glyphs.cell, { backgroundColor: ink }]} />
+          ))}
+        </View>
+      );
+    case "style":
+      return (
+        <View aria-hidden testID="tab-icon-style" style={glyphs.sliders}>
+          {[2, 10, 5].map((left, i) => (
+            <View key={i} style={glyphs.track}>
+              <View style={[glyphs.line, { backgroundColor: ink }]} />
+              <View style={[glyphs.knob, { left, backgroundColor: ink }]} />
+            </View>
+          ))}
+        </View>
+      );
+    case "export":
+      return (
+        <View aria-hidden testID="tab-icon-export" style={glyphs.box}>
+          <View style={[glyphs.tray, { borderColor: ink }]} />
+          <View style={[glyphs.shaft, { backgroundColor: ink }]} />
+          <View style={[glyphs.head, { borderColor: ink }]} />
+        </View>
+      );
+  }
+}
+
 interface Props {
   photos: Photo[];
   /** What subject detection found, e.g. "Found 2 faces and a dog." */
@@ -380,6 +413,7 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
               }}
               style={styles.tab}
             >
+              <TabGlyph tool={t.id} ink={current ? colors.accent : colors.muted} />
               <Text style={[styles.tabLabel, current && styles.tabCurrent]}>{t.label}</Text>
               {t.id === "export" && warnings.length > 0 && <View role="img" aria-label="(has warnings)" style={styles.badge} />}
             </Choice>
@@ -421,8 +455,8 @@ const styles = StyleSheet.create({
   panel: { height: 132, flexShrink: 0, justifyContent: "center", paddingHorizontal: 12, borderTopLeftRadius: 20, borderTopRightRadius: 20, backgroundColor: colors.surface },
   photoTool: { gap: 4 },
   tabbar: { flexDirection: "row", flexShrink: 0, backgroundColor: colors.surface },
-  tab: { flex: 1, minHeight: 48, alignItems: "center", justifyContent: "center" },
-  tabLabel: { fontFamily, fontSize: 16, fontWeight: "600", color: colors.muted },
+  tab: { flex: 1, minHeight: 48, alignItems: "center", justifyContent: "center", gap: 2 },
+  tabLabel: { fontFamily, fontSize: 13, fontWeight: "600", color: colors.muted },
   tabCurrent: { fontWeight: "800", color: colors.accent },
   badge: { position: "absolute", top: 10, right: "30%", width: 8, height: 8, borderRadius: 4, backgroundColor: "#d97706" },
   exportTool: { flexGrow: 1, justifyContent: "center", gap: 8 },
@@ -430,4 +464,17 @@ const styles = StyleSheet.create({
   exportError: { fontFamily, padding: 12, borderRadius: 14, fontSize: 14, backgroundColor: colors.warnBg, color: colors.warnText },
   warnings: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, backgroundColor: colors.warnBg },
   warning: { fontFamily, fontSize: 13, color: colors.warnText },
+});
+
+const glyphs = StyleSheet.create({
+  grid: { width: 18, height: 18, flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", alignContent: "space-between" },
+  cell: { width: 8, height: 8, borderRadius: 2 },
+  sliders: { width: 18, height: 18, justifyContent: "space-between" },
+  track: { height: 6, justifyContent: "center" },
+  line: { height: 1.5, borderRadius: 1 },
+  knob: { position: "absolute", top: 0, width: 6, height: 6, borderRadius: 3 },
+  box: { width: 18, height: 18, alignItems: "center" },
+  tray: { position: "absolute", bottom: 1, width: 16, height: 8, borderWidth: 1.5, borderTopWidth: 0, borderBottomLeftRadius: 3, borderBottomRightRadius: 3 },
+  shaft: { position: "absolute", top: 3, width: 1.5, height: 10 },
+  head: { position: "absolute", top: 3, width: 7, height: 7, borderTopWidth: 1.5, borderLeftWidth: 1.5, transform: [{ rotate: "45deg" }] },
 });

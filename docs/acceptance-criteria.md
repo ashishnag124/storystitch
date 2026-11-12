@@ -155,6 +155,7 @@ reuse IDs.
 | AC-A11Y-03 | Every control is at least 44 × 44 CSS pixels. | auto |
 | AC-MOBILE-01 | Nothing scrolls sideways at phone width, on the pick screen or in the editor. | auto |
 | AC-MOBILE-04 | On phones the editor is one screen with no page scrolling: top bar with Share, the preview, the current tool and the tab bar all fit, in every tool and with a photo selected. | auto |
+| AC-MOBILE-06 | Each tab in the editor's tab bar (Layouts, Style, Export) has an icon above its label, hidden from screen readers so the tab's name is still just its label, and each tab is at least 44 px tall. | auto |
 | AC-MOBILE-02 | The full flow passes in emulated iPhone Safari (WebKit) and Android Chrome (Chromium). | auto |
 | AC-MOBILE-05 | Grouped actions keep to one hierarchy at phone width, on web and iOS: at most one gold primary, full width; at most one outlined secondary at the same width; anything else is smaller text in one row below, still at least 44 px tall. Destructive actions read as destructive. Nothing wraps into uneven rows, and tools of equal rank sit in even rows of equal widths. | auto |
 | AC-MOBILE-03 | Staging is checked by hand on a real iPhone (Safari) and Android phone (Chrome) before each release. | manual |
