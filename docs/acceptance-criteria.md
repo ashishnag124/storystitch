@@ -238,6 +238,7 @@ Behind `EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR` (needs accounts): on in staging and p
 | AC-CUSTOM-11 | After Done, anyone can use the edited layout in their collage and export it without an account. Signed-out users are told an account is optional and only keeps the layout for later; if they create one or sign in, they come back to their layout, ready to name and save it. An unsaved layout stays in the Layouts tool while the photos are open, and isn't counted as an export of the layout it started from. | auto |
 | AC-CUSTOM-12 | With the blank layout flag on, "Start from blank" opens the layout editor on a single cell that fills the frame; splitting it builds a grid, Done proceeds once there's one cell per photo, and the result is used and saved like any edited layout. | auto |
 | AC-CUSTOM-13 | With the blank layout flag on, a blank frame can start as shapes instead of a grid: "Add shape" adds a rectangle, circle, heart or star (up to 8 cells) that moves, resizes and can be removed like any free cell, and Undo takes it away. | auto |
+| AC-CUSTOM-14 | With the blank layout flag on, dragging on empty space in a shapes layout draws a new rectangular cell; one that's too small, overlaps where it mustn't or would be a ninth cell isn't added. | auto |
 | AC-CUSTOM-08 | The layout editor feels right one-handed on a real iPhone and Android phone: lines, corners and photos are easy to grab and drag without precise aim. | manual |
 
 ## Saved collages

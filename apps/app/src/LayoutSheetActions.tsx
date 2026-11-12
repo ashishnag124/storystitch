@@ -60,7 +60,13 @@ export function BlankChoice({ editor }: Props) {
   );
 }
 
+/** The dashed outline of the cell being drawn. `box` is in px from the preview's top left. */
+export function DrawOutline({ box }: { box: { left: number; top: number; width: number; height: number } }) {
+  return <View pointerEvents="none" style={[styles.outline, box]} />;
+}
+
 const styles = StyleSheet.create({
+  outline: { position: "absolute", borderWidth: 3, borderStyle: "dashed", borderColor: colors.accent },
   row: { flexDirection: "row", gap: 8 },
   choice: { flex: 1, minHeight: MIN_TARGET, alignItems: "center", justifyContent: "center", borderRadius: 999, borderWidth: 1, borderColor: colors.border },
   checked: { borderColor: colors.accent, backgroundColor: colors.accent },

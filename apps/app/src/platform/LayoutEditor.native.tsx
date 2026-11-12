@@ -8,7 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AccessibilityInfo, KeyboardAvoidingView, PanResponder, StyleSheet, Text, TextInput, View, type AccessibilityActionEvent, type GestureResponderEvent } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, fontFamily, type as typography } from "../theme";
-import { BlankChoice, SaveActions, UseActions } from "../LayoutSheetActions";
+import { BlankChoice, DrawOutline, SaveActions, UseActions } from "../LayoutSheetActions";
 import { ToolGrid } from "../ui/Actions";
 import { Button } from "../ui/Button";
 import { useLayoutEditor, type CellMover, type Handle, type Move } from "../useLayoutEditor";
@@ -179,6 +179,7 @@ export default function LayoutEditor({ photos, style, start, signedIn, onCancel,
               <Picture picture={picture} />
             </Canvas>
           </View>
+          {editor.outline && <DrawOutline box={editor.outline} />}
           {editor.cellMover && <MoveCell mover={editor.cellMover} />}
           {handles.map((h) => (
             <LineOrHandle key={h.key} handle={h} onGrab={grabHandle} onMove={editor.moveHandle} onEnd={finishDrag} />

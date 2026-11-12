@@ -5,7 +5,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, type KeyboardEvent, ty
 import type { Photo } from "./photos";
 import { drawBlurredBackground, drawCell, fillBackground, hasBlurredBackground, outlinePath, previewOf } from "./render";
 import { cellShapes, styleScale, type Scene, type Start, type Style } from "@storystitch/client";
-import { BlankChoice, SaveActions, UseActions } from "../LayoutSheetActions";
+import { BlankChoice, DrawOutline, SaveActions, UseActions } from "../LayoutSheetActions";
 import { ToolGrid } from "../ui/Actions";
 import { Button } from "../ui/Button";
 import { useLayoutEditor, type Handle } from "../useLayoutEditor";
@@ -158,6 +158,7 @@ export default function LayoutEditor({ photos, style, start, signedIn, onCancel,
             onContextMenu={(e) => e.preventDefault()}
           />
 
+          {editor.outline && <DrawOutline box={editor.outline} />}
           {handles.map((h) =>
             h.range ? (
               <div
