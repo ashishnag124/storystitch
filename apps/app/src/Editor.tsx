@@ -1,15 +1,16 @@
-import { DEFAULT_STYLE, assignedScene, blankDraft, autoColor, cellShapes, newScene, rankedScenes, usageLayout, withCrop, withStyle, type Scene, type Start } from "@storystitch/client";
+import { DEFAULT_STYLE, assignedScene, blankDraft, autoColor, cellShapes, newScene, rankedScenes, usageLayout, withCrop, withStyle, type Draft, type Scene, type Start } from "@storystitch/client";
 import { MAX_ZOOM, MIN_ZOOM, clampCrop } from "@storystitch/layout-engine";
 import { STORY_CANVAS, type Layout, type SavedLayout } from "@storystitch/shared";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppState, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { AccountLink } from "./AccountLink";
 import { deleteSaved, listSaved, recordExport } from "./api";
-import { BLANK_LAYOUT_ENABLED, FIT_LAYOUTS_ENABLED, LAYOUT_EDITOR_ENABLED } from "./config";
+import { BLANK_LAYOUT_ENABLED, DESCRIBE_LAYOUT_ENABLED, FIT_LAYOUTS_ENABLED, LAYOUT_EDITOR_ENABLED } from "./config";
 import { LayoutStrip } from "./LayoutStrip";
 import { PlusUpsell } from "./PlusUpsell";
 import { perfTimes, resetPerfPeak, timeLayoutSwitch } from "./PerfReadout";
 import { EXPORT_PAUSE_MS, canShareFiles, canWaitToShare, renderExport, shareOrDownload, type ExportFormat } from "./platform/exportImage";
+import { DescribeAction } from "./platform/DescribeAction";
 import { FormatSelect } from "./platform/FormatSelect";
 import { LayoutEditor } from "./platform/lazyScreens";
 import type { Photo } from "./platform/photos";
@@ -207,6 +208,13 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
     track("screen_viewed", { screen: "layout_editor" });
   }
 
+  function openDescribedEditor(draft: Draft, adjusted: boolean) {
+    setConfirmDelete(false);
+    setSelected(null);
+    setBuilding({ ...draft, notice: adjusted ? `Adjusted to fit your ${photos.length === 1 ? "photo" : `${photos.length} photos`}.` : undefined });
+    track("screen_viewed", { screen: "layout_editor" });
+  }
+
   // Load saved layouts, and again after any navigation or, mid-edit, on coming back from another tab: they may have
   // signed in, or confirmed their email.
   const editing = building !== null;
@@ -350,6 +358,7 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
                     <View style={styles.layoutAction}>
                       <Button label="Edit this layout" primary trackAs="edit_layout" onPress={openEditor} />
                       {BLANK_LAYOUT_ENABLED && <Button label="Start from blank" trackAs="blank_layout" onPress={openBlankEditor} />}
+                      {DESCRIBE_LAYOUT_ENABLED && DescribeAction && <DescribeAction photoCount={photos.length} onLayout={openDescribedEditor} />}
                     </View>
                     {mineIds.has(scene.layout.id) && <Button label="Delete" quiet danger onPress={() => setConfirmDelete(true)} />}
                   </>

@@ -249,7 +249,19 @@ Behind `EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR` (needs accounts): on in staging and p
 | AC-CUSTOM-22 | A saved layout with turned shapes is still read by the previous layout schema (the one the released app and API use), which drops the turn and keeps the layout; the new schema keeps it, within ±180°. | auto |
 | AC-CUSTOM-08 | The layout editor feels right one-handed on a real iPhone and Android phone: lines, corners and photos are easy to grab and drag without precise aim. | manual |
 
-## Saved collages
+## Describe a layout (iOS)
+
+Behind `EXPO_PUBLIC_FEATURE_DESCRIBE_LAYOUT` (needs the layout editor, iOS only): on in the staging iOS app, off in production.
+
+| ID | Criterion | Check |
+|---|---|---|
+| AC-AI-01 | A layout spec from the model (bands of photos, each with a count and a size) becomes a valid grid layout of rectangles with one cell per photo, filling the frame, in rows or columns, that the grid tools can edit. A spec with too few or too many photos is put right deterministically (the last bands fill up first, the fullest band gives up photos first) and reported as adjusted; cells that can't be big enough or are too long and thin to fill with a photo, and malformed specs, are rejected with a reason. | auto |
+| AC-AI-02 | An answer from the model that can't be read or made into a layout is skipped, and one with the wrong number of photos is adjusted to the photos (the editor then opens saying "Adjusted to fit your N photos."). With no usable answer a friendly message shows and the editor never opens; a refusal or an unready model shows its own message at once. | auto |
+| AC-AI-03 | The web build has no "Describe a layout", even with its flag set. On iOS the action is hidden when the model isn't available or the flag is off. | auto |
+| AC-AI-04 | On a real iPhone with Apple Intelligence, sample descriptions each produce a layout that matches what was asked, with the phone in airplane mode. | manual |
+| AC-AI-05 | The model is asked up to four times, the first at a low temperature and the rest higher, and asking stops once there are three different layouts. The same grid counts as one layout however it was described; the layout made most often comes first, ties in the order first made; at most three are offered, an answer that needed no adjusting is kept over one that did. | auto |
+| AC-AI-06 | On iOS, "Describe a layout" shows up to three layouts as thumbnails to pick from, each labelled for VoiceOver (for example "Option 2: 2 rows, 3 photos then 1"); the first appears as soon as it is ready; tapping one opens the layout editor on it; "Try again" asks for a fresh set; if only one different layout comes back, the editor opens on it directly. | manual |
+
 
 | ID | Criterion | Check |
 |---|---|---|

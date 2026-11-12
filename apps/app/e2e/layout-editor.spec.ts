@@ -211,6 +211,13 @@ test("AC-CUSTOM-12 starts from an empty canvas: no splitting, and shapes of your
   expect(saved!.layout.cells).toHaveLength(3);
 });
 
+test("AC-AI-03 the web app has no Describe a layout, even with its flag set", async ({ page }) => {
+  await signedIn(page);
+  await pickPhotos(page, 3);
+  await expect(page.getByRole("button", { name: "Edit this layout" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Describe a layout" })).toHaveCount(0);
+});
+
 test("AC-CUSTOM-13 adds shapes from the picker: empty, and undoable", async ({ page }) => {
   const e = await openBlank(page, 3);
   await addShapes(e, "Circle");

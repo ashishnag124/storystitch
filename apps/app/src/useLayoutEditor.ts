@@ -226,7 +226,7 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
   const [drawing, setDrawing] = useState<{ from: Point; to: Point } | null>(null);
   const [dragging, setDragging] = useState(false);
   const [problems, setProblems] = useState<{ text: string; cells: number[] }[]>([]);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(start.notice ?? "");
   const [saving, setSaving] = useState<{ name: string; busy: boolean; error: string } | null>(null);
   const [view, setView] = useState({ width: 0, height: 0 });
   const drag = useRef<Drag | null>(null);
