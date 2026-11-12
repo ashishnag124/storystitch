@@ -83,10 +83,11 @@ export function smartCrop(image: Size, frame: Size, detections: Detection[], ins
     const margin = SUBJECT_MARGIN * W;
     const subjectLo = (alongX ? subject.x : subject.y) * N - margin;
     const subjectHi = (alongX ? subject.x + subject.w : subject.y + subject.h) * N + margin;
-    const reach = Math.max(0, N - W);
-    const ideal = clamp(subjectCenter - safeCenter * (W / L), 0, reach);
-    const candidates = [ideal, 0, reach, subjectLo, subjectHi - W, ...spans.flatMap((s) => [s.lo - edge, s.hi - W + edge, s.lo - W, s.hi])]
-      .map((x) => clamp(x, 0, reach))
+    // Longer than the photo, the crop is centered on it (as sourceRect does); otherwise it slides inside it.
+    const [first, reach] = W >= N ? [(N - W) / 2, (N - W) / 2] : [0, N - W];
+    const ideal = clamp(subjectCenter - safeCenter * (W / L), first, reach);
+    const candidates = [ideal, first, reach, subjectLo, subjectHi - W, ...spans.flatMap((s) => [s.lo - edge, s.hi - W + edge, s.lo - W, s.hi])]
+      .map((x) => clamp(x, first, reach))
       .filter(allowed);
     if (!candidates.length) return null;
     return candidates.reduce((a, b) => {
