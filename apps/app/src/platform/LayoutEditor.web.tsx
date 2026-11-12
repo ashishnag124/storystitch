@@ -43,7 +43,7 @@ export default function LayoutEditor({ photos, style, start, signedIn, onCancel,
     return { x: rect.left, y: rect.top };
   };
   const editor = useLayoutEditor({ photos, style, start, onUse, onSaved, frameOrigin });
-  const { layout, order, crops, selected, dropTarget, problems, view, fit, handles, tools, finishDrag, countText, saving, setSaving } = editor;
+  const { layout, order, crops, selected, dropTarget, fade, problems, view, fit, handles, tools, finishDrag, countText, saving, setSaving } = editor;
   const imageFor = useCallback((i: number) => previewOf(photos[i]!), [photos]);
 
   useEffect(() => heading.current?.focus(), []);
@@ -76,6 +76,8 @@ export default function LayoutEditor({ photos, style, start, signedIn, onCancel,
     fillBackground(ctx, STORY_CANVAS, scene);
     if (hasBlurredBackground(scene)) drawBlurredBackground(ctx, STORY_CANVAS, imageFor(first));
     for (const i of drawOrder(layout.cells)) {
+      // A shape dragged toward the edge fades to say it will go.
+      ctx.globalAlpha = fade?.cell === i ? fade.alpha : 1;
       const crop = crops[i];
       if (crop) drawCell(ctx, shapes[i]!, imageFor(order[i]!), crop, radius, border, style.borderColor);
       else {
@@ -96,6 +98,7 @@ export default function LayoutEditor({ photos, style, start, signedIn, onCancel,
         ctx.stroke();
         ctx.restore();
       }
+      ctx.globalAlpha = 1;
     }
     const outline = (i: number, color: string, dash: number[]) => {
       if (!shapes[i]) return;
@@ -109,7 +112,7 @@ export default function LayoutEditor({ photos, style, start, signedIn, onCancel,
     for (const p of problems) for (const c of p.cells) outline(c, PROBLEM_COLOR, [28, 18]);
     if (selected !== null) outline(selected, SELECTED_COLOR, []);
     if (dropTarget !== null) outline(dropTarget, DROP_COLOR, []);
-  }, [layout, order, style, crops, imageFor, selected, dropTarget, problems]);
+  }, [layout, order, style, crops, imageFor, selected, dropTarget, fade, problems]);
 
   // --- Pointers on the preview.
 

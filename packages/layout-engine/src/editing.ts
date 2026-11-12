@@ -1073,3 +1073,81 @@ export function tidyCells(layout: Layout, { gap = 0, margin = 0 }: TidyOptions =
   }
   return round(cells) === round(layout.cells) ? layout : { ...layout, cells };
 }
+
+// ---------------------------------------------------------------------------------------------------------------
+// Direct manipulation on a blank canvas: pinch, twist and dragging off the edge
+
+/** A turn within this many degrees of a multiple of 90 sticks to it (the schema allows ±45, so in practice 0). */
+const TURN_SNAP_RIGHT = 5;
+/** A turn within this many degrees of a multiple of 15 sticks to it. */
+const TURN_SNAP_STEP = 2;
+/** A size within this share of another shape's of the same kind becomes exactly that size. */
+const SIZE_SNAP = 0.04;
+
+/** `degrees`, stuck to 0° and every 90° within about 5°, and to 15° steps within about 2°. */
+export function snapRotation(degrees: number): { value: number; snapped: boolean } {
+  for (const [step, near] of [
+    [90, TURN_SNAP_RIGHT],
+    [15, TURN_SNAP_STEP],
+  ] as const) {
+    const target = Math.round(degrees / step) * step;
+    if (Math.abs(degrees - target) <= near) return { value: target || 0, snapped: true };
+  }
+  return { value: degrees, snapped: false };
+}
+
+/** Cell `i` given exactly the size of another cell of its shape when it's within 4% of it both ways (and not already that size). */
+export function snapSize(base: Layout, i: number): { layout: Layout; snapped: boolean } {
+  const cell = base.cells[i]!;
+  const mine = sizeOf(cell);
+  if (!mine) return { layout: base, snapped: false };
+  let best: [number, number] | null = null;
+  let distance = Infinity;
+  base.cells.forEach((other, j) => {
+    const theirs = j === i || other.shape !== cell.shape ? null : sizeOf(other);
+    if (!theirs) return;
+    const off = [Math.abs(mine[0] / theirs[0] - 1), Math.abs(mine[1] / theirs[1] - 1)];
+    const far = Math.max(off[0]!, off[1]!);
+    if (far <= SIZE_SNAP && far < distance) {
+      best = theirs;
+      distance = far;
+    }
+  });
+  if (!best || distance < 1e-6) return { layout: base, snapped: false };
+  const layout = replaced(base, i, sized(cell, best));
+  return cellsFit(layout, [i]) ? { layout, snapped: true } : { layout: base, snapped: false };
+}
+
+/**
+ * What two fingers do to cell `i`: size it by `scale` and, where it can turn, turn it by `turn` degrees from `rotate0`,
+ * both with gentle snapping. `size` and `angle` say which of them stuck. Null when it wouldn't fit.
+ */
+export function pinchCell(base: Layout, i: number, scale: number, turn: number, rotate0: number): { layout: Layout; size: boolean; angle: boolean } | null {
+  const scaled = scaleCell(base, i, scale);
+  if (!scaled) return null;
+  const { layout: sized, snapped: size } = snapSize(scaled, i);
+  if (!canRotate(sized.cells[i]!)) return { layout: sized, size, angle: false };
+  const snap = snapRotation(rotate0 + turn);
+  const turned = rotateCell(sized, i, snap.value) ?? rotateCell(scaled, i, rotate0 + turn);
+  return { layout: turned ?? sized, size, angle: snap.snapped && turned !== null };
+}
+
+/** A cell moved by (dx, dy) (normalized) with no regard for the canvas edge, for dragging it off. */
+export function moveCellLoose(base: Layout, i: number, dx: number, dy: number): Layout {
+  return replaced(base, i, translated(base.cells[i]!, dx, dy));
+}
+
+/** A cell moved by (dx, dy) and then in just far enough to lie inside the canvas. */
+export function moveCellInside(base: Layout, i: number, dx: number, dy: number): Layout {
+  return replaced(base, i, insideCanvas(translated(base.cells[i]!, dx, dy)));
+}
+
+/** The share (0–1) of a cell's bounding box that lies past the canvas edge. */
+export function offCanvas(cell: Cell): number {
+  const b = cellBounds(cell);
+  const inside = Math.max(0, Math.min(b.x + b.w, W) - Math.max(b.x, 0)) * Math.max(0, Math.min(b.y + b.h, H) - Math.max(b.y, 0));
+  return 1 - inside / (b.w * b.h);
+}
+
+/** A cell dragged this far off the canvas (share of it) and let go of is removed. */
+export const REMOVE_OFF_CANVAS = 0.6;

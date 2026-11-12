@@ -3,6 +3,13 @@ import { describe, expect, it } from "vitest";
 import {
   ADD_SHAPES,
   PALETTE_SHAPES,
+  REMOVE_OFF_CANVAS,
+  moveCellInside,
+  moveCellLoose,
+  offCanvas,
+  pinchCell,
+  snapRotation,
+  snapSize,
   addCell,
   addCellAt,
   addPhotoCell,
@@ -593,5 +600,66 @@ describe("AC-CUSTOM-17 tidy", () => {
       expect(cellsFit(once, cells.map((_, i) => i))).toBe(true);
       expect(once.cells.map((c) => c.shape)).toEqual(cells.map((c) => c.shape));
     }
+  });
+});
+
+describe("AC-CUSTOM-18 pinch, twist and dragging off the edge", () => {
+  const cellsOf = (l: Layout) => l.cells as Extract<Cell, { shape: "rect" }>[];
+
+  it("sticks a turn to 0° and 90°s within about 5°, and to 15° steps within about 2°", () => {
+    expect(snapRotation(4)).toEqual({ value: 0, snapped: true });
+    expect(snapRotation(-4.9)).toEqual({ value: 0, snapped: true });
+    expect(snapRotation(6)).toEqual({ value: 6, snapped: false });
+    expect(snapRotation(14)).toEqual({ value: 15, snapped: true });
+    expect(snapRotation(32.5)).toEqual({ value: 32.5, snapped: false });
+    expect(snapRotation(-29)).toEqual({ value: -30, snapped: true });
+    expect(snapRotation(88)).toEqual({ value: 90, snapped: true });
+    expect(snapRotation(40)).toEqual({ value: 40, snapped: false });
+  });
+
+  it("gives a shape exactly the size of another of its kind when it's within 4% of it", () => {
+    const base = blankLayout([circleCell(0.3, 0.2, 0.18), circleCell(0.7, 0.6, 0.185, 1), rectCell(0.1, 0.8, 0.18, 0.1, 2)]);
+    const near = snapSize(base, 1);
+    expect(near.snapped).toBe(true);
+    expect((near.layout.cells[1] as Extract<Cell, { shape: "circle" }>).r).toBe(0.18);
+    const far = snapSize(blankLayout([circleCell(0.3, 0.2, 0.18), circleCell(0.7, 0.6, 0.2, 1)]), 1);
+    expect(far.snapped).toBe(false);
+    expect(snapSize(base, 2).snapped).toBe(false); // nothing else of its kind
+    expect(snapSize(near.layout, 1).snapped).toBe(false); // already that size
+  });
+
+  it("sizes and turns a shape in one go, with snapping, and only turns rectangles", () => {
+    const base = blankLayout([rectCell(0.3, 0.4, 0.3, 0.15), circleCell(0.7, 0.2, 0.15, 1)]);
+    const both = pinchCell(base, 0, 1.2, 14, 0)!;
+    const r = cellsOf(both.layout)[0]!;
+    expect(r.rotate).toBe(15); // snapped
+    expect(both.angle).toBe(true);
+    expect(r.w).toBeCloseTo(0.36, 3);
+    expect((cellsOf(both.layout)[0]!.x + r.w / 2)).toBeCloseTo(0.45, 3); // about its center
+    const round = pinchCell(base, 1, 1.3, 40, 0)!;
+    expect(round.angle).toBe(false);
+    expect((round.layout.cells[1] as Extract<Cell, { shape: "circle" }>).r).toBeCloseTo(0.195, 3);
+    const matched = pinchCell(blankLayout([rectCell(0.1, 0.1, 0.3, 0.15), rectCell(0.5, 0.5, 0.28, 0.14, 1)]), 1, 1.05, 0, 0)!;
+    expect(matched.size).toBe(true);
+    expect(cellsOf(matched.layout)[1]!.w).toBe(0.3);
+    expect(pinchCell(base, 0, 20, 0, 0)).toBeNull(); // too big for the canvas
+  });
+
+  it("lets a shape slide off the canvas while dragged, and settles it back inside when it isn't taken off", () => {
+    const base = blankLayout([rectCell(0.3, 0.4, 0.3, 0.15)]);
+    const loose = moveCellLoose(base, 0, 0.6, 0);
+    expect(cellsOf(loose)[0]!.x).toBeCloseTo(0.9, 3);
+    expect(offCanvas(loose.cells[0]!)).toBeCloseTo(0.667, 2);
+    expect(offCanvas(base.cells[0]!)).toBe(0);
+    const settled = cellsOf(moveCellInside(base, 0, 0.6, 0))[0]!;
+    expect(settled.x + settled.w).toBeCloseTo(1, 3);
+    expect(cellsFit(moveCellInside(base, 0, 0.6, 0.9), [0])).toBe(true);
+  });
+
+  it("takes a shape off only when most of it is past the edge", () => {
+    const base = blankLayout([rectCell(0.3, 0.4, 0.3, 0.15)]);
+    expect(offCanvas(moveCellLoose(base, 0, 0.5, 0).cells[0]!)).toBeLessThan(REMOVE_OFF_CANVAS); // half: stays
+    expect(offCanvas(moveCellLoose(base, 0, 0.6, 0).cells[0]!)).toBeGreaterThan(REMOVE_OFF_CANVAS);
+    expect(offCanvas(moveCellLoose(blankLayout([circleCell(0.5, 0.5, 0.15)]), 0, -0.55, 0).cells[0]!)).toBeGreaterThan(REMOVE_OFF_CANVAS);
   });
 });
