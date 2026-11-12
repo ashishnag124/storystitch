@@ -148,7 +148,7 @@ export interface Grid {
 
 const NEW_ID = 1000;
 
-const isGridCell = (c: Cell): c is GridShape => (c.shape === "rect" && !c.rotate) || c.shape === "arch" || c.shape === "pill" || c.shape === "wave";
+const isGridCell = (c: Cell): c is GridShape => (c.shape === "rect" && !c.rotate && !c.turn) || ((c.shape === "arch" || c.shape === "pill") && !c.turn) || c.shape === "wave";
 
 /** The layout as a grid of rows and columns, or null when it isn't one (overlap, rotation, other shapes). */
 export function gridOf(layout: Layout): Grid | null {
@@ -700,8 +700,28 @@ export function scaleCell(base: Layout, i: number, k: number): Layout | null {
   return cellsFit(layout, [i]) ? layout : null;
 }
 
-/** Whether a cell can be turned: rectangles (prints, Polaroids) can. */
-export const canRotate = (cell: Cell) => cell.shape === "rect";
+/** Whether a cell can be turned: every shape but a circle (whose turn would show nothing), polygons and waves. */
+export const canRotate = (cell: Cell) => cell.shape === "rect" || cell.shape === "arch" || cell.shape === "pill" || cell.shape === "heart" || cell.shape === "star";
+
+/** An angle in degrees as -180 to 180, tenths of a degree. */
+const wrapTurn = (degrees: number) => {
+  const v = Math.round((((((degrees + 180) % 360) + 360) % 360) - 180) * 10) / 10;
+  return v === -180 ? 180 : v;
+};
+
+/**
+ * Turns cell `i` so it points `degrees` clockwise in all (a full turn either way, wrapping), by writing `turn`; a rect's
+ * `rotate` stays as it was. Null for a cell that can't turn, or when it wouldn't fit.
+ */
+export function turnCell(base: Layout, i: number, degrees: number): Layout | null {
+  const cell = base.cells[i]!;
+  if (!canRotate(cell)) return null;
+  const turn = wrapTurn(degrees - (cell.shape === "rect" ? cell.rotate : 0));
+  const next = { ...cell, turn } as Cell & { turn?: number };
+  if (!turn) delete next.turn;
+  const layout = replaced(base, i, next);
+  return cellsFit(layout, [i]) ? layout : null;
+}
 
 /** Sets a rectangle's rotation (degrees, kept within the schema's ±45); null when it wouldn't fit. */
 export function rotateCell(base: Layout, i: number, degrees: number): Layout | null {
@@ -716,29 +736,6 @@ export function bringToFront(base: Layout, i: number): Layout {
   const top = Math.max(...base.cells.map((c) => c.z));
   if (base.cells[i]!.z === top && base.cells.filter((c) => c.z === top).length === 1) return base;
   return replaced(base, i, { ...base.cells[i]!, z: top + 1 });
-}
-
-/** Adds a copy of cell `i` wherever it fits first (near it, then anywhere). Null when there's no room. */
-export function duplicateCell(base: Layout, i: number): Edited | null {
-  const cell = { ...base.cells[i]!, z: Math.max(...base.cells.map((c) => c.z)) + 1 };
-  const steps = [0.08, 0.16, 0.24, 0.32, 0.4, 0.5, 0.6, 0.7];
-  const tries = steps.flatMap((d) => [
-    [d, 0],
-    [0, d],
-    [-d, 0],
-    [0, -d],
-    [d, d],
-    [-d, d],
-    [d, -d],
-    [-d, -d],
-  ]);
-  for (const k of [1, 0.8, 0.6]) {
-    for (const [dx, dy] of tries) {
-      const layout = { ...base, cells: [...base.cells, translated(scaled(cell, k), dx!, dy!)] };
-      if (cellsFit(layout, [base.cells.length])) return { layout, origin: [...same(base), null] };
-    }
-  }
-  return null;
 }
 
 /** Shapes the editor can add to a free layout: all of them move and resize, and rectangles turn too. */
@@ -821,11 +818,16 @@ export function reshapeFreeCell(base: Layout, i: number, shape: PaletteShape): L
   const [cx, cy] = isRound(cell) ? [cell.cx * W, cell.cy * H] : [cell.x * W + w / 2, cell.y * H + h / 2];
   const side = Math.min(w, h);
   let next: Cell;
-  if (shape === "circle" || shape === "heart" || shape === "star") next = { shape, cx: round4(cx / W), cy: round4(cy / H), r: round4(side / 2 / W), z: cell.z };
+  const turn = "turn" in cell ? cell.turn : undefined;
+  if (shape === "circle") next = { shape, cx: round4(cx / W), cy: round4(cy / H), r: round4(side / 2 / W), z: cell.z };
+  else if (shape === "heart" || shape === "star") next = { shape, cx: round4(cx / W), cy: round4(cy / H), r: round4(side / 2 / W), ...(turn ? { turn } : {}), z: cell.z };
   else {
     const [nw, nh] = isRound(cell) || shape === "square" ? [side, side] : [w, h];
     const box = { x: round4((cx - nw / 2) / W), y: round4((cy - nh / 2) / H), w: round4(nw / W), h: round4(nh / H) };
-    next = shape === "rect" || shape === "square" ? { shape: "rect", ...box, rotate: cell.shape === "rect" && shape === "rect" ? cell.rotate : 0, z: cell.z } : { shape, ...box, z: cell.z };
+    next =
+      shape === "rect" || shape === "square"
+        ? { shape: "rect", ...box, rotate: cell.shape === "rect" && shape === "rect" ? cell.rotate : 0, ...(turn ? { turn } : {}), z: cell.z }
+        : { shape, ...box, ...(turn ? { turn } : {}), z: cell.z };
   }
   const layout = replaced(base, i, next);
   return cellsFit(layout, [i]) ? layout : null;
@@ -1073,3 +1075,81 @@ export function tidyCells(layout: Layout, { gap = 0, margin = 0 }: TidyOptions =
   }
   return round(cells) === round(layout.cells) ? layout : { ...layout, cells };
 }
+
+// ---------------------------------------------------------------------------------------------------------------
+// Direct manipulation on a blank canvas: pinch, twist and dragging off the edge
+
+/** A turn within this many degrees of a multiple of 90 sticks to it (the schema allows ±45, so in practice 0). */
+const TURN_SNAP_RIGHT = 5;
+/** A turn within this many degrees of a multiple of 15 sticks to it. */
+const TURN_SNAP_STEP = 2;
+/** A size within this share of another shape's of the same kind becomes exactly that size. */
+const SIZE_SNAP = 0.04;
+
+/** `degrees`, stuck to 0° and every 90° within about 5°, and to 15° steps within about 2°. */
+export function snapRotation(degrees: number): { value: number; snapped: boolean } {
+  for (const [step, near] of [
+    [90, TURN_SNAP_RIGHT],
+    [15, TURN_SNAP_STEP],
+  ] as const) {
+    const target = Math.round(degrees / step) * step;
+    if (Math.abs(degrees - target) <= near) return { value: target || 0, snapped: true };
+  }
+  return { value: degrees, snapped: false };
+}
+
+/** Cell `i` given exactly the size of another cell of its shape when it's within 4% of it both ways (and not already that size). */
+export function snapSize(base: Layout, i: number): { layout: Layout; snapped: boolean } {
+  const cell = base.cells[i]!;
+  const mine = sizeOf(cell);
+  if (!mine) return { layout: base, snapped: false };
+  let best: [number, number] | null = null;
+  let distance = Infinity;
+  base.cells.forEach((other, j) => {
+    const theirs = j === i || other.shape !== cell.shape ? null : sizeOf(other);
+    if (!theirs) return;
+    const off = [Math.abs(mine[0] / theirs[0] - 1), Math.abs(mine[1] / theirs[1] - 1)];
+    const far = Math.max(off[0]!, off[1]!);
+    if (far <= SIZE_SNAP && far < distance) {
+      best = theirs;
+      distance = far;
+    }
+  });
+  if (!best || distance < 1e-6) return { layout: base, snapped: false };
+  const layout = replaced(base, i, sized(cell, best));
+  return cellsFit(layout, [i]) ? { layout, snapped: true } : { layout: base, snapped: false };
+}
+
+/**
+ * What two fingers do to cell `i`: size it by `scale` and, where it can turn, turn it by `turn` degrees from `rotate0` (its angle now),
+ * both with gentle snapping. `size` and `angle` say which of them stuck. Null when it wouldn't fit.
+ */
+export function pinchCell(base: Layout, i: number, scale: number, turn: number, rotate0: number): { layout: Layout; size: boolean; angle: boolean } | null {
+  const scaled = scaleCell(base, i, scale);
+  if (!scaled) return null;
+  const { layout: sized, snapped: size } = snapSize(scaled, i);
+  if (!canRotate(sized.cells[i]!)) return { layout: sized, size, angle: false };
+  const snap = snapRotation(rotate0 + turn);
+  const turned = turnCell(sized, i, snap.value) ?? turnCell(scaled, i, rotate0 + turn);
+  return { layout: turned ?? sized, size, angle: snap.snapped && turned !== null };
+}
+
+/** A cell moved by (dx, dy) (normalized) with no regard for the canvas edge, for dragging it off. */
+export function moveCellLoose(base: Layout, i: number, dx: number, dy: number): Layout {
+  return replaced(base, i, translated(base.cells[i]!, dx, dy));
+}
+
+/** A cell moved by (dx, dy) and then in just far enough to lie inside the canvas. */
+export function moveCellInside(base: Layout, i: number, dx: number, dy: number): Layout {
+  return replaced(base, i, insideCanvas(translated(base.cells[i]!, dx, dy)));
+}
+
+/** The share (0–1) of a cell's bounding box that lies past the canvas edge. */
+export function offCanvas(cell: Cell): number {
+  const b = cellBounds(cell);
+  const inside = Math.max(0, Math.min(b.x + b.w, W) - Math.max(b.x, 0)) * Math.max(0, Math.min(b.y + b.h, H) - Math.max(b.y, 0));
+  return 1 - inside / (b.w * b.h);
+}
+
+/** A cell dragged this far off the canvas (share of it) and let go of is removed. */
+export const REMOVE_OFF_CANVAS = 0.6;

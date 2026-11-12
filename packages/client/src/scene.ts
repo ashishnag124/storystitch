@@ -15,7 +15,9 @@ import {
   cellPolygon,
   frameCorners,
   hitTest,
+  cellAngle,
   insetPolygon,
+  rotatePoints,
   layoutsFor,
   type Frame,
   type Layout,
@@ -257,19 +259,23 @@ export function cellShapes(layout: Layout, style: Style, size: Size): CellShape[
       const cy = offset + cell.cy * area.height;
       return { frame: { cx, cy, width: 2 * r, height: 2 * r, rotate: 0 }, outline: { kind: "circle", cx, cy, r } };
     }
-    const points = insetPolygon(cellPolygon(cell, area), gap / 2).map(shift);
     if (cell.shape === "rect") {
+      const points = insetPolygon(cellPolygon(cell, area), gap / 2).map(shift);
       const f = cellFrame(cell, area);
       const frame = { ...f, cx: f.cx + offset, cy: f.cy + offset, width: f.width - gap, height: f.height - gap };
       const outline = { kind: "polygon", points } as const;
       return layout.family === "polaroid" ? polaroid(frame, outline) : { frame, outline };
     }
-    const xs = points.map((p) => p.x);
-    const ys = points.map((p) => p.y);
+    // Inset the shape upright, then turn it: the photo's frame is the upright box, which turns with the shape.
+    const angle = cellAngle(cell);
+    const upright = insetPolygon(cellPolygon({ ...cell, turn: 0 } as typeof cell, area), gap / 2).map(shift);
+    const xs = upright.map((p) => p.x);
+    const ys = upright.map((p) => p.y);
     const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+    const center = { x: (x0 + x1) / 2, y: (y0 + y1) / 2 };
     return {
-      frame: { cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, width: x1 - x0, height: y1 - y0, rotate: 0 },
-      outline: { kind: "polygon", points },
+      frame: { cx: center.x, cy: center.y, width: x1 - x0, height: y1 - y0, rotate: angle },
+      outline: { kind: "polygon", points: rotatePoints(upright, center, angle) },
     };
   });
 }

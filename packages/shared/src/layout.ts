@@ -29,6 +29,11 @@ export const LAYOUT_FAMILIES = [
 
 const unit = z.number().min(0).max(1);
 const z_order = z.number().int().default(0);
+/**
+ * How far a cell is turned (degrees, clockwise, around its center) on top of any `rotate`: a full turn either way.
+ * Optional and never written as 0, so older readers (which don't know it and drop it) still read every layout.
+ */
+const turn = z.number().min(-180).max(180).optional();
 
 /** Axis-aligned rectangle, optionally rotated (degrees, clockwise) around its center. */
 const RectCellSchema = z.object({
@@ -38,6 +43,7 @@ const RectCellSchema = z.object({
   w: unit,
   h: unit,
   rotate: z.number().min(-45).max(45).default(0),
+  turn,
   z: z_order,
 });
 
@@ -64,6 +70,7 @@ const ArchCellSchema = z.object({
   y: unit,
   w: unit,
   h: unit,
+  turn,
   z: z_order,
 });
 
@@ -74,12 +81,13 @@ const PillCellSchema = z.object({
   y: unit,
   w: unit,
   h: unit,
+  turn,
   z: z_order,
 });
 
 /** Heart or five-pointed star whose bounding box is centered at (cx, cy). `r` is half its width, a fraction of the canvas width. */
-const HeartCellSchema = z.object({ shape: z.literal("heart"), cx: unit, cy: unit, r: unit, z: z_order });
-const StarCellSchema = z.object({ shape: z.literal("star"), cx: unit, cy: unit, r: unit, z: z_order });
+const HeartCellSchema = z.object({ shape: z.literal("heart"), cx: unit, cy: unit, r: unit, turn, z: z_order });
+const StarCellSchema = z.object({ shape: z.literal("star"), cx: unit, cy: unit, r: unit, turn, z: z_order });
 
 /**
  * Rectangle with a wavy top and/or bottom edge. Every wave follows the same curve across the canvas (WAVE),

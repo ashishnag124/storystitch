@@ -188,6 +188,7 @@ export function drawDraft(
   selected: number | null,
   problems: number[],
   target: number | null = null,
+  fade: { cell: number; alpha: number } | null = null,
 ) {
   const shapes = cellShapes(scene.layout, scene.style, size);
   const { radius, border } = styleScale(scene.layout, scene.style, size);
@@ -195,6 +196,13 @@ export function drawDraft(
   if (blurred) drawBlurredBackground(canvas, size, blurred);
   for (const i of drawOrder(scene.layout.cells)) {
     const crop = crops[i];
+    // A shape dragged toward the edge fades to say it will go.
+    const faded = fade?.cell === i;
+    if (faded) {
+      const paint = Skia.Paint();
+      paint.setAlphaf(fade.alpha);
+      canvas.saveLayer(paint);
+    }
     if (crop) drawCell(canvas, shapes[i]!, imageFor(order[i]!), crop, radius, border, scene.style.borderColor);
     else {
       canvas.drawPath(outlinePath(shapes[i]!.photo ?? shapes[i]!.outline, radius), paintOf("rgba(43, 19, 64, 0.5)"));
@@ -205,6 +213,7 @@ export function drawDraft(
       canvas.drawLine(cx - arm, cy, cx + arm, cy, paint);
       canvas.drawLine(cx, cy - arm, cx, cy + arm, paint);
     }
+    if (faded) canvas.restore();
   }
   const outline = (cell: number, color: string, dash: number[]) => {
     if (!shapes[cell]) return;

@@ -1,10 +1,19 @@
-import { LayoutSchema, STORY_CANVAS, cellBounds, cellContains, editedLayoutProblems, cellPolygon, layoutProblems, layouts, type Cell, type Layout } from "@storystitch/shared";
+import { LayoutSchema, STORY_CANVAS, cellAngle, cellBounds, cellFrame, cellContains, editedLayoutProblems, cellPolygon, layoutProblems, layouts, type Cell, type Layout } from "@storystitch/shared";
 import { describe, expect, it } from "vitest";
 import {
   ADD_SHAPES,
   PALETTE_SHAPES,
+  REMOVE_OFF_CANVAS,
+  moveCellInside,
+  moveCellLoose,
+  offCanvas,
+  pinchCell,
+  snapRotation,
+  snapSize,
   addCell,
   addCellAt,
+  canRotate,
+  turnCell,
   addPhotoCell,
   cellNear,
   cellsFit,
@@ -18,7 +27,6 @@ import {
   cornerSteps,
   cornersLayout,
   cornersOf,
-  duplicateCell,
   editModeOf,
   fitGrid,
   gridDividers,
@@ -274,13 +282,12 @@ describe("AC-CUSTOM-04 free cells", () => {
     expect(rotateCell(fixed.fiveCircles, 0, 10)).toBeNull();
   });
 
-  it("adds a copy of a cell where it fits, and removes cells", () => {
+  it("removes cells, but not the last one", () => {
     const two = fixed.twoCircles;
-    const added = duplicateCell(scaleCell(scaleCell(two, 0, 0.6)!, 1, 0.6)!, 0)!;
-    expect(added.layout.cells).toHaveLength(3);
-    expect(added.origin).toEqual([0, 1, null]);
-    valid(added.layout);
-    expect(removeCell(added.layout, 0)!.origin).toEqual([1, 2]);
+    const removed = removeCell(two, 0)!;
+    expect(removed.layout.cells).toHaveLength(1);
+    expect(removed.origin).toEqual([1]);
+    valid(removed.layout);
     expect(removeCell(byId("one-heart"), 0)).toBeNull();
   });
 
@@ -593,5 +600,137 @@ describe("AC-CUSTOM-17 tidy", () => {
       expect(cellsFit(once, cells.map((_, i) => i))).toBe(true);
       expect(once.cells.map((c) => c.shape)).toEqual(cells.map((c) => c.shape));
     }
+  });
+});
+
+describe("AC-CUSTOM-18 pinch, twist and dragging off the edge", () => {
+  const cellsOf = (l: Layout) => l.cells as Extract<Cell, { shape: "rect" }>[];
+
+  it("sticks a turn to 0° and 90°s within about 5°, and to 15° steps within about 2°", () => {
+    expect(snapRotation(4)).toEqual({ value: 0, snapped: true });
+    expect(snapRotation(-4.9)).toEqual({ value: 0, snapped: true });
+    expect(snapRotation(6)).toEqual({ value: 6, snapped: false });
+    expect(snapRotation(14)).toEqual({ value: 15, snapped: true });
+    expect(snapRotation(32.5)).toEqual({ value: 32.5, snapped: false });
+    expect(snapRotation(-29)).toEqual({ value: -30, snapped: true });
+    expect(snapRotation(88)).toEqual({ value: 90, snapped: true });
+    expect(snapRotation(40)).toEqual({ value: 40, snapped: false });
+  });
+
+  it("gives a shape exactly the size of another of its kind when it's within 4% of it", () => {
+    const base = blankLayout([circleCell(0.3, 0.2, 0.18), circleCell(0.7, 0.6, 0.185, 1), rectCell(0.1, 0.8, 0.18, 0.1, 2)]);
+    const near = snapSize(base, 1);
+    expect(near.snapped).toBe(true);
+    expect((near.layout.cells[1] as Extract<Cell, { shape: "circle" }>).r).toBe(0.18);
+    const far = snapSize(blankLayout([circleCell(0.3, 0.2, 0.18), circleCell(0.7, 0.6, 0.2, 1)]), 1);
+    expect(far.snapped).toBe(false);
+    expect(snapSize(base, 2).snapped).toBe(false); // nothing else of its kind
+    expect(snapSize(near.layout, 1).snapped).toBe(false); // already that size
+  });
+
+  it("sizes and turns a shape in one go, with snapping, and only turns rectangles", () => {
+    const base = blankLayout([rectCell(0.3, 0.4, 0.3, 0.15), circleCell(0.7, 0.2, 0.15, 1)]);
+    const both = pinchCell(base, 0, 1.2, 14, 0)!;
+    const r = cellsOf(both.layout)[0]!;
+    expect(r.turn).toBe(15); // snapped, and written as the turn
+    expect(r.rotate).toBe(0);
+    expect(both.angle).toBe(true);
+    expect(r.w).toBeCloseTo(0.36, 3);
+    expect((cellsOf(both.layout)[0]!.x + r.w / 2)).toBeCloseTo(0.45, 3); // about its center
+    const round = pinchCell(base, 1, 1.3, 40, 0)!;
+    expect(round.angle).toBe(false);
+    expect((round.layout.cells[1] as Extract<Cell, { shape: "circle" }>).r).toBeCloseTo(0.195, 3);
+    const matched = pinchCell(blankLayout([rectCell(0.1, 0.1, 0.3, 0.15), rectCell(0.5, 0.5, 0.28, 0.14, 1)]), 1, 1.05, 0, 0)!;
+    expect(matched.size).toBe(true);
+    expect(cellsOf(matched.layout)[1]!.w).toBe(0.3);
+    expect(pinchCell(base, 0, 20, 0, 0)).toBeNull(); // too big for the canvas
+  });
+
+  it("lets a shape slide off the canvas while dragged, and settles it back inside when it isn't taken off", () => {
+    const base = blankLayout([rectCell(0.3, 0.4, 0.3, 0.15)]);
+    const loose = moveCellLoose(base, 0, 0.6, 0);
+    expect(cellsOf(loose)[0]!.x).toBeCloseTo(0.9, 3);
+    expect(offCanvas(loose.cells[0]!)).toBeCloseTo(0.667, 2);
+    expect(offCanvas(base.cells[0]!)).toBe(0);
+    const settled = cellsOf(moveCellInside(base, 0, 0.6, 0))[0]!;
+    expect(settled.x + settled.w).toBeCloseTo(1, 3);
+    expect(cellsFit(moveCellInside(base, 0, 0.6, 0.9), [0])).toBe(true);
+  });
+
+  it("takes a shape off only when most of it is past the edge", () => {
+    const base = blankLayout([rectCell(0.3, 0.4, 0.3, 0.15)]);
+    expect(offCanvas(moveCellLoose(base, 0, 0.5, 0).cells[0]!)).toBeLessThan(REMOVE_OFF_CANVAS); // half: stays
+    expect(offCanvas(moveCellLoose(base, 0, 0.6, 0).cells[0]!)).toBeGreaterThan(REMOVE_OFF_CANVAS);
+    expect(offCanvas(moveCellLoose(blankLayout([circleCell(0.5, 0.5, 0.15)]), 0, -0.55, 0).cells[0]!)).toBeGreaterThan(REMOVE_OFF_CANVAS);
+  });
+});
+
+describe("AC-CUSTOM-21 every shape but a circle turns, all the way round", () => {
+  const heart = (turn?: number): Cell => ({ shape: "heart", cx: 0.5, cy: 0.5, r: 0.2, z: 0, ...(turn ? { turn } : {}) });
+  const star = (turn?: number): Cell => ({ shape: "star", cx: 0.5, cy: 0.5, r: 0.2, z: 0, ...(turn ? { turn } : {}) });
+  const arch = (turn?: number): Cell => ({ shape: "arch", x: 0.3, y: 0.3, w: 0.28, h: 0.3, z: 0, ...(turn ? { turn } : {}) });
+  const pill = (turn?: number): Cell => ({ shape: "pill", x: 0.3, y: 0.45, w: 0.4, h: 0.12, z: 0, ...(turn ? { turn } : {}) });
+
+  it("adds a rect's rotate and every turnable shape's turn into one angle", () => {
+    expect(cellAngle({ shape: "rect", x: 0, y: 0, w: 0.2, h: 0.2, rotate: 10, turn: 80, z: 0 })).toBe(90);
+    expect(cellAngle(rectCell(0, 0, 0.2, 0.2))).toBe(0);
+    for (const make of [heart, star, arch, pill]) expect(cellAngle(make(-120))).toBe(-120);
+    expect(cellAngle(circleCell(0.5, 0.5, 0.2))).toBe(0);
+    expect(cellAngle({ shape: "polygon", points: [[0, 0], [1, 0], [0, 1]], z: 0 })).toBe(0);
+    expect(["rect", "arch", "pill", "heart", "star"].every((s) => canRotate({ shape: s } as Cell))).toBe(true);
+    expect(canRotate(circleCell(0.5, 0.5, 0.2))).toBe(false);
+  });
+
+  it("turns each shape's outline about its center, so its bounds, hit-testing and fit follow", () => {
+    for (const make of [heart, star, arch, pill]) {
+      const upright = cellBounds(make());
+      const quarter = cellBounds(make(90));
+      expect(quarter.x + quarter.w / 2).toBeCloseTo(upright.x + upright.w / 2, 3); // same center
+      expect(quarter.y + quarter.h / 2).toBeCloseTo(upright.y + upright.h / 2, 3);
+      // A quarter turn swaps the width and height (a heart or star only nearly: their outlines aren't symmetric).
+      if (make === pill || make === arch) {
+        expect(quarter.w).toBeCloseTo(upright.h, 0);
+        expect(quarter.h).toBeCloseTo(upright.w, 0);
+      }
+      expect(cellFrame(make(30)).rotate).toBe(30);
+      expect(cellFrame(make(30)).width).toBeCloseTo(upright.w, 3); // the photo's frame is the upright box, which turns with it
+      expect(cellFrame(make(30)).height).toBeCloseTo(upright.h, 3);
+    }
+    // A turned pill that no longer fits is refused, and one in the middle is not.
+    expect(cellsFit(blankLayout([pill(90)]), [0])).toBe(true);
+    expect(cellsFit(blankLayout([{ ...pill(90), y: 0.02 } as Cell]), [0])).toBe(false);
+    expect(cellsFit(blankLayout([{ ...pill(90), x: 0.9, y: 0.45 } as Cell]), [0])).toBe(false);
+  });
+
+  it("turns a cell all the way round, wrapping to ±180, and writes only turn", () => {
+    const base = blankLayout([{ ...rectCell(0.3, 0.4, 0.3, 0.15), rotate: 5 } as Cell, heart(), circleCell(0.8, 0.8, 0.1, 1)]);
+    const rect = turnCell(base, 0, 190)!.cells[0] as Extract<Cell, { shape: "rect" }>;
+    expect(rect.turn).toBeCloseTo(-175, 1); // 190° in all is 5° of rotate and -175° of turn
+    expect(rect.rotate).toBe(5); // untouched
+    expect(cellAngle(rect)).toBeCloseTo(-170, 1);
+    expect((turnCell(base, 1, 270)!.cells[1] as Extract<Cell, { shape: "heart" }>).turn).toBe(-90);
+    expect((turnCell(base, 1, -181)!.cells[1] as Extract<Cell, { shape: "heart" }>).turn).toBe(179);
+    expect((turnCell(base, 1, 180)!.cells[1] as Extract<Cell, { shape: "heart" }>).turn).toBe(180);
+    expect("turn" in turnCell(turnCell(base, 1, 40)!, 1, 360)!.cells[1]!).toBe(false); // back to 0: no turn written
+    expect(turnCell(base, 2, 30)).toBeNull(); // a circle doesn't turn
+    for (let a = -180; a <= 180; a += 45) expect(LayoutSchema.safeParse(turnCell(base, 1, a)).success).toBe(true);
+  });
+
+  it("snaps a twist to 0°, 90°, 180° and 270°, and to 15° steps", () => {
+    for (const [angle, want] of [[88, 90], [183, 180], [268, 270], [-92, -90], [14, 15], [-31, -30]] as const) expect(snapRotation(angle).value).toBe(want);
+    const twisted = pinchCell(blankLayout([heart()]), 0, 1, 87, 0)!;
+    expect((twisted.layout.cells[0] as Extract<Cell, { shape: "heart" }>).turn).toBe(90);
+    expect(twisted.angle).toBe(true);
+    expect(((pinchCell(blankLayout([pill()]), 0, 1, 183, 0)!.layout.cells[0]) as Extract<Cell, { shape: "pill" }>).turn).toBe(180);
+  });
+
+  it("stops treating a turned cell as part of a grid, and keeps the turn when the shape changes", () => {
+    const grid = { ...blankLayout([rectCell(0, 0, 1, 0.5), rectCell(0, 0.5, 1, 0.5)]), allowOverlap: false };
+    expect(gridOf(grid)).not.toBeNull();
+    expect(gridOf({ ...grid, cells: [{ ...rectCell(0, 0, 1, 0.5), turn: 10 } as Cell, rectCell(0, 0.5, 1, 0.5)] })).toBeNull();
+    expect(gridOf({ ...grid, cells: [{ shape: "arch", x: 0, y: 0, w: 1, h: 0.5, z: 0, turn: 10 } as Cell, rectCell(0, 0.5, 1, 0.5)] })).toBeNull();
+    const changed = reshapeFreeCell(blankLayout([heart(40)]), 0, "pill")!.cells[0] as Extract<Cell, { shape: "pill" }>;
+    expect(changed.turn).toBe(40);
+    expect("turn" in reshapeFreeCell(blankLayout([heart(40)]), 0, "circle")!.cells[0]!).toBe(false);
   });
 });

@@ -19,6 +19,18 @@ export const QuietActions = ({ children }: { children: ReactNode }) => <View sty
 
 /** Tools of equal rank, in even rows of equal widths. */
 export function ToolGrid({ tools, scroll }: { tools: ButtonProps[]; /** One row that scrolls sideways, for when the rows would take the room the preview needs. */ scroll?: boolean }) {
+  if (scroll && tools.length <= 4) {
+    // Few enough to fit across a phone: one row, each button an equal share, so nothing scrolls.
+    return (
+      <View style={styles.fitRow}>
+        {tools.map((t) => (
+          <View key={t.label} style={styles.fitTool}>
+            <Button {...t} />
+          </View>
+        ))}
+      </View>
+    );
+  }
   if (scroll) {
     return (
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollRow}>
@@ -46,5 +58,7 @@ const styles = StyleSheet.create({
   quiet: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "center", columnGap: 16 },
   tools: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   tool: { flexGrow: 1 },
-  scrollRow: { gap: 8, paddingHorizontal: 2 },
+  fitRow: { flexDirection: "row", gap: 8 },
+  fitTool: { flex: 1 },
+  scrollRow: { gap: 8, paddingHorizontal: 2, flexGrow: 1, justifyContent: "center" },
 });

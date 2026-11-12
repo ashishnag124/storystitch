@@ -14,6 +14,7 @@ import { ToolGrid } from "../ui/Actions";
 import { Button } from "../ui/Button";
 import { useLayoutEditor, type CellMover, type Handle, type Move } from "../useLayoutEditor";
 import type { Photo } from "./photos.native";
+import { haptic } from "./motion.native";
 import { PhotoTray, THUMB, Thumb } from "./PhotoTray.native";
 import { SHAPE_BUTTON, ShapePalette } from "./ShapePalette.native";
 import { ShapeGlyph } from "../ui/ShapeGlyph";
@@ -116,9 +117,16 @@ export default function LayoutEditor({ photos, style, start, signedIn, onCancel,
   const insets = useSafeAreaInsets();
   const origin = useRef<Point>({ x: 0, y: 0 });
   const editor = useLayoutEditor({ photos, style, start, onUse, onSaved, frameOrigin: () => origin.current });
-  const { layout, order, crops, selected, dropTarget, problems, view, fit, handles, tools, finishDrag, countText, saving, setSaving } = editor;
+  const { layout, order, crops, selected, dropTarget, fade, problems, view, fit, handles, tools, finishDrag, countText, saving, setSaving } = editor;
   const [fingerCount, setFingerCount] = useState(0);
   const root = useRef<HostInstance>(null);
+  // A light tick when something snaps, or a photo lifts out of its shape.
+  const { snapTicks } = editor;
+  const ticked = useRef(snapTicks);
+  useEffect(() => {
+    if (snapTicks !== ticked.current) haptic();
+    ticked.current = snapTicks;
+  }, [snapTicks]);
   const previewBox = useRef<HostInstance>(null);
   /** Where the editor's top left is on screen: the photo being dragged is placed by page coordinates. */
   const [rootOrigin, setRootOrigin] = useState<Point>({ x: 0, y: 0 });
@@ -133,9 +141,9 @@ export default function LayoutEditor({ photos, style, start, signedIn, onCancel,
     () =>
       createPicture((canvas) => {
         canvas.scale(view.width / STORY_CANVAS.width, view.width / STORY_CANVAS.width);
-        drawDraft(canvas, STORY_CANVAS, scene, crops, order, imageFor, blurred, selected, problems.flatMap((p) => p.cells), dropTarget);
+        drawDraft(canvas, STORY_CANVAS, scene, crops, order, imageFor, blurred, selected, problems.flatMap((p) => p.cells), dropTarget, fade);
       }),
-    [view.width, scene, crops, order, imageFor, blurred, selected, problems, dropTarget],
+    [view.width, scene, crops, order, imageFor, blurred, selected, problems, dropTarget, fade],
   );
 
   /** Where the preview is on screen, from a touch on something `at` this far into it. Its size changes with the tools. */
@@ -164,6 +172,8 @@ export default function LayoutEditor({ photos, style, start, signedIn, onCancel,
   const preview = useFingers({
     down: (e) => {
       findOrigin(e, { x: 0, y: 0 });
+      // A photo lifted out of a shape follows the finger by where the editor is on screen.
+      root.current?.measureInWindow((rx, ry) => setRootOrigin({ x: rx, y: ry }));
       setFingerCount(1);
       editor.pressPreview(fingersOf(e));
     },
