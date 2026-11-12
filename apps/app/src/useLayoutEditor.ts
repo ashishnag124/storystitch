@@ -2,7 +2,9 @@
 // LayoutEditor.web.tsx and LayoutEditor.native.tsx draw it and feed it touches. How cells can change depends on the
 // layout (editModeOf): lines in grids, shared corners and lines in slanted layouts, and whole cells otherwise.
 import {
+  ADD_SHAPES,
   GRID_SHAPES,
+  addCell,
   MOVE_STEPS,
   bringToFront,
   canRotate,
@@ -10,6 +12,7 @@ import {
   cornersLayout,
   cornerSteps,
   cornersOf,
+  drawCell,
   duplicateCell,
   editModeOf,
   gridDividers,
@@ -27,13 +30,15 @@ import {
   snapTo,
   splitCell,
   type Corners,
+  type AddShape,
   type Edited,
   type Grid,
 } from "@storystitch/layout-engine";
 import { STORY_CANVAS, cellBounds, editedLayoutProblems, hitTest, type Layout, type Point, type SavedLayout } from "@storystitch/shared";
-import { SaveError, autoCrop, explain, styleScale, withOrigin, type CropSource, type Draft, type Start, type Style } from "@storystitch/client";
+import { SaveError, autoCrop, blankDraft, blankShapesDraft, explain, styleScale, withOrigin, type CropSource, type Draft, type Start, type Style } from "@storystitch/client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { saveLayout } from "./api";
+import { BLANK_LAYOUT_ENABLED } from "./config";
 import { track } from "./usage";
 
 const { width: W, height: H } = STORY_CANVAS;
@@ -42,12 +47,18 @@ const HANDLE_PX = 48;
 /** Lines snap to halves, thirds and quarters, and to each other, within this many screen px. */
 const SNAP_PX = 12;
 const SNAP_FRACTIONS = [0.25, 1 / 3, 0.5, 2 / 3, 0.75];
+/** A press that moves less than this (layout px) is a tap, not the start of a drawing. */
+const TAP_PX = 24;
 /** Button steps: how much Bigger/Smaller resize and Turn rotates. */
 const SCALE_STEP = 1.08;
 const TURN_STEP = 4;
 /** How far one VoiceOver step moves a line or corner (canvas px): enough to change the percent it says. */
 const VOICEOVER_STEP_PX = 40;
 const NO_ROOM = "There's no room to move it that way.";
+const SHAPE_NAMES: Record<AddShape, string> = { rect: "Rectangle", circle: "Circle", heart: "Heart", star: "Star" };
+const DRAW_HINT = "Drag on empty space to draw a photo.";
+/** The most photos a layout holds. */
+const MAX_CELLS = 8;
 /** How long after the last change the overlay check runs (it samples the whole canvas). */
 const CHECK_DELAY_MS = 150;
 
@@ -69,7 +80,8 @@ type Drag =
   | { kind: "move"; cell: number; x: number; y: number; base: Draft }
   | { kind: "resize"; cell: number; center: Point; distance: number; base: Draft }
   | { kind: "rotate"; cell: number; center: Point; angle: number; rotate: number; base: Draft }
-  | { kind: "pinch"; cell: number; distance: number; angle: number; rotate: number; base: Draft };
+  | { kind: "pinch"; cell: number; distance: number; angle: number; rotate: number; base: Draft }
+  | { kind: "draw"; from: Point; to: Point; base: Draft };
 
 /** What VoiceOver does in place of a drag. `run` returns what to say when the move can't be made. */
 export interface Move {
@@ -109,7 +121,11 @@ export interface Tool {
   /** Said instead of the label, when the label is only a symbol. */
   name?: string;
   onPress: () => void;
+  disabled?: boolean;
 }
+
+/** The two ways a blank frame can start. */
+export type BlankKind = "grid" | "shapes";
 
 interface Options {
   photos: CropSource[];
@@ -122,10 +138,13 @@ interface Options {
 }
 
 export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOrigin }: Options) {
-  const mode = useMemo(() => editModeOf(start.layout), [start.layout]);
+  const [mode, setMode] = useState(() => editModeOf(start.layout));
   const [draft, setDraft] = useState<Draft>({ layout: start.layout, order: start.order });
   const [history, setHistory] = useState<Draft[]>([]);
   const [selected, setSelected] = useState<number | null>(mode === "grid" && start.layout.cells.length === 1 ? 0 : null);
+  const [adding, setAdding] = useState(false);
+  /** The corners of the cell being drawn, in layout px. */
+  const [drawing, setDrawing] = useState<{ from: Point; to: Point } | null>(null);
   const [dragging, setDragging] = useState(false);
   const [problems, setProblems] = useState<{ text: string; cells: number[] }[]>([]);
   const [message, setMessage] = useState("");
@@ -186,7 +205,29 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
     const d = drag.current;
     drag.current = null;
     setDragging(false);
+    if (d?.kind === "draw") {
+      setDrawing(null);
+      // A tap on empty space isn't a drag.
+      setSelected(null);
+      if (Math.hypot(d.to.x - d.from.x, d.to.y - d.from.y) < TAP_PX) return;
+      const edited = drawCell(d.base.layout, { x: d.from.x / W, y: d.from.y / H }, { x: d.to.x / W, y: d.to.y / H });
+      if (!edited) return setMessage(d.base.layout.cells.length >= MAX_CELLS ? "A layout holds up to 8 photos." : "That's too small, or there's no room, for a photo there.");
+      const next = withOrigin(d.base, edited, photos.length);
+      commit(next);
+      setSelected(next.layout.cells.length - 1);
+      return;
+    }
     if (d && d.base.layout !== draft.layout) setHistory((h) => [...h, d.base]);
+  }
+  // A blank frame starts as a grid or as shapes, until the first edit. Undo back to the start brings the choice back.
+  const blankKind: BlankKind | null = BLANK_LAYOUT_ENABLED && start.layout.id === "blank" && history.length === 0 ? (mode === "free" ? "shapes" : "grid") : null;
+  function chooseBlank(kind: BlankKind) {
+    const next = kind === "shapes" ? blankShapesDraft() : blankDraft();
+    setDraft(next);
+    setMode(kind === "shapes" ? "free" : "grid");
+    setSelected(kind === "grid" ? 0 : null);
+    setAdding(false);
+    setMessage("");
   }
   const refuse = (text: string) => {
     setMessage(text);
@@ -210,6 +251,12 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
 
   /** A finger went down on the preview; `fingers` are all those on it now, the new one last. */
   function pressPreview(fingers: Point[]) {
+    if (drag.current?.kind === "draw") {
+      // A second finger means a pinch or a mistake, not a drawing.
+      drag.current = null;
+      setDrawing(null);
+      setDragging(false);
+    }
     if (fingers.length === 2 && mode === "free" && selected !== null) {
       const [a, b] = fingers as [Point, Point];
       const cell = layout.cells[selected]!;
@@ -225,6 +272,12 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
     }
     const finger = fingers.at(-1)!;
     const hit = hitTest(layout.cells, screenToLayout(finger.x, finger.y));
+    if (hit < 0 && mode === "free" && BLANK_LAYOUT_ENABLED && fingers.length === 1) {
+      // The chosen photo stays chosen until the finger lifts: its tools going away would resize the preview mid-drag.
+      const from = screenToLayout(finger.x, finger.y);
+      startDrag({ kind: "draw", from, to: from, base: draft });
+      return;
+    }
     setSelected(hit >= 0 ? hit : null);
     if (hit < 0 || mode !== "free") return;
     const base = layout.allowOverlap ? { ...draft, layout: bringToFront(layout, hit) } : draft;
@@ -234,7 +287,10 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
 
   function movePreview(fingers: Point[]) {
     const d = drag.current;
-    if (d?.kind === "move") {
+    if (d?.kind === "draw") {
+      d.to = screenToLayout(fingers[0]!.x, fingers[0]!.y);
+      if (Math.hypot(d.to.x - d.from.x, d.to.y - d.from.y) >= TAP_PX) setDrawing({ from: d.from, to: d.to });
+    } else if (d?.kind === "move") {
       const delta = layoutDelta(fingers[0]!.x - d.x, fingers[0]!.y - d.y);
       const moved = moveCell(d.base.layout, d.cell, delta.x / W, delta.y / H);
       if (moved) setDraft({ ...d.base, layout: moved });
@@ -460,7 +516,25 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
       { label: "Remove", onPress: () => (setSelected(null), apply(removeGridCell(layout, sel), "A layout needs at least one cell.")) },
     );
   }
-  if (sel !== null && mode === "free") {
+  const canAdd = BLANK_LAYOUT_ENABLED && mode === "free";
+  const full = layout.cells.length >= MAX_CELLS;
+  if (canAdd && adding) {
+    for (const shape of ADD_SHAPES) {
+      tools.push({
+        label: SHAPE_NAMES[shape],
+        onPress: () => {
+          const edited = addCell(layout, shape);
+          if (!edited) return refuse("There's no room for another photo.");
+          const next = withOrigin(draft, edited, photos.length);
+          commit(next);
+          setSelected(next.layout.cells.length - 1);
+          setAdding(false);
+        },
+      });
+    }
+    tools.push({ label: "Back", onPress: () => setAdding(false) });
+  } else if (sel !== null && mode === "free") {
+    if (canAdd) tools.push({ label: "Add shape", disabled: full, onPress: () => setAdding(true) });
     tools.push(
       { label: "Smaller", onPress: () => scaleBy(1 / SCALE_STEP) },
       { label: "Bigger", onPress: () => scaleBy(SCALE_STEP) },
@@ -471,6 +545,15 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
       tools.push({ label: "⟲", name: "Turn left", onPress: () => turnBy(-TURN_STEP) }, { label: "⟳", name: "Turn right", onPress: () => turnBy(TURN_STEP) });
     }
     tools.push({ label: "Remove", onPress: () => (setSelected(null), apply(removeCell(layout, sel), "A layout needs at least one cell.")) });
+  } else if (canAdd) {
+    tools.push({ label: "Add shape", disabled: full, onPress: () => setAdding(true) });
+  }
+
+  /** The cell being drawn, as a box in screen px from the frame's top left. */
+  let outline: Handle["box"] | null = null;
+  if (drawing) {
+    const [a, b] = [screen(drawing.from), screen(drawing.to)];
+    outline = { left: Math.min(a.x, b.x), top: Math.min(a.y, b.y), width: Math.abs(a.x - b.x), height: Math.abs(a.y - b.y) };
   }
 
   // --- Done: check the layout, then use it as it is, or name it and save it.
@@ -508,6 +591,11 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
     }
   }
 
+  // The hint for drawing goes after the count, or the usual hint, but not after a refusal or a problem.
+  const canDraw = canAdd && !full && sel === null;
+  const usual = countHint || (canAdd && full ? "A layout holds up to 8 photos." : HINTS[mode](sel !== null));
+  const status = message || (problems[0] && !countHint ? problems[0].text : canDraw ? `${usual} ${DRAW_HINT}` : usual);
+
   return {
     layout,
     order,
@@ -521,6 +609,9 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
     handles,
     cellMover,
     tools,
+    outline,
+    blankKind,
+    chooseBlank,
     pressPreview,
     movePreview,
     grabHandle,
@@ -531,7 +622,7 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
     done,
     use: () => onUse(layout, order),
     countText,
-    status: message || countHint || problems[0]?.text || HINTS[mode](sel !== null),
+    status,
     saving,
     setSaving,
     save,

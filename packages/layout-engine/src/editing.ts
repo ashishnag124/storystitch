@@ -741,6 +741,61 @@ export function duplicateCell(base: Layout, i: number): Edited | null {
   return null;
 }
 
+/** Shapes the editor can add to a free layout: all of them move and resize, and rectangles turn too. */
+export const ADD_SHAPES = ["rect", "circle", "heart", "star"] as const;
+export type AddShape = (typeof ADD_SHAPES)[number];
+
+/** Most cells a layout can have (the schema's limit). */
+const MAX_CELLS = 8;
+/** Where a new cell's center goes, in order: the middle, then two columns, the rows Instagram covers least first. */
+const SPOTS: Point[] = [
+  { x: 0.5, y: 0.5 },
+  ...[0.26, 0.74, 0.5, 0.12, 0.88].flatMap((y) => [0.26, 0.74].map((x) => ({ x, y }))),
+];
+
+/**
+ * Adds one cell of `shape` at a default size, in the middle if that spot is clear of the other cells, otherwise at
+ * the first clear spot. It looks for a clear spot even when the layout lets cells overlap, so new cells don't hide
+ * each other. Gets the next photo (see withOrigin). Null at 8 cells or when there's no room.
+ */
+export function addCell(base: Layout, shape: AddShape): Edited | null {
+  if (base.cells.length >= MAX_CELLS) return null;
+  const z = Math.max(...base.cells.map((c) => c.z)) + 1;
+  const r = 0.18;
+  const [w, h] = [0.36, 0.2];
+  const strict = { ...base, allowOverlap: false };
+  for (const { x, y } of SPOTS) {
+    const cell: Cell = shape === "rect" ? { shape, x: round4(x - w / 2), y: round4(y - h / 2), w, h, rotate: 0, z } : { shape, cx: x, cy: y, r, z };
+    const layout = { ...base, cells: [...base.cells, cell] };
+    if (cellsFit({ ...strict, cells: layout.cells }, [base.cells.length])) return { layout, origin: [...same(base), null] };
+  }
+  return null;
+}
+
+/** How close (as a fraction of the canvas width) a drawn edge must be to a snap target to jump to it. */
+export const DRAW_SNAP = 0.03;
+/** Lines a drawn cell's edges snap to, besides the canvas edges and the other cells' edges. */
+const DRAW_FRACTIONS = [0.25, 1 / 3, 0.5, 2 / 3, 0.75];
+
+/**
+ * A rectangle cell drawn by dragging from `from` to `to` (canvas units, 0–1), in any direction. Its edges snap to
+ * the canvas edges, halves, thirds, quarters and the other cells' edges, within `snap` (of the canvas width), and
+ * stay inside the canvas. Null at 8 cells, when a side ends up under MIN_CELL, or when it doesn't fit.
+ */
+export function drawCell(base: Layout, from: Point, to: Point, snap = DRAW_SNAP): Edited | null {
+  if (base.cells.length >= MAX_CELLS) return null;
+  const clamp = (v: number) => Math.min(Math.max(v, 0), 1);
+  const edges = base.cells.map((c) => cellBounds(c));
+  const xs = [0, 1, ...DRAW_FRACTIONS, ...edges.flatMap((b) => [b.x / W, (b.x + b.w) / W])];
+  const ys = [0, 1, ...DRAW_FRACTIONS, ...edges.flatMap((b) => [b.y / H, (b.y + b.h) / H])];
+  const [x0, x1] = [from.x, to.x].map((v) => snapTo(clamp(v), xs, snap)).sort((a, b) => a - b) as [number, number];
+  const [y0, y1] = [from.y, to.y].map((v) => snapTo(clamp(v), ys, (snap * W) / H)).sort((a, b) => a - b) as [number, number];
+  const z = Math.max(...base.cells.map((c) => c.z)) + 1;
+  const cell: Cell = { shape: "rect", x: round4(x0), y: round4(y0), w: round4(x1 - x0), h: round4(y1 - y0), rotate: 0, z };
+  const layout = { ...base, cells: [...base.cells, cell] };
+  return cellsFit(layout, [base.cells.length]) ? { layout, origin: [...same(base), null] } : null;
+}
+
 /** Removes cell `i`. Null for the last cell. */
 export function removeCell(base: Layout, i: number): Edited | null {
   if (base.cells.length < 2) return null;

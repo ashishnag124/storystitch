@@ -1,7 +1,7 @@
-import { editModeOf, splitCell, removeCell } from "@storystitch/layout-engine";
+import { ADD_SHAPES, addCell, editModeOf, splitCell, removeCell } from "@storystitch/layout-engine";
 import { LayoutSchema, editedLayoutProblems, layoutProblems, layouts } from "@storystitch/shared";
 import { describe, expect, it } from "vitest";
-import { blankDraft, explain, withOrigin } from "./draft";
+import { blankDraft, blankShapesDraft, explain, withOrigin } from "./draft";
 
 const byId = (id: string) => layouts.find((l) => l.id === id)!;
 
@@ -54,5 +54,19 @@ describe("AC-CUSTOM-12 a blank frame", () => {
       expect(editModeOf(draft.layout)).toBe("grid");
       expect(draft.order).toEqual(Array.from({ length: n }, (_, i) => i));
     }
+  });
+});
+
+describe("AC-CUSTOM-13 a blank frame of shapes", () => {
+  it("is one centered cell that validates, opens as a free layout and takes added shapes", () => {
+    let draft = blankShapesDraft();
+    expect(LayoutSchema.safeParse(draft.layout).success).toBe(true);
+    expect(layoutProblems(draft.layout)).toEqual([]);
+    expect(editModeOf(draft.layout)).toBe("free");
+    expect(draft.order).toEqual([0]);
+    for (const shape of ADD_SHAPES.slice(0, 3)) draft = withOrigin(draft, addCell(draft.layout, shape)!, 4);
+    expect(draft.order).toEqual([0, 1, 2, 3]);
+    expect(editModeOf(draft.layout)).toBe("free");
+    expect(editedLayoutProblems(draft.layout)).toEqual([]);
   });
 });
