@@ -128,6 +128,11 @@ replaces parts of it. Build order and status: see "Backend milestones" in `PROJE
   Polaroids by moving, resizing and turning cells.
 - Saved layouts are checked like the built-in ones, show first in the Layouts tool as "Yours", and can be edited and
   deleted. They're never counted toward popularity.
+- Describe a layout (iOS): on iPhones with Apple Intelligence, a quiet "Describe a layout" action takes a typed
+  description such as "one big photo on top, three small ones below" and offers up to three different grid layouts made
+  by the phone's own language model to pick from (Try again asks for a fresh set), then opens the editor on the one
+  picked. Text only: the model sees the description and the photo count, never the photos. Nothing leaves the phone.
+  Not on the web, and hidden where the model isn't available.
 
 ## Admin analytics
 

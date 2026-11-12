@@ -10,6 +10,8 @@ export interface Draft {
 export interface Start extends Draft {
   /** Set when editing a layout already saved in the account: saving replaces it. */
   saved?: SavedLayout;
+  /** Said under the editor when it opens. */
+  notice?: string;
 }
 
 /**
