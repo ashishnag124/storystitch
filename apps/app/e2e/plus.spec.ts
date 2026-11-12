@@ -63,7 +63,7 @@ function maxDiff(page: Page, a: Buffer, b: Buffer) {
   );
 }
 
-test("AC-PLUS-01 signed out, the mark can't be turned off, and the upsell asks to sign in", async ({ page }) => {
+test("AC-PLUS-01 AC-PRIV-04 signed out, the mark can't be turned off, and the upsell asks to sign in", async ({ page }) => {
   const toggle = await exportTool(page);
   await expect(toggle).toBeChecked();
   await expect(toggle).toBeDisabled();
@@ -73,6 +73,8 @@ test("AC-PLUS-01 signed out, the mark can't be turned off, and the upsell asks t
   const signIn = upsell.getByRole("button", { name: "Sign in to get Plus" });
   await expect(signIn).toHaveCSS("background-color", "rgb(255, 194, 75)");
   await expect(upsell.getByRole("button", { name: "Not now" }).getByText("Not now")).toHaveCSS("font-size", "14px");
+  await expect(upsell.getByRole("link", { name: "Terms" })).toBeVisible();
+  await expect(upsell.getByRole("link", { name: "Refunds" })).toBeVisible();
   await upsell.getByRole("button", { name: "Not now" }).click();
   await expect(upsell).toHaveCount(0);
   await page.getByRole("button", { name: "Remove the mark" }).click();
