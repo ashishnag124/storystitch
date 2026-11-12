@@ -1,6 +1,7 @@
 // The layout editor on iOS: a full-screen view for changing a layout, to use in the collage or save to an account.
 // useLayoutEditor does the work; this draws it with Skia and feeds it touches.
 import { Canvas, Picture, createPicture, type SkImage } from "@shopify/react-native-skia";
+import type { PaletteShape } from "@storystitch/layout-engine";
 import type { Layout, Point, SavedLayout } from "@storystitch/shared";
 import { STORY_CANVAS } from "@storystitch/shared";
 import type { Start, Style } from "@storystitch/client";
@@ -14,6 +15,8 @@ import { Button } from "../ui/Button";
 import { useLayoutEditor, type CellMover, type Handle, type Move } from "../useLayoutEditor";
 import type { Photo } from "./photos.native";
 import { PhotoTray, THUMB, Thumb } from "./PhotoTray.native";
+import { SHAPE_BUTTON, ShapePalette } from "./ShapePalette.native";
+import { ShapeGlyph } from "../ui/ShapeGlyph";
 import { blurredImage, drawDraft, hasBlurredBackground, previewOf } from "./render.native";
 
 interface Props {
@@ -141,10 +144,17 @@ export default function LayoutEditor({ photos, style, start, signedIn, onCancel,
     origin.current = { x: pageX - locationX - at.x, y: pageY - locationY - at.y };
   }
   /** A photo dragged from the tray lands by where the preview is, which isn't known from touches on the tray. */
-  function grabPhoto(photo: number, x: number, y: number) {
+  function measureForDrag() {
     root.current?.measureInWindow((rx, ry) => setRootOrigin({ x: rx, y: ry }));
     previewBox.current?.measureInWindow((px, py) => (origin.current = { x: px, y: py }));
+  }
+  function grabPhoto(photo: number, x: number, y: number) {
+    measureForDrag();
     editor.tray!.grab(photo, x, y);
+  }
+  function grabShape(shape: PaletteShape, x: number, y: number) {
+    measureForDrag();
+    editor.palette!.grab(shape, x, y);
   }
   function grabHandle(handle: Handle, e: GestureResponderEvent) {
     findOrigin(e, { x: handle.box.left, y: handle.box.top });
@@ -210,12 +220,21 @@ export default function LayoutEditor({ photos, style, start, signedIn, onCancel,
           {editor.status}
         </Text>
         {editor.tray && <PhotoTray photos={photos} tray={{ ...editor.tray, grab: grabPhoto }} />}
-        {tools.length > 0 && <ToolGrid tools={tools} scroll={editor.toolsScroll} />}
+        {editor.palette ? <ShapePalette palette={{ ...editor.palette, grab: grabShape }} /> : tools.length > 0 && <ToolGrid tools={tools} scroll={editor.toolsScroll} />}
       </View>
 
       {editor.tray?.ghost && (
         <View pointerEvents="none" style={[styles.ghost, { left: editor.tray.ghost.x - rootOrigin.x - THUMB / 2, top: editor.tray.ghost.y - rootOrigin.y - THUMB / 2 }]}>
           <Thumb photo={photos[editor.tray.ghost.photo]!} />
+        </View>
+      )}
+
+      {editor.palette?.ghost && (
+        <View
+          pointerEvents="none"
+          style={[styles.ghost, styles.shapeGhost, { left: editor.palette.ghost.x - rootOrigin.x - SHAPE_BUTTON / 2, top: editor.palette.ghost.y - rootOrigin.y - SHAPE_BUTTON / 2 }]}
+        >
+          <ShapeGlyph shape={editor.palette.ghost.shape} />
         </View>
       )}
 
@@ -270,6 +289,7 @@ const styles = StyleSheet.create({
   tools: { minHeight: 128, justifyContent: "center", gap: 8, paddingTop: 10, paddingBottom: 14, paddingHorizontal: 12, borderTopLeftRadius: 20, borderTopRightRadius: 20, backgroundColor: colors.surface },
   status: { fontFamily, fontSize: 15, color: colors.muted, textAlign: "center" },
   ghost: { position: "absolute", width: THUMB, height: THUMB, overflow: "hidden", borderRadius: 12, borderWidth: 2, borderColor: colors.accent, opacity: 0.9 },
+  shapeGhost: { width: SHAPE_BUTTON, height: SHAPE_BUTTON, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface },
   backdrop: { ...StyleSheet.absoluteFill, justifyContent: "flex-end", backgroundColor: "rgba(0, 0, 0, 0.5)" },
   sheet: { gap: 12, paddingTop: 20, paddingBottom: 28, paddingHorizontal: 16, borderTopLeftRadius: 20, borderTopRightRadius: 20, backgroundColor: colors.surface },
   input: { minHeight: 44, paddingHorizontal: 12, borderWidth: 1, borderColor: colors.border, borderRadius: 10, backgroundColor: colors.bg, color: colors.text, fontSize: 16 },

@@ -283,3 +283,43 @@
   opacity: 0.9;
   pointer-events: none;
 }
+
+/* Shape palette of a blank canvas. */
+.builder-palette {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  padding: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.builder-shape {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: none;
+  cursor: grab;
+  touch-action: pan-x;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.builder-shape:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.builder-ghost.shape {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+}
