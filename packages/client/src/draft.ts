@@ -12,6 +12,20 @@ export interface Start extends Draft {
   saved?: SavedLayout;
 }
 
+/** A blank 9:16 frame for the layout editor: one grid cell filling the canvas (the style's margin sits inside it). */
+export function blankDraft(): Draft {
+  const layout: Layout = {
+    id: "blank",
+    name: "Blank",
+    family: "grid",
+    allowOverlap: false,
+    bleed: false,
+    blurBackground: false,
+    cells: [{ shape: "rect", x: 0, y: 0, w: 1, h: 1, rotate: 0, z: 0 }],
+  };
+  return { layout, order: [0] };
+}
+
 /** Problems from layoutProblems, said plainly, with the cells they're about. */
 export function explain(problems: string[]): { text: string; cells: number[] }[] {
   return problems.map((p) => {

@@ -14,6 +14,8 @@ export const USAGE_ENABLED = process.env.EXPO_PUBLIC_FEATURE_USAGE === "true" &&
 export const FIT_LAYOUTS_ENABLED = process.env.EXPO_PUBLIC_FEATURE_FIT_LAYOUTS === "true";
 /** The layout editor saves to accounts, so it needs them too. */
 export const LAYOUT_EDITOR_ENABLED = ACCOUNTS_ENABLED && process.env.EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR === "true";
+/** "Start from blank" in the Layouts tool opens the layout editor on an empty frame. Needs the layout editor; off unless set to true. */
+export const BLANK_LAYOUT_ENABLED = LAYOUT_EDITOR_ENABLED && process.env.EXPO_PUBLIC_FEATURE_BLANK_LAYOUT === "true";
 /**
  * StoryStitch Plus: the mark can be turned off only with Plus, which is bought with RevenueCat. Off unless
  * EXPO_PUBLIC_FEATURE_PLUS=true; it needs the API (which says who has Plus) and accounts. With it off, anyone can turn
