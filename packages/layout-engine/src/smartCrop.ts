@@ -1,6 +1,6 @@
 import type { Size } from "@storystitch/shared";
 import { CENTER_CROP, MIN_ZOOM, sourceRect, type Crop } from "./crop";
-import { importance, subjectBox, union, withPaddedFaces, type Detection } from "./subject";
+import { importance, subjectBox, withPaddedFaces, type Detection } from "./subject";
 
 /** Fractions of a frame's edges that sit under Instagram's interface overlays (see SAFE_ZONE). */
 export interface SafeInsets {
@@ -67,43 +67,55 @@ export function smartCrop(image: Size, frame: Size, detections: Detection[], ins
   if (insetLo + insetHi > MAX_INSET_SHARE) [insetLo, insetHi] = [0, 0]; // nowhere better to move to
   const subjectCenter = ((alongX ? subject.x + subject.w / 2 : subject.y + subject.h / 2) * N);
   const safeCenter = L * (insetLo + (1 - insetLo - insetHi) / 2);
-  const ideal = clamp(subjectCenter - safeCenter, 0, N - L);
+  /** The best position for a crop `W` long (the frame's L at zoom 1), or null when no position keeps every face whole. */
+  const bestPosition = (W: number, edge: number): number | null => {
+    const inside = (s: Span, x: number) => s.lo >= x + edge - EDGE_TOLERANCE_PX && s.hi <= x + W - edge + EDGE_TOLERANCE_PX;
+    const outside = (s: Span, x: number) => s.hi <= x + EDGE_TOLERANCE_PX || s.lo >= x + W - EDGE_TOLERANCE_PX;
+    const allowed = (x: number) => faces.every((f) => inside(f, x) || outside(f, x)) && (!topFace || inside(topFace, x));
+    const kept = (x: number) =>
+      spans.reduce((sum, s) => {
+        if (s.face) return sum + (inside(s, x) ? s.weight : 0);
+        const covered = Math.max(0, Math.min(s.hi, x + W) - Math.max(s.lo, x)) / Math.max(s.hi - s.lo, 1e-9);
+        return sum + s.weight * covered;
+      }, 0);
 
-  const inside = (s: Span, x: number) => s.lo >= x - EDGE_TOLERANCE_PX && s.hi <= x + L + EDGE_TOLERANCE_PX;
-  const outside = (s: Span, x: number) => s.hi <= x + EDGE_TOLERANCE_PX || s.lo >= x + L - EDGE_TOLERANCE_PX;
-  const allowed = (x: number) => faces.every((f) => inside(f, x) || outside(f, x)) && (!topFace || inside(topFace, x));
-  const kept = (x: number) =>
-    spans.reduce((sum, s) => {
-      if (s.face) return sum + (inside(s, x) ? s.weight : 0);
-      const covered = Math.max(0, Math.min(s.hi, x + L) - Math.max(s.lo, x)) / Math.max(s.hi - s.lo, 1e-9);
-      return sum + s.weight * covered;
-    }, 0);
-
-  // The best position is the ideal one or lies where some face or the subject touches a crop edge.
-  const margin = SUBJECT_MARGIN * L;
-  const subjectLo = (alongX ? subject.x : subject.y) * N - margin;
-  const subjectHi = (alongX ? subject.x + subject.w : subject.y + subject.h) * N + margin;
-  const candidates = [ideal, 0, N - L, subjectLo, subjectHi - L, ...spans.flatMap((s) => [s.lo, s.hi - L, s.lo - L, s.hi])]
-    .map((x) => clamp(x, 0, N - L))
-    .filter(allowed);
-
-  if (candidates.length) {
-    const best = candidates.reduce((a, b) => {
+    // The best position is the ideal one or lies where some face or the subject touches a crop edge.
+    const margin = SUBJECT_MARGIN * W;
+    const subjectLo = (alongX ? subject.x : subject.y) * N - margin;
+    const subjectHi = (alongX ? subject.x + subject.w : subject.y + subject.h) * N + margin;
+    // Longer than the photo, the crop is centered on it (as sourceRect does); otherwise it slides inside it.
+    const [first, reach] = W >= N ? [(N - W) / 2, (N - W) / 2] : [0, N - W];
+    const ideal = clamp(subjectCenter - safeCenter * (W / L), first, reach);
+    const candidates = [ideal, first, reach, subjectLo, subjectHi - W, ...spans.flatMap((s) => [s.lo - edge, s.hi - W + edge, s.lo - W, s.hi])]
+      .map((x) => clamp(x, first, reach))
+      .filter(allowed);
+    if (!candidates.length) return null;
+    return candidates.reduce((a, b) => {
       const d = kept(b) - kept(a);
       if (Math.abs(d) > 1e-9) return d > 0 ? b : a;
       return Math.abs(b - ideal) < Math.abs(a - ideal) ? b : a;
     });
+  };
+
+  const best = bestPosition(L, 0);
+  if (best !== null) {
     const center = (best + L / 2) / N;
     return alongX ? { cx: center, cy: 0.5, zoom: 1 } : { cx: 0.5, cy: center, zoom: 1 };
   }
 
-  // No clean cut: zoom out until every face (plus margin) fits along the sliding axis.
-  const all = union(withPaddedFaces(detections.filter((d) => d.kind === "face")).map((d) => d.box));
-  const needed = ((alongX ? all.w : all.h) * N) / (1 - 2 * SUBJECT_MARGIN);
-  const zoom = Math.max(MIN_ZOOM, Math.min(1, L / needed));
-  return {
-    cx: alongX ? all.x + all.w / 2 : 0.5,
-    cy: alongX ? 0.5 : all.y + all.h / 2,
-    zoom,
-  };
+  // No clean cut: zoom out as little as it takes. A crop of length L / zoom needs room for the faces it keeps plus
+  // a margin, so try the zooms at which some run of faces just fits, largest first; faces outside the run stay out.
+  const zooms = faces
+    .flatMap((a) => faces.map((b) => (b.hi - a.lo) / (1 - 2 * SUBJECT_MARGIN)))
+    .filter((needed) => needed > L)
+    .map((needed) => L / needed)
+    .sort((a, b) => b - a);
+  for (const zoom of [...zooms, MIN_ZOOM].map((z) => Math.max(z, MIN_ZOOM))) {
+    const W = L / zoom;
+    const at = bestPosition(W, SUBJECT_MARGIN * W);
+    if (at === null && zoom > MIN_ZOOM) continue;
+    const center = at !== null ? (W >= N ? 0.5 : (at + W / 2) / N) : (Math.min(...faces.map((f) => f.lo)) + Math.max(...faces.map((f) => f.hi))) / 2 / N; // floor: fit what we can
+    return alongX ? { cx: center, cy: 0.5, zoom } : { cx: 0.5, cy: center, zoom };
+  }
+  return CENTER_CROP;
 }
