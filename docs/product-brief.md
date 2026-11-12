@@ -110,8 +110,8 @@ replaces parts of it. Build order and status: see "Backend milestones" in `PROJE
 
 ## Layout editor
 
-- "Edit this layout" in the Layouts tool, highlighted in gold, starts from the layout on screen. (Making a layout
-  from a blank frame is set aside for now.) Layouts are saved to the account (up to 20), so a signed-out user is
+- "Edit this layout" in the Layouts tool, highlighted in gold, starts from the layout on screen, and "Start from
+  blank" opens the editor on a single cell filling the frame, to split into a grid. Layouts are saved to the account (up to 20), so a signed-out user is
   asked to create an account or sign in, and comes straight back to the editor.
 - Full screen on the phone, with large touch targets, snapping, Undo, and buttons (Bigger, Smaller, Turn) for small
   adjustments without precise dragging. The preview shows the user's own photos.

@@ -1,11 +1,11 @@
-import { DEFAULT_STYLE, assignedScene, autoColor, cellShapes, newScene, rankedScenes, usageLayout, withCrop, withStyle, type Scene, type Start } from "@storystitch/client";
+import { DEFAULT_STYLE, assignedScene, blankDraft, autoColor, cellShapes, newScene, rankedScenes, usageLayout, withCrop, withStyle, type Scene, type Start } from "@storystitch/client";
 import { MAX_ZOOM, MIN_ZOOM, clampCrop } from "@storystitch/layout-engine";
 import { STORY_CANVAS, type Layout, type SavedLayout } from "@storystitch/shared";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppState, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { AccountLink } from "./AccountLink";
 import { deleteSaved, listSaved, recordExport } from "./api";
-import { FIT_LAYOUTS_ENABLED, LAYOUT_EDITOR_ENABLED } from "./config";
+import { BLANK_LAYOUT_ENABLED, FIT_LAYOUTS_ENABLED, LAYOUT_EDITOR_ENABLED } from "./config";
 import { LayoutStrip } from "./LayoutStrip";
 import { PlusUpsell } from "./PlusUpsell";
 import { perfTimes, resetPerfPeak, timeLayoutSwitch } from "./PerfReadout";
@@ -167,6 +167,13 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
     track("screen_viewed", { screen: "layout_editor" });
   }
 
+  function openBlankEditor() {
+    setConfirmDelete(false);
+    setSelected(null);
+    setBuilding(blankDraft());
+    track("screen_viewed", { screen: "layout_editor" });
+  }
+
   // Load saved layouts, and again after any navigation or, mid-edit, on coming back from another tab: they may have
   // signed in, or confirmed their email.
   const editing = building !== null;
@@ -309,6 +316,7 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
                   <>
                     <View style={styles.layoutAction}>
                       <Button label="Edit this layout" primary trackAs="edit_layout" onPress={openEditor} />
+                      {BLANK_LAYOUT_ENABLED && <Button label="Start from blank" trackAs="blank_layout" onPress={openBlankEditor} />}
                     </View>
                     {mineIds.has(scene.layout.id) && <Button label="Delete" quiet danger onPress={() => setConfirmDelete(true)} />}
                   </>
@@ -403,7 +411,7 @@ const styles = StyleSheet.create({
   panelActions: { height: "auto", minHeight: 132, paddingVertical: 8 },
   layoutsTool: { gap: 6 },
   layoutActions: { flexDirection: "row", alignItems: "center", gap: 8 },
-  layoutAction: { flex: 1 },
+  layoutAction: { flex: 1, gap: 8 },
   backdrop: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0, zIndex: 20, justifyContent: "flex-end", backgroundColor: "rgba(0, 0, 0, 0.5)" },
   sheet: { gap: 12, padding: 20, borderTopLeftRadius: 20, borderTopRightRadius: 20, backgroundColor: colors.surface },
   sheetActions: { flexDirection: "row", flexWrap: "wrap", gap: 8 },

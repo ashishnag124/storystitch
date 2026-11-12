@@ -1,7 +1,8 @@
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { expo } from "@better-auth/expo";
 import { betterAuth } from "better-auth";
-import { captcha } from "better-auth/plugins";
+import { createAuthMiddleware } from "better-auth/api";
+import { captcha, twoFactor } from "better-auth/plugins";
 import type { Db } from "./db/client";
 import * as schema from "./db/schema";
 import { linkEmail, type Mailer } from "./email";
@@ -22,6 +23,8 @@ export interface AuthOptions {
   rateLimit?: boolean;
   /** Tests only: a local stand-in for Cloudflare's verification endpoint, so they don't depend on the network. */
   turnstileVerifyUrl?: string;
+  /** Adds authenticator-app two-factor sign-in (TOTP only). Accounts without it sign in as before. */
+  adminEnabled?: boolean;
 }
 
 /** Limits on top of Better Auth's default (100 requests per 10 s per IP and path). */
@@ -37,7 +40,7 @@ export const AUTH_RATE_LIMITS = {
  * email, and can delete their account (with their password). Sign-up, sign-in and reset require a Turnstile token.
  */
 export function createAuth(options: AuthOptions) {
-  const { db, secret, baseURL, webOrigins, appScheme, mailer, turnstileSecret, rateLimit = true, turnstileVerifyUrl } = options;
+  const { db, secret, baseURL, webOrigins, appScheme, mailer, turnstileSecret, rateLimit = true, turnstileVerifyUrl, adminEnabled = false } = options;
   return betterAuth({
     appName: "StoryStitch",
     secret,
@@ -91,10 +94,35 @@ export function createAuth(options: AuthOptions) {
       // entries), so attempt limits are per visitor rather than one shared bucket.
       ipAddress: { ipAddressHeaders: ["x-real-ip"] },
     },
+    // Finishing two-factor enrollment signs the account out everywhere else: the plugin swaps in a new session for the one
+    // that verified the code and leaves the user's other sessions, which never entered a code, untouched.
+    ...(adminEnabled
+      ? {
+          hooks: {
+            after: createAuthMiddleware(async (ctx) => {
+              if (ctx.path !== "/two-factor/verify-totp") return;
+              const created = ctx.context.newSession;
+              // A request that arrives with a session is enrollment; signing in with a code arrives with none, and must
+              // leave the account's other devices alone.
+              const hadSession = await ctx.getSignedCookie(ctx.context.authCookies.sessionToken.name, ctx.context.secret);
+              if (!created || !hadSession) return;
+              await ctx.context.adapter.deleteMany({
+                model: "session",
+                where: [
+                  { field: "userId", value: created.user.id },
+                  { field: "token", operator: "ne", value: created.session.token },
+                ],
+              });
+            }),
+          },
+        }
+      : {}),
     plugins: [
       // The app has no browser Origin. This reads its expo-origin header instead, only when a request has no Origin.
       expo(),
       captcha({ provider: "cloudflare-turnstile", secretKey: turnstileSecret, siteVerifyURLOverride: turnstileVerifyUrl }),
+      // No email or SMS codes (no sendOTP), so an authenticator app is the only second factor.
+      ...(adminEnabled ? [twoFactor({ issuer: "StoryStitch" })] : []),
     ],
   });
 }

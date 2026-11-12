@@ -132,6 +132,17 @@ test("AC-PRIV-03 the privacy and support pages are public, and the Account scree
   await expect(page.getByRole("heading", { level: 1, name: "StoryStitch support" })).toBeVisible();
 });
 
+test("AC-PRIV-04 the terms and refund pages are public, and link to the privacy policy and each other", async ({ page }) => {
+  await page.goto("/terms");
+  await expect(page.getByRole("heading", { level: 1, name: "StoryStitch terms of use" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "StoryStitch Plus" })).toBeVisible();
+  await page.getByRole("link", { name: "Privacy policy" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "StoryStitch privacy policy" })).toBeVisible();
+  await page.getByRole("link", { name: "Refund policy", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "StoryStitch refund policy" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Terms of use" })).toBeVisible();
+});
+
 test("AC-AUTH-12 the bot check page holds only the check and passes its token to the iOS app", async ({ page }) => {
   // Stands in for the iOS app's WebView.
   await page.addInitScript(() => {

@@ -24,6 +24,8 @@ const EnvSchema = z
     USAGE_INGEST_ENABLED: flag,
     /** StoryStitch Plus: adds the payment routes. Needs the three RevenueCat values below. */
     PAYMENTS_ENABLED: flag,
+    /** The /admin/stats route and two-factor sign-in (authenticator app) for admin accounts. */
+    ADMIN_ENABLED: flag,
     /** A RevenueCat v2 secret key that can read customers and entitlements. */
     REVENUECAT_SECRET_KEY: z.string().min(1).optional(),
     /** The RevenueCat project's ID, e.g. proj1ab2c3d4. */

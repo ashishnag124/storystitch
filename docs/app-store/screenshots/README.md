@@ -126,7 +126,7 @@ Before each capture, wait for the "Drag to move" hint to fade (about 6 seconds),
 
 When someone shares the App Store link in Messages, the card shows the first screenshot of one set, at that screenshot's own shape. Messages' code (`LPiTunesMediaMetadataProviderSpecialization` in LinkPresentation, read on macOS 27 in November 2026) checks the sets in this order: `iphone_6_5`, `iphone_5_8`, `iphone6+`, `iphone6`, `iphone5`, `iphone`, then the iPad sets, then `appleVisionPro`. The 6.9-inch set (`iphone_d74`) isn't on the list, so it's only used when nothing else is uploaded. It also judges a set's shape by its first screenshot alone.
 
-So the 6.5-inch set starts with a landscape image, `../screenshots-6.5/01-collages.png` (2778 × 1284). It shows real captures 02, 03 and 07 beside the home screen's headline, on the app's colors. Rebuild it from the repo root after retaking any of those three:
+So the 6.5-inch set starts with a landscape image, `../screenshots-6.5/01-collages.png` (2778 × 1284). It shows real captures 02, 03 and 07 beside the home screen's headline, on the app's colors. Rebuild it, and the two images below, from the repo root after retaking any capture they use:
 
 ```bash
 swiftc -O docs/app-store/screenshots/landscape.swift -o /tmp/landscape && /tmp/landscape
@@ -139,6 +139,17 @@ mkdir -p /tmp/six5 && for f in docs/app-store/screenshots/0[2-9]*.png; do sips -
 ```
 
 The crop takes 6 pixels off the top and bottom. If App Store Connect won't take landscape and portrait images in one set, upload `01-collages.png` alone: one image is enough for a set.
+
+## Header and search results, for iOS 27
+
+App Store Connect has two optional slots, under **Header and Search Results** in a version's Product Page Information. They only show on iOS 27 and iPadOS 27 or later. Without them, search results fall back to the screenshots.
+
+| File | Slot | Size | Shows |
+|---|---|---|---|
+| `../creative/header.jpg` | Header | 3840 × 1646 (21:9) | Captures 05, 02, 03, 07 and 04 in a row, with no text, because the App Store shows the name |
+| `../creative/search-results.jpg` | Search Results | 3840 × 2560 (3:2) | The home screen's headline above captures 02, 03 and 07 |
+
+`landscape.swift` builds both, along with the 6.5-inch cover. Apple's rules for these images: no alpha, nothing about pricing, URLs, other platforms or awards, and suitable for a 4+ rating. Keep the main subject in the center, because the slots can be cropped on some devices. Check both in App Store Connect's preview before you submit.
 
 ## Sizes
 

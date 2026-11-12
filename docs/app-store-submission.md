@@ -219,6 +219,8 @@ Upload them in that order to the iPhone set. App Store Connect takes 1 to 10 ima
 
 Also upload a 6.5-inch set, for link previews. When someone shares the App Store link in Messages, the card shows the first screenshot of the first set on Messages' list: the 6.5-inch set and older iPhone sizes come first, then iPad, and the 6.9-inch set isn't on the list. With only the 6.9-inch set, the card is a tall copy of the home screen. Put `docs/app-store/screenshots-6.5/01-collages.png` first in the 6.5-inch set, a landscape image of three real collages, so the card is short and shows collages. Then add images 2 to 9, resized with the command in the screenshots README. Devices with a 6.5-inch screen show this set in the App Store.
 
+For iOS 27, also fill in **Header and Search Results** in Product Page Information: `docs/app-store/creative/header.jpg` goes under Header, and `docs/app-store/creative/search-results.jpg` under Search Results. Both are optional, and the screenshots README explains them.
+
 From April 2027, Apple also requires iPhone Duo screenshots for apps built with the iOS 27.1 SDK or later.
 
 Don't show Instagram's logo or app screens in them. The home screen's own text does name Instagram: "Turn 1–8 photos into an Instagram Story collage."

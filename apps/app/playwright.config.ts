@@ -46,6 +46,7 @@ export default defineConfig({
         ENABLE_TEST_ROUTES: "true",
         // Every e2e request comes from 127.0.0.1; the limits themselves are covered by the API's tests.
         DISABLE_RATE_LIMIT: "true",
+        ADMIN_ENABLED: "true",
         // Cloudflare's always-pass Turnstile test secret.
         TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA",
       },

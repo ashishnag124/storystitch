@@ -39,6 +39,16 @@ on:
         type: boolean
         required: false
         default: false
+      admin:
+        description: "Build with the /admin dashboard switched on (EXPO_PUBLIC_FEATURE_ADMIN; needs accounts, and the API's ADMIN_ENABLED to show anything)"
+        type: boolean
+        required: false
+        default: false
+      blank_layout:
+        description: "Build with the blank layout switched on (EXPO_PUBLIC_FEATURE_BLANK_LAYOUT; needs the layout editor)"
+        type: boolean
+        required: false
+        default: false
 
 jobs:
   deploy:
@@ -63,6 +73,8 @@ jobs:
           EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR: ${{ inputs.layout_editor }}
           EXPO_PUBLIC_FEATURE_USAGE: ${{ inputs.usage }}
           EXPO_PUBLIC_FEATURE_FIT_LAYOUTS: ${{ inputs.fit_layouts }}
+          EXPO_PUBLIC_FEATURE_ADMIN: ${{ inputs.admin }}
+          EXPO_PUBLIC_FEATURE_BLANK_LAYOUT: ${{ inputs.blank_layout }}
           EXPO_PUBLIC_TURNSTILE_SITE_KEY: ${{ secrets.TURNSTILE_SITE_KEY }}
       - uses: cloudflare/wrangler-action@v3
         with:

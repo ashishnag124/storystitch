@@ -144,6 +144,31 @@ test("AC-CUSTOM-02 AC-CUSTOM-05 AC-CUSTOM-06 AC-CUSTOM-07 reworks a grid by remo
   expect(saved!.layout.cells).toHaveLength(3);
 });
 
+test("AC-CUSTOM-12 starts from a blank frame, splits it to one cell per photo, and saves it", async ({ page }) => {
+  await signedIn(page);
+  await pickPhotos(page, 3);
+  const blank = page.getByRole("button", { name: "Start from blank" });
+  await expect(blank).toBeVisible();
+  await expect(page.getByRole("button", { name: "Edit this layout" })).toHaveCSS("background-color", "rgb(255, 194, 75)"); // still the primary
+  await blank.click();
+  const e = editor(page);
+  await expect(e.getByRole("heading", { name: "1 of 3 photos" })).toBeVisible();
+  await expect(e.getByRole("separator")).toHaveCount(0); // one cell: no lines
+  await e.getByRole("button", { name: "Done" }).click();
+  await expect(e.getByRole("status")).toHaveText("Split 2 more cells to fit 3 photos.");
+
+  await e.getByRole("button", { name: "Split across" }).click(); // the one cell starts out chosen
+  await expect(e.getByRole("heading", { name: "2 of 3 photos" })).toBeVisible();
+  await tapAt(page, 0.5, 0.2); // the top row, clear of the line
+  await e.getByRole("button", { name: "Split down" }).click();
+  await expect(e.getByRole("heading", { name: "3 of 3 photos" })).toBeVisible();
+
+  await saveAs(page, "From blank");
+  const [saved] = await savedLayouts(page);
+  expect(saved!.name).toBe("From blank");
+  expect(saved!.layout.cells).toHaveLength(3);
+});
+
 test("AC-CUSTOM-06 draws nothing over the photos", async ({ page }) => {
   await signedIn(page);
   await pickPhotos(page, 3);
