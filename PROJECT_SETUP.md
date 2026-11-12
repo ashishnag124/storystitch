@@ -42,6 +42,8 @@ Web app on Cloudflare Pages, plus an API with Postgres on Railway (from v2). All
 | `EXPO_PUBLIC_FEATURE_FIT_LAYOUTS` (optional, default `false`) | `fit_layouts:` input to `_deploy-pages.yml` for web, `true` in `ci.yml` (staging) and `release.yml` (production); `apps/app/eas.json` for iOS, `true` in every profile; locally from `.env` | Expo app builds: grid layouts fit their lines to the photos (`fittedLayout`) |
 | `USAGE_INGEST_ENABLED` (optional, default `false`) | Railway variable on `api`, per environment, `true` on staging and production. Also the emergency off switch | `POST /usage/events` counts events only when `true` |
 | `EXPO_PUBLIC_FEATURE_PLUS` (optional, default `false`; needs accounts and an API URL), `EXPO_PUBLIC_REVENUECAT_WEB_KEY`, `EXPO_PUBLIC_REVENUECAT_IOS_KEY` (public RevenueCat keys) | Not wired into hosted builds yet: the change that turns Plus on for staging adds them to `_deploy-pages.yml` (web, from GitHub variables) and `apps/app/eas.json` (iOS); locally from `.env` | Expo app builds: with it on, the mark switch unlocks only when the API says the account has Plus |
+| `EXPO_PUBLIC_FEATURE_ADMIN` (optional, default `false`; needs accounts and an API URL) | Not wired into hosted builds yet: turning it on for staging adds it to `_deploy-pages.yml` (web, from a GitHub variable); locally from `.env`. Web only: iOS builds ignore it | Expo web build: the `/admin` dashboard (see "B5 checklist") |
+| `ADMIN_ENABLED` (optional, default `false`) | Railway variable on `api`, per environment, not set yet: staging first (see "B5 checklist") | `GET /admin/stats` and two-factor sign-in (authenticator app) exist only when it's on |
 | `PAYMENTS_ENABLED` (optional, default `false`), `REVENUECAT_SECRET_KEY`, `REVENUECAT_PROJECT_ID`, `REVENUECAT_WEBHOOK_SECRET` (all three needed when it's on) | Railway variables on `api`, per environment, not set yet: staging first, with RevenueCat sandbox data (see "B4 checklist"). The webhook secret is the Authorization value set on RevenueCat's webhook | StoryStitch Plus: `POST /payments/revenuecat`, `GET /me/entitlements`, `POST /me/entitlements/refresh`, `POST /entitlements/check` exist only when it's on |
 | `TURNSTILE_SITE_KEY` (public), plus the Cloudflare and Resend keys | GitHub secrets, synced with `gh secret set -f ~/.config/new-project/secrets.env` | web builds (`EXPO_PUBLIC_TURNSTILE_SITE_KEY`) |
 | Accounts flag (`EXPO_PUBLIC_FEATURE_ACCOUNTS`) | `accounts:` input to `_deploy-pages.yml`: `true` in `ci.yml` (staging) and `release.yml` (production) | web builds |
@@ -80,7 +82,7 @@ What and why: the v2 section of `docs/product-brief.md`. Acceptance criteria: th
 | B2 | Optional email and password accounts (Better Auth, Resend, Turnstile), account deletion, behind `EXPO_PUBLIC_FEATURE_ACCOUNTS` | on in staging and production |
 | B3 | Save collages to Cloudflare R2, "My stories", storage limits | not started |
 | B4 | StoryStitch Plus: pay once ($4.99) to remove the mark, through RevenueCat (Apple in-app purchase on iOS, Paddle on web), behind `EXPO_PUBLIC_FEATURE_PLUS` and `PAYMENTS_ENABLED` | in progress; checklist below |
-| B5 | Admin analytics (`/admin`, desktop, admin login with authenticator code) | not started |
+| B5 | Admin analytics (`/admin`, desktop, admin login with authenticator code), behind `EXPO_PUBLIC_FEATURE_ADMIN` and `ADMIN_ENABLED` | built behind flags, off everywhere; checklist below |
 
 ### B0 checklist (yours)
 
@@ -240,6 +242,20 @@ and test keys; nothing here can be done from Claude Code. Use sandbox and test m
 7. **Turning it on in production** locks a switch that's been free since v1.1.0. Say so in the release notes.
 
 The iOS purchase needs a new build: it adds native code, so an over-the-air update can't deliver it.
+
+### B5 checklist: admin dashboard (yours)
+
+What and why: "Admin analytics" in `docs/product-brief.md`. Nothing is wired into hosted builds yet.
+
+1. On staging, set `ADMIN_ENABLED=true` on the Railway `api` service, and `EXPO_PUBLIC_FEATURE_ADMIN=true` for the web
+   build (Claude wires the second one into `_deploy-pages.yml` when you ask).
+2. Sign up on staging with the email you want as admin, and confirm it.
+3. On that environment's database run `update "user" set is_admin = true where email = '<your email>';`. Nothing in
+   the API can set it.
+4. Open `/admin` on a desktop, enter your password, add the key it shows to an authenticator app, and enter a code.
+   From then on `/admin` asks for a code after the password.
+5. If you lose the authenticator, remove its row: `delete from two_factor where user_id = (select id from "user" where email = '<your email>');`
+   and `update "user" set two_factor_enabled = false where email = '<your email>';`, then enroll again.
 
 ### iOS delivery checklist (yours)
 
