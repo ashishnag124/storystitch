@@ -251,7 +251,7 @@ Behind `EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR` (needs accounts): on in staging and p
 
 ## Describe a layout (iOS)
 
-Behind `EXPO_PUBLIC_FEATURE_DESCRIBE_LAYOUT` (needs the layout editor, iOS only): off in staging and production.
+Behind `EXPO_PUBLIC_FEATURE_DESCRIBE_LAYOUT` (needs the layout editor, iOS only): on in the staging iOS app, off in production.
 
 | ID | Criterion | Check |
 |---|---|---|
