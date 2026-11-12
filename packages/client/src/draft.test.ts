@@ -1,7 +1,7 @@
-import { splitCell, removeCell } from "@storystitch/layout-engine";
-import { layoutProblems, layouts } from "@storystitch/shared";
+import { editModeOf, splitCell, removeCell } from "@storystitch/layout-engine";
+import { LayoutSchema, editedLayoutProblems, layoutProblems, layouts } from "@storystitch/shared";
 import { describe, expect, it } from "vitest";
-import { explain, withOrigin } from "./draft";
+import { blankDraft, explain, withOrigin } from "./draft";
 
 const byId = (id: string) => layouts.find((l) => l.id === id)!;
 
@@ -32,5 +32,27 @@ describe("AC-CUSTOM-02 photos follow their cells", () => {
     const draft = { layout: byId("three-stack"), order: [2, 0, 1] };
     const removed = withOrigin(draft, removeCell(draft.layout, 0)!, 3);
     expect(removed.order).toEqual([0, 1]);
+  });
+});
+
+describe("AC-CUSTOM-12 a blank frame", () => {
+  it("is one full-canvas cell that validates and opens as a grid", () => {
+    const { layout, order } = blankDraft();
+    expect(LayoutSchema.safeParse(layout).success).toBe(true);
+    expect(layoutProblems(layout)).toEqual([]);
+    expect(editModeOf(layout)).toBe("grid");
+    expect(layout.cells).toEqual([{ shape: "rect", x: 0, y: 0, w: 1, h: 1, rotate: 0, z: 0 }]);
+    expect(order).toEqual([0]);
+  });
+
+  it("validates after splitting to N cells, each with its own photo", () => {
+    let draft = blankDraft();
+    for (let n = 2; n <= 4; n++) {
+      draft = withOrigin(draft, splitCell(draft.layout, draft.layout.cells.length - 1, n % 2 ? "down" : "across")!, n);
+      expect(draft.layout.cells).toHaveLength(n);
+      expect(editedLayoutProblems(draft.layout)).toEqual([]);
+      expect(editModeOf(draft.layout)).toBe("grid");
+      expect(draft.order).toEqual(Array.from({ length: n }, (_, i) => i));
+    }
   });
 });
