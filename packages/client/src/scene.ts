@@ -14,7 +14,6 @@ import {
   cellFrame,
   cellPolygon,
   frameCorners,
-  hitTest,
   cellAngle,
   insetPolygon,
   rotatePoints,
@@ -124,21 +123,29 @@ function outlineArea(outline: Outline): number {
 /** Sampling step (canvas pixels) for measuring how much of each overlapping cell stays uncovered. */
 const UNCOVERED_STEP_PX = 12;
 
-/** Share of each cell not covered by cells drawn above it; all 1 unless the layout allows overlap. */
+const uncoveredCache = new WeakMap<Layout, number[]>();
+
+/** Share of each cell not covered by cells drawn above it; all 1 unless the layout allows overlap. Depends only on the layout, so it's measured once per layout object. */
 function uncovered(layout: Layout): number[] {
   if (!layout.allowOverlap) return layout.cells.map(() => 1);
+  const cached = uncoveredCache.get(layout);
+  if (cached) return cached;
   const inside = layout.cells.map(() => 0);
   const shown = layout.cells.map(() => 0);
   for (let y = UNCOVERED_STEP_PX / 2; y < STORY_CANVAS.height; y += UNCOVERED_STEP_PX) {
     for (let x = UNCOVERED_STEP_PX / 2; x < STORY_CANVAS.width; x += UNCOVERED_STEP_PX) {
-      const top = hitTest(layout.cells, { x, y });
+      let top = -1; // as `hitTest`: highest z, then latest
       layout.cells.forEach((cell, i) => {
-        if (cellContains(cell, { x, y })) inside[i]!++;
+        if (!cellContains(cell, { x, y })) return;
+        inside[i]!++;
+        if (top === -1 || cell.z >= layout.cells[top]!.z) top = i;
       });
       if (top >= 0) shown[top]!++;
     }
   }
-  return inside.map((n, i) => (n ? shown[i]! / n : 1));
+  const shares = inside.map((n, i) => (n ? shown[i]! / n : 1));
+  uncoveredCache.set(layout, shares);
+  return shares;
 }
 
 /**
