@@ -1,5 +1,5 @@
 // Test-only: an API wired to the local database, with emails captured in memory and Cloudflare's Turnstile test keys.
-import { randomUUID } from "node:crypto";
+import { createHmac, randomUUID } from "node:crypto";
 import { createServer } from "node:http";
 import { createApp } from "./app";
 import { createAuth } from "./auth";
@@ -43,7 +43,8 @@ export function testApi({
   turnstileSecret = TURNSTILE_PASS,
   usageIngestEnabled = false,
   payments,
-}: { turnstileSecret?: string; usageIngestEnabled?: boolean; payments?: PaymentsOptions } = {}) {
+  adminEnabled = false,
+}: { turnstileSecret?: string; usageIngestEnabled?: boolean; payments?: PaymentsOptions; adminEnabled?: boolean } = {}) {
   const { pool, db } = createDb(process.env.DATABASE_URL!);
   const mailer = memoryMailer();
   const auth = createAuth({
@@ -55,6 +56,7 @@ export function testApi({
     mailer,
     turnstileSecret,
     turnstileVerifyUrl,
+    adminEnabled,
   });
   const app = createApp({
     pool,
@@ -64,6 +66,7 @@ export function testApi({
     minimumIosVersion: MINIMUM_IOS_VERSION,
     usageIngestEnabled,
     payments,
+    adminEnabled,
     testEmails: mailer.sent,
   });
   /** A browser-like client with its own IP address (so rate limits don't leak between tests) and cookies. */
@@ -113,4 +116,18 @@ export async function verifiedUser(api: ReturnType<typeof testApi>, password = "
   await c.call("/api/auth/sign-up/email", { body: { email, password, name: "Test" }, headers: CAPTCHA });
   await c.call(api.lastEmail(email).link);
   return { email, password, c };
+}
+
+const BASE32 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+
+/** The current six-digit authenticator code for a base32 secret (RFC 6238: HMAC-SHA1, 30 s steps). */
+export function totpCode(secret: string, now = Date.now()) {
+  let bits = "";
+  for (const char of secret.replace(/=+$/, "").toUpperCase()) bits += BASE32.indexOf(char).toString(2).padStart(5, "0");
+  const key = Buffer.from(bits.match(/.{8}/g)!.map((byte) => parseInt(byte, 2)));
+  const counter = Buffer.alloc(8);
+  counter.writeBigUInt64BE(BigInt(Math.floor(now / 30_000)));
+  const hmac = createHmac("sha1", key).update(counter).digest();
+  const offset = hmac[hmac.length - 1]! & 15;
+  return String((hmac.readUInt32BE(offset) & 0x7fffffff) % 1_000_000).padStart(6, "0");
 }

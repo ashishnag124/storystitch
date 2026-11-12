@@ -27,6 +27,7 @@ const auth = createAuth({
   mailer,
   turnstileSecret: env.TURNSTILE_SECRET_KEY,
   rateLimit: !env.DISABLE_RATE_LIMIT,
+  adminEnabled: env.ADMIN_ENABLED,
 });
 const app = createApp({
   pool,
@@ -35,6 +36,7 @@ const app = createApp({
   version: env.RAILWAY_GIT_COMMIT_SHA ?? "dev",
   minimumIosVersion: env.MIN_IOS_APP_VERSION,
   usageIngestEnabled: env.USAGE_INGEST_ENABLED,
+  adminEnabled: env.ADMIN_ENABLED,
   payments: env.PAYMENTS_ENABLED
     ? {
         revenueCat: revenueCatApi({ secretKey: env.REVENUECAT_SECRET_KEY!, projectId: env.REVENUECAT_PROJECT_ID! }),

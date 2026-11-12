@@ -284,6 +284,6 @@ flag is off, AC-EXPORT-09 describes the switch exactly.
 |---|---|---|
 | AC-ADMIN-01 | The app records first-party events: visit, screen views, tagged button presses, photos picked (count), layout chosen, export, share, save, sign-up and error. | auto |
 | AC-ADMIN-02 | Events and stored counts never contain image data, file names, layout names, emails, IP addresses, user agents or any account or device ID. Daily visitors are counted with a hash held in memory that changes daily and is never stored. | auto |
-| AC-ADMIN-03 | `/admin` opens only for admin accounts signed in with email, password and an authenticator code; everyone else is refused. | planned |
-| AC-ADMIN-04 | The dashboard shows daily totals, the picked → exported → saved funnel, most-used layouts and errors. | planned |
-| AC-ADMIN-05 | At phone width, `/admin` says to open it on a desktop. | planned |
+| AC-ADMIN-03 | `/admin` opens only for admin accounts signed in with email, password and an authenticator code; everyone else is refused. | auto |
+| AC-ADMIN-04 | The dashboard shows daily totals, the picked → exported → saved funnel, most-used layouts and errors. | auto |
+| AC-ADMIN-05 | At phone width, `/admin` says to open it on a desktop. | auto |

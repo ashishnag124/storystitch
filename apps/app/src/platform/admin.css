@@ -1,0 +1,154 @@
+.admin {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  overflow: auto;
+  padding: 16px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.admin > :not(header) {
+  max-width: 960px;
+  margin-inline: auto;
+}
+
+.admin form {
+  max-width: 420px;
+  margin-inline: 0;
+}
+
+.admin header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 960px;
+  margin: 0 auto 16px;
+}
+
+.admin h1 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.admin h2 {
+  margin: 24px 0 8px;
+  font-size: 1.0625rem;
+}
+
+.admin a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--accent);
+}
+
+.admin .muted {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.admin-message {
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.admin-message.error {
+  background: var(--warn-bg);
+  color: var(--warn-text);
+}
+
+.admin .secret {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: 1.125rem;
+  letter-spacing: 0.08em;
+  word-break: break-all;
+}
+
+.periods {
+  display: flex;
+  gap: 8px;
+}
+
+.periods button {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.periods button[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-text);
+  font-weight: 700;
+}
+
+.admin table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.admin th,
+.admin td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin th:first-child,
+.admin td:first-child {
+  text-align: left;
+}
+
+.admin thead th {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.admin tbody th {
+  font-weight: 400;
+}
+
+.funnel {
+  display: flex;
+  gap: 16px;
+  margin: 0;
+}
+
+.funnel > div {
+  flex: 1;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.funnel dt {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.funnel dd {
+  margin: 4px 0 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.funnel small {
+  color: var(--muted);
+  font-size: 0.8125rem;
+  font-weight: 400;
+}

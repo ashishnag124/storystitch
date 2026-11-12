@@ -43,6 +43,13 @@
       "when": 1794298344558,
       "tag": "0005_small_rumiko_fujikawa",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794456929871,
+      "tag": "0006_eminent_zombie",
+      "breakpoints": true
     }
   ]
 }

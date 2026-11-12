@@ -1,7 +1,7 @@
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { expo } from "@better-auth/expo";
 import { betterAuth } from "better-auth";
-import { captcha } from "better-auth/plugins";
+import { captcha, twoFactor } from "better-auth/plugins";
 import type { Db } from "./db/client";
 import * as schema from "./db/schema";
 import { linkEmail, type Mailer } from "./email";
@@ -22,6 +22,8 @@ export interface AuthOptions {
   rateLimit?: boolean;
   /** Tests only: a local stand-in for Cloudflare's verification endpoint, so they don't depend on the network. */
   turnstileVerifyUrl?: string;
+  /** Adds authenticator-app two-factor sign-in (TOTP only). Accounts without it sign in as before. */
+  adminEnabled?: boolean;
 }
 
 /** Limits on top of Better Auth's default (100 requests per 10 s per IP and path). */
@@ -37,7 +39,7 @@ export const AUTH_RATE_LIMITS = {
  * email, and can delete their account (with their password). Sign-up, sign-in and reset require a Turnstile token.
  */
 export function createAuth(options: AuthOptions) {
-  const { db, secret, baseURL, webOrigins, appScheme, mailer, turnstileSecret, rateLimit = true, turnstileVerifyUrl } = options;
+  const { db, secret, baseURL, webOrigins, appScheme, mailer, turnstileSecret, rateLimit = true, turnstileVerifyUrl, adminEnabled = false } = options;
   return betterAuth({
     appName: "StoryStitch",
     secret,
@@ -95,6 +97,8 @@ export function createAuth(options: AuthOptions) {
       // The app has no browser Origin. This reads its expo-origin header instead, only when a request has no Origin.
       expo(),
       captcha({ provider: "cloudflare-turnstile", secretKey: turnstileSecret, siteVerifyURLOverride: turnstileVerifyUrl }),
+      // No email or SMS codes (no sendOTP), so an authenticator app is the only second factor.
+      ...(adminEnabled ? [twoFactor({ issuer: "StoryStitch" })] : []),
     ],
   });
 }
