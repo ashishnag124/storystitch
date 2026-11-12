@@ -58,6 +58,18 @@ describe("smartCrop", () => {
     for (const f of faces) expect(contains(crop, px(padFace(f.box), wide))).toBe(true);
   });
 
+  it("AC-CROP-05 zooms out only as far as the faces it keeps need, leaving a far face out", () => {
+    // Two heads overlapping and a bit wider than the crop (37.5% of the photo), and a third head far away.
+    const faces = [face(0.1, 0.3, 0.16, 0.2, 0.9), face(0.27, 0.3, 0.16, 0.2, 0.85), face(0.8, 0.3, 0.1, 0.13, 0.7)];
+    const result = smartCrop(wide, tallFrame, faces);
+    expect(result.zoom).toBeLessThan(1);
+    expect(result.zoom).toBeGreaterThan(0.8); // fitting all three heads would need MIN_ZOOM
+    const crop = sourceRect(wide, tallFrame, result);
+    expect(contains(crop, px(padFace(faces[0]!.box), wide))).toBe(true);
+    expect(contains(crop, px(padFace(faces[1]!.box), wide))).toBe(true);
+    expect(disjoint(crop, px(padFace(faces[2]!.box), wide))).toBe(true);
+  });
+
   it("AC-CROP-03 moves the subject out of a safe-zone band", () => {
     const tall = { width: 3000, height: 4000 };
     const wideFrame = { width: 1000, height: 500 }; // crop slides along y
