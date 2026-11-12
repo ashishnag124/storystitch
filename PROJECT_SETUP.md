@@ -101,8 +101,8 @@ Claude never reads that file; it loads values from it into Railway and GitHub wh
 - [x] **Production web domain**: Cloudflare dashboard → Workers & Pages → `storystitch-web` → Custom domains → add
   `storystitch.ashishnag.com`, then add the DNS record below in Cloudflare. The current v1 site goes live there.
 - [ ] **Legal pages**: have the policy reviewed. `apps/app/public/privacy.html` and `support.html` are the pages at
-  /privacy and /support. Terms are postponed: `docs/legal/terms.md` is a
-  draft, and the app has no terms page.
+  /privacy and /support. `terms.html` and `refunds.html` (/terms and /refunds, text in `docs/legal/terms.md`) are drafts
+  for the owner to read before Plus is turned on.
 - [x] **Usage tracking** (on in production since v1.0.0, November 7, 2026), before turning it on: have the policy's usage text reviewed, then in App Store Connect → App
   Privacy, for the staging and production apps, add Usage Data → Product Interaction (Analytics) and Diagnostics → Other
   Diagnostic Data (Analytics), both not linked and not used for tracking. Check that Product Interaction also lists App
@@ -232,11 +232,11 @@ and test keys; nothing here can be done from Claude Code. Use sandbox and test m
    - A webhook to `https://api-staging.storystitch.ashishnag.com/payments/revenuecat` (and the production API later),
      with an Authorization header value you generate (`openssl rand -hex 32`).
 3. **Paddle**: an account (sandbox first), website verification (Paddle checks the site has terms, a refund policy,
-   pricing and contact details; Claude can draft the terms and refund pages), a $4.99 one-time product, and the
+   pricing and contact details; the drafts of the terms and refund pages are in `apps/app/public/`, for you to read), a $4.99 one-time product, and the
    connection to RevenueCat.
 4. **Config**: the values Claude adds to "Where config lives" as each part lands. Staging gets sandbox keys; production
    gets live keys only when you're ready to sell.
-5. **Privacy policy**: name RevenueCat and Paddle as processors (Claude drafts the change).
+5. **Privacy policy**: name RevenueCat and Paddle as processors (drafted in `apps/app/public/privacy.html`; you read it).
 6. **App Review note** for the build that adds the purchase: Plus is a one-time purchase that removes the export's
    mark; it can be bought without an account, and Restore purchases is in the upsell.
 7. **Turning it on in production** locks a switch that's been free since v1.1.0. Say so in the release notes.

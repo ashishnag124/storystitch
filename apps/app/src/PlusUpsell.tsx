@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { authClient } from "./authClient";
+import { ORIGIN } from "./platform/forms";
 import { BUY_SIGNED_OUT, CAN_RESTORE, buyPlus, plusPrice, restorePlus } from "./platform/purchases";
 import { navigate } from "./platform/route";
 import { colors, type as typography } from "./theme";
 import { Actions, QuietActions } from "./ui/Actions";
 import { Button } from "./ui/Button";
+import { ExternalLink } from "./ui/NavLink";
 
 interface Props {
   recheck: (userId: string | null) => Promise<boolean>;
@@ -86,6 +88,10 @@ export function PlusUpsell({ recheck, onClose }: Props) {
       <QuietActions>
         {CAN_RESTORE && <Button label="Restore purchases" quiet disabled={busy} onPress={() => void run(restorePlus, "No Plus purchase was found for this Apple Account.")} />}
         <Button label="Not now" quiet onPress={onClose} />
+      </QuietActions>
+      <QuietActions>
+        <ExternalLink url={`${ORIGIN}/terms`} label="Terms" />
+        <ExternalLink url={`${ORIGIN}/refunds`} label="Refunds" />
       </QuietActions>
     </View>
   );

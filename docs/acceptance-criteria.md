@@ -144,6 +144,7 @@ reuse IDs.
 | AC-PRIV-01 | Photos never leave the device: nothing is uploaded from page load through export. In builds with no API, no request goes to another origin. | auto |
 | AC-PRIV-02 | The UI says photos stay on the device. | auto |
 | AC-PRIV-03 | The privacy policy and support pages are public at /privacy and /support, with no account needed, and the Account screen links to both. | auto |
+| AC-PRIV-04 | The terms of use and refund policy are public at /terms and /refunds, with no account needed, and the Plus upsell links to both. | auto |
 
 ## Accessibility and mobile
 
