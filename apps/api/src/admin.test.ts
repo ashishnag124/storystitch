@@ -134,6 +134,22 @@ describe("AC-ADMIN-03 admin access", () => {
     }
   });
 
+  it("lets people sign up, sign in and out as before when ADMIN_ENABLED is off", async () => {
+    const off = testApi();
+    try {
+      const { email, password, c } = await verifiedUser(off);
+      expect(await (await c.call("/api/auth/get-session")).json()).toMatchObject({ user: { email } });
+      expect((await c.call("/api/auth/sign-out", { body: {} })).status).toBe(200);
+      const again = off.client();
+      const res = await again.call("/api/auth/sign-in/email", { body: { email, password }, headers: CAPTCHA });
+      expect(res.status).toBe(200);
+      expect(await res.json()).not.toHaveProperty("twoFactorRedirect");
+      expect(await (await again.call("/api/auth/get-session")).json()).toMatchObject({ user: { email } });
+    } finally {
+      await off.close();
+    }
+  });
+
   it("leaves sign-in for accounts without an authenticator as it was", async () => {
     const { email, password } = await verifiedUser(api);
     const c = api.client();

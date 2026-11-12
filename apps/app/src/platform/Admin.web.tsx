@@ -210,7 +210,7 @@ function Stats({ stats }: { stats: AdminStats }) {
   );
 }
 
-type Load = { state: "loading" } | { state: "ready"; stats: AdminStats } | { state: "refused" } | { state: "enroll" } | { state: "error" };
+type Load = { state: "loading" } | { state: "ready"; stats: AdminStats } | { state: "refused" } | { state: "enroll" } | { state: "off" } | { state: "error" };
 
 function Dashboard() {
   const [days, setDays] = useState<(typeof PERIODS)[number]>(30);
@@ -227,7 +227,8 @@ function Dashboard() {
           const body = (await res.json().catch(() => null)) as { error?: string } | null;
           return done({ state: body?.error === "TWO_FACTOR_REQUIRED" ? "enroll" : "refused" } as Load);
         }
-        done({ state: "error" });
+        // The API has no such route: its ADMIN_ENABLED is off.
+        done({ state: res.status === 404 ? "off" : "error" });
       })
       .catch(() => done({ state: "error" }));
     return () => {
@@ -247,6 +248,7 @@ function Dashboard() {
       </>
     );
   }
+  if (load.state === "off") return <Message error>The admin dashboard isn't switched on for this site.</Message>;
   if (load.state === "error") return <Message error>Couldn't load the numbers. Try again in a moment.</Message>;
   return (
     <>
