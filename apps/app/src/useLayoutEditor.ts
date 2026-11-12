@@ -42,12 +42,13 @@ import {
   snapTo,
   splitCell,
   tidyCells,
+  turnCell,
   type Corners,
   type PaletteShape,
   type Edited,
   type Grid,
 } from "@storystitch/layout-engine";
-import { STORY_CANVAS, cellBounds, editedLayoutProblems, hitTest, type Cell, type Layout, type Point, type SavedLayout } from "@storystitch/shared";
+import { STORY_CANVAS, cellAngle, cellBounds, editedLayoutProblems, hitTest, type Layout, type Point, type SavedLayout } from "@storystitch/shared";
 import { SaveError, autoCrop, blankProblem, explain, placePhoto, styleScale, takePhotoOut, withOrigin, type CropSource, type Draft, type Start, type Style } from "@storystitch/client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { saveLayout } from "./api";
@@ -399,7 +400,7 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
         cell: pinched,
         distance: Math.hypot(b.x - a.x, b.y - a.y),
         angle: Math.atan2(b.y - a.y, b.x - a.x),
-        rotate: cell.shape === "rect" ? cell.rotate : 0,
+        rotate: cellAngle(cell),
         base: draft,
       });
       return;
@@ -471,7 +472,7 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
         d.angleStuck = result.angle;
         setDraft({ ...d.base, layout: result.layout });
         const now = result.layout.cells[d.cell]!;
-        setLive(now.shape === "rect" && Math.abs(turn) > 2 ? `Turned ${Math.round(now.rotate)}°` : `${Math.round(scale * 100)}%`);
+        setLive(canRotate(now) && Math.abs(turn) > 2 ? `Turned ${Math.round(cellAngle(now))}°` : `${Math.round(scale * 100)}%`);
         return;
       }
       const scaled = scaleCell(d.base.layout, d.cell, scale);
@@ -528,12 +529,13 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
       const p = screenToLayout(x, y);
       const angle = (Math.atan2(p.y - d.center.y, p.x - d.center.x) * 180) / Math.PI;
       const snap = blank ? snapRotation(d.rotate + angle - d.angle) : { value: d.rotate + angle - d.angle, snapped: false };
-      const turned = rotateCell(d.base.layout, d.cell, snap.value);
+      // On a blank canvas every shape but a circle turns, all the way round; elsewhere only rectangles, within ±45°.
+      const turned = blank ? turnCell(d.base.layout, d.cell, snap.value) : rotateCell(d.base.layout, d.cell, snap.value);
       if (!turned) return;
       if (snap.snapped && !d.stuck) setTicks((t) => t + 1);
       d.stuck = snap.snapped;
       setDraft({ ...d.base, layout: turned });
-      if (blank) setLive(`Turned ${Math.round((turned.cells[d.cell] as Extract<Cell, { shape: "rect" }>).rotate)}°`);
+      if (blank) setLive(`Turned ${Math.round(cellAngle(turned.cells[d.cell]!))}°`);
     }
   }
 
@@ -640,16 +642,16 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
       moves: swipes((direction) => scaleBy(direction > 0 ? SCALE_STEP : 1 / SCALE_STEP)),
       value: `${Math.round((selBox.w / W) * 100)}% of the width`,
     });
-    if (selCell?.shape === "rect") {
+    if (selCell && (blank ? canRotate(selCell) : selCell.shape === "rect")) {
       const top = screen({ x: center.x, y: selBox.y });
       handles.push({
         key: "rotate",
         kind: "rotate",
         label: `Turn photo ${sel + 1}`,
         box: { ...square(top.x, 0), top: Math.max(0, top.y - HANDLE_PX * 1.25) },
-        target: { kind: "rotate", cell: sel, center, rotate: selCell.rotate },
+        target: { kind: "rotate", cell: sel, center, rotate: cellAngle(selCell) },
         moves: swipes((direction) => turnBy(direction * TURN_STEP)),
-        value: `${Math.round(selCell.rotate)} degrees`,
+        value: `${Math.round(cellAngle(selCell))} degrees`,
       });
     }
   }
@@ -673,8 +675,8 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
     commit({ ...draft, layout: next });
   };
   const turnBy = (deg: number) => {
-    if (sel === null || selCell?.shape !== "rect") return;
-    const next = rotateCell(layout, sel, selCell.rotate + deg);
+    if (sel === null || !selCell || (blank ? !canRotate(selCell) : selCell.shape !== "rect")) return;
+    const next = blank ? turnCell(layout, sel, cellAngle(selCell) + deg) : selCell.shape === "rect" ? rotateCell(layout, sel, selCell.rotate + deg) : null;
     if (!next) return refuse("There's no room to turn it further.");
     commit({ ...draft, layout: next });
   };

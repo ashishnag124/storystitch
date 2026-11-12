@@ -115,7 +115,7 @@ replaces parts of it. Build order and status: see "Backend milestones" in `PROJE
   asked to create an account or sign in, and comes straight back to the editor.
 - Full screen on the phone, with large touch targets, snapping, Undo, and, when editing an existing layout, buttons
   (Bigger, Smaller, Turn) for small adjustments without precise dragging. The preview shows the user's own photos.
-  The blank canvas has no such buttons: a chosen shape is resized by pinching and turned by twisting (two fingers,
+  The blank canvas has no such buttons: a chosen shape is resized by pinching and turned by twisting, all the way round (every shape but a circle; two fingers,
   anywhere on the canvas, with a gentle snap), with a corner handle and a turn handle as the way to do the same
   with a mouse or VoiceOver. A shape dragged off the edge is removed, and a photo held on its shape can be dragged to
   another shape or back to the tray.
