@@ -760,7 +760,7 @@ const SPOTS: Point[] = [
  */
 export function addCell(base: Layout, shape: AddShape): Edited | null {
   if (base.cells.length >= MAX_CELLS) return null;
-  const z = Math.max(...base.cells.map((c) => c.z)) + 1;
+  const z = Math.max(-1, ...base.cells.map((c) => c.z)) + 1;
   const r = 0.18;
   const [w, h] = [0.36, 0.2];
   const strict = { ...base, allowOverlap: false };
@@ -790,15 +790,15 @@ export function drawCell(base: Layout, from: Point, to: Point, snap = DRAW_SNAP)
   const ys = [0, 1, ...DRAW_FRACTIONS, ...edges.flatMap((b) => [b.y / H, (b.y + b.h) / H])];
   const [x0, x1] = [from.x, to.x].map((v) => snapTo(clamp(v), xs, snap)).sort((a, b) => a - b) as [number, number];
   const [y0, y1] = [from.y, to.y].map((v) => snapTo(clamp(v), ys, (snap * W) / H)).sort((a, b) => a - b) as [number, number];
-  const z = Math.max(...base.cells.map((c) => c.z)) + 1;
+  const z = Math.max(-1, ...base.cells.map((c) => c.z)) + 1;
   const cell: Cell = { shape: "rect", x: round4(x0), y: round4(y0), w: round4(x1 - x0), h: round4(y1 - y0), rotate: 0, z };
   const layout = { ...base, cells: [...base.cells, cell] };
   return cellsFit(layout, [base.cells.length]) ? { layout, origin: [...same(base), null] } : null;
 }
 
-/** Removes cell `i`. Null for the last cell. */
-export function removeCell(base: Layout, i: number): Edited | null {
-  if (base.cells.length < 2) return null;
+/** Removes cell `i`. Null for the last cell, unless `last` says the layout may be left with none (a blank canvas). */
+export function removeCell(base: Layout, i: number, last = false): Edited | null {
+  if (base.cells.length < 2 && !last) return null;
   const keep = base.cells.map((_, k) => k).filter((k) => k !== i);
   return { layout: { ...base, cells: keep.map((k) => base.cells[k]!) }, origin: keep };
 }

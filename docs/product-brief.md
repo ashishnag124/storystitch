@@ -115,8 +115,9 @@ replaces parts of it. Build order and status: see "Backend milestones" in `PROJE
   asked to create an account or sign in, and comes straight back to the editor.
 - Full screen on the phone, with large touch targets, snapping, Undo, and buttons (Bigger, Smaller, Turn) for small
   adjustments without precise dragging. The preview shows the user's own photos.
-- A blank frame can start as a grid or as shapes: with shapes, "Add shape" puts a rectangle, circle, heart or star
-  (up to 8 photos) on the frame, to move, resize and remove, or dragging on empty space draws a rectangle.
+- "Start from blank" opens an empty canvas: the user adds shapes (a rectangle, circle, heart or star, or by dragging
+  on empty space to draw one), then drags their photos from a tray into the shapes, or taps a photo and then a
+  shape. Done goes ahead once every photo is in a shape and no shape is empty.
 - How a layout is edited depends on what it's made of: grids by dragging the lines between cells and splitting,
   reshaping or removing cells; slanted layouts by dragging shared corners and lines; circles, shapes, prints and
   Polaroids by moving, resizing and turning cells.
