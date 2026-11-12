@@ -148,7 +148,7 @@ export interface Grid {
 
 const NEW_ID = 1000;
 
-const isGridCell = (c: Cell): c is GridShape => (c.shape === "rect" && !c.rotate) || c.shape === "arch" || c.shape === "pill" || c.shape === "wave";
+const isGridCell = (c: Cell): c is GridShape => (c.shape === "rect" && !c.rotate && !c.turn) || ((c.shape === "arch" || c.shape === "pill") && !c.turn) || c.shape === "wave";
 
 /** The layout as a grid of rows and columns, or null when it isn't one (overlap, rotation, other shapes). */
 export function gridOf(layout: Layout): Grid | null {
@@ -700,8 +700,28 @@ export function scaleCell(base: Layout, i: number, k: number): Layout | null {
   return cellsFit(layout, [i]) ? layout : null;
 }
 
-/** Whether a cell can be turned: rectangles (prints, Polaroids) can. */
-export const canRotate = (cell: Cell) => cell.shape === "rect";
+/** Whether a cell can be turned: every shape but a circle (whose turn would show nothing), polygons and waves. */
+export const canRotate = (cell: Cell) => cell.shape === "rect" || cell.shape === "arch" || cell.shape === "pill" || cell.shape === "heart" || cell.shape === "star";
+
+/** An angle in degrees as -180 to 180, tenths of a degree. */
+const wrapTurn = (degrees: number) => {
+  const v = Math.round((((((degrees + 180) % 360) + 360) % 360) - 180) * 10) / 10;
+  return v === -180 ? 180 : v;
+};
+
+/**
+ * Turns cell `i` so it points `degrees` clockwise in all (a full turn either way, wrapping), by writing `turn`; a rect's
+ * `rotate` stays as it was. Null for a cell that can't turn, or when it wouldn't fit.
+ */
+export function turnCell(base: Layout, i: number, degrees: number): Layout | null {
+  const cell = base.cells[i]!;
+  if (!canRotate(cell)) return null;
+  const turn = wrapTurn(degrees - (cell.shape === "rect" ? cell.rotate : 0));
+  const next = { ...cell, turn } as Cell & { turn?: number };
+  if (!turn) delete next.turn;
+  const layout = replaced(base, i, next);
+  return cellsFit(layout, [i]) ? layout : null;
+}
 
 /** Sets a rectangle's rotation (degrees, kept within the schema's ±45); null when it wouldn't fit. */
 export function rotateCell(base: Layout, i: number, degrees: number): Layout | null {
@@ -821,11 +841,16 @@ export function reshapeFreeCell(base: Layout, i: number, shape: PaletteShape): L
   const [cx, cy] = isRound(cell) ? [cell.cx * W, cell.cy * H] : [cell.x * W + w / 2, cell.y * H + h / 2];
   const side = Math.min(w, h);
   let next: Cell;
-  if (shape === "circle" || shape === "heart" || shape === "star") next = { shape, cx: round4(cx / W), cy: round4(cy / H), r: round4(side / 2 / W), z: cell.z };
+  const turn = "turn" in cell ? cell.turn : undefined;
+  if (shape === "circle") next = { shape, cx: round4(cx / W), cy: round4(cy / H), r: round4(side / 2 / W), z: cell.z };
+  else if (shape === "heart" || shape === "star") next = { shape, cx: round4(cx / W), cy: round4(cy / H), r: round4(side / 2 / W), ...(turn ? { turn } : {}), z: cell.z };
   else {
     const [nw, nh] = isRound(cell) || shape === "square" ? [side, side] : [w, h];
     const box = { x: round4((cx - nw / 2) / W), y: round4((cy - nh / 2) / H), w: round4(nw / W), h: round4(nh / H) };
-    next = shape === "rect" || shape === "square" ? { shape: "rect", ...box, rotate: cell.shape === "rect" && shape === "rect" ? cell.rotate : 0, z: cell.z } : { shape, ...box, z: cell.z };
+    next =
+      shape === "rect" || shape === "square"
+        ? { shape: "rect", ...box, rotate: cell.shape === "rect" && shape === "rect" ? cell.rotate : 0, ...(turn ? { turn } : {}), z: cell.z }
+        : { shape, ...box, ...(turn ? { turn } : {}), z: cell.z };
   }
   const layout = replaced(base, i, next);
   return cellsFit(layout, [i]) ? layout : null;
@@ -1119,7 +1144,7 @@ export function snapSize(base: Layout, i: number): { layout: Layout; snapped: bo
 }
 
 /**
- * What two fingers do to cell `i`: size it by `scale` and, where it can turn, turn it by `turn` degrees from `rotate0`,
+ * What two fingers do to cell `i`: size it by `scale` and, where it can turn, turn it by `turn` degrees from `rotate0` (its angle now),
  * both with gentle snapping. `size` and `angle` say which of them stuck. Null when it wouldn't fit.
  */
 export function pinchCell(base: Layout, i: number, scale: number, turn: number, rotate0: number): { layout: Layout; size: boolean; angle: boolean } | null {
@@ -1128,7 +1153,7 @@ export function pinchCell(base: Layout, i: number, scale: number, turn: number, 
   const { layout: sized, snapped: size } = snapSize(scaled, i);
   if (!canRotate(sized.cells[i]!)) return { layout: sized, size, angle: false };
   const snap = snapRotation(rotate0 + turn);
-  const turned = rotateCell(sized, i, snap.value) ?? rotateCell(scaled, i, rotate0 + turn);
+  const turned = turnCell(sized, i, snap.value) ?? turnCell(scaled, i, rotate0 + turn);
   return { layout: turned ?? sized, size, angle: snap.snapped && turned !== null };
 }
 

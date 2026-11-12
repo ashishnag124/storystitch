@@ -245,6 +245,8 @@ Behind `EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR` (needs accounts): on in staging and p
 | AC-CUSTOM-18 | On a blank canvas a selected shape is resized by pinching and turned by twisting with two fingers, anywhere on the canvas; a shape added from the palette stays unselected so more can be added; there are no Bigger, Smaller or turn buttons. | auto |
 | AC-CUSTOM-19 | On a blank canvas, dragging a shape most of the way off any canvas edge and letting go removes it (it fades as it goes, its photo returns to the tray, and Undo brings it back); a shape let go less far off settles back inside. | auto |
 | AC-CUSTOM-20 | On a blank canvas, pressing and holding on a shape with a photo lifts the photo out: dropped on another shape it moves there (swapping with what that shape held), dropped on the tray it is taken out; a plain drag still moves the shape. | auto |
+| AC-CUSTOM-21 | On a blank canvas every shape but a circle turns by twisting or with the turn handle, all the way round, with a gentle snap to 15° steps and every 90°; the photo turns with its shape and still fills it; Edit this layout keeps its buttons and its ±45° prints. | auto |
+| AC-CUSTOM-22 | A saved layout with turned shapes is still read by the previous layout schema (the one the released app and API use), which drops the turn and keeps the layout; the new schema keeps it, within ±180°. | auto |
 | AC-CUSTOM-08 | The layout editor feels right one-handed on a real iPhone and Android phone: lines, corners and photos are easy to grab and drag without precise aim. | manual |
 
 ## Saved collages

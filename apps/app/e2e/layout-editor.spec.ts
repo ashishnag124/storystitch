@@ -466,8 +466,9 @@ test("AC-CUSTOM-18 two fingers pinch and twist the chosen shape wherever they ar
   await page.getByRole("button", { name: "Save layout" }).click();
   await expect(editor(page)).toHaveCount(0);
   const [saved] = await savedLayouts(page);
-  const cell = saved!.layout.cells[0] as unknown as { w: number; rotate: number };
-  expect(cell.rotate).toBe(15); // turned, and stuck to a 15° step
+  const cell = saved!.layout.cells[0] as unknown as { w: number; rotate: number; turn: number };
+  expect(cell.turn).toBe(15); // turned, and stuck to a 15° step
+  expect(cell.rotate).toBe(0);
   expect(cell.w).toBeGreaterThan(0.36 * 1.5); // 1.8 times as wide
 });
 
@@ -520,6 +521,63 @@ test("AC-CUSTOM-20 holding a shape lifts its photo out to another shape or back 
   await dragPhoto(page, 1, SPOTS.topLeft);
   await sweep(page, await canvasAt(page, ...SPOTS.topLeft), await canvasAt(page, 0.3, 0.4));
   await expect(trayPhoto(e, 1, "placed")).toBeVisible();
+});
+
+/** Drags the turn handle of the chosen shape (whose center is at a fraction of the canvas) through `degrees` clockwise, in an arc. */
+async function turnHandle(page: Page, center: readonly [number, number], degrees: number) {
+  const handle = editor(page).getByRole("button", { name: /^Turn photo/ });
+  const box = (await handle.boundingBox())!;
+  const [hx, hy] = [box.x + box.width / 2, box.y + box.height / 2];
+  const [cx, cy] = await canvasAt(page, center[0], center[1]);
+  const radius = Math.hypot(hx - cx, hy - cy);
+  const start = Math.atan2(hy - cy, hx - cx);
+  await page.mouse.move(hx, hy);
+  await page.mouse.down();
+  const steps = Math.max(6, Math.ceil(Math.abs(degrees) / 10));
+  for (let i = 1; i <= steps; i++) {
+    const a = start + (((degrees * i) / steps) * Math.PI) / 180;
+    await page.mouse.move(cx + radius * Math.cos(a), cy + radius * Math.sin(a));
+  }
+}
+
+test("AC-CUSTOM-21 every shape but a circle says it turns, and a heart and a rectangle turn a quarter with the handle", async ({ page }) => {
+  await signedIn(page);
+  const e = await openBlank(page, 2);
+  const hint = "Drag to move. Pinch to resize, twist to turn.";
+  // Four shapes go in the middle, top left, top right and bottom left; a circle only resizes.
+  const spots = [SPOTS.middle, SPOTS.topLeft, SPOTS.topRight, [0.26, 0.74]] as const;
+  for (const shape of ["Star", "Arch", "Pill", "Circle"]) await e.getByRole("button", { name: `Add ${shape.toLowerCase()}`, exact: true }).click();
+  for (const [i, spot] of spots.entries()) {
+    await page.mouse.click(...(await canvasAt(page, spot[0], spot[1])));
+    await expect(e.getByRole("status")).toHaveText(i === 3 ? "Drag to move. Pinch to resize." : hint);
+    await expect(e.getByRole("button", { name: /^Turn photo/ })).toHaveCount(i === 3 ? 0 : 1);
+  }
+  await page.mouse.click(...(await canvasAt(page, 0.97, 0.97)));
+  await e.getByRole("button", { name: "Undo" }).click(); // the four shapes are more than two photos need: take back the circle and two more
+  await e.getByRole("button", { name: "Undo" }).click();
+  await e.getByRole("button", { name: "Undo" }).click();
+  await e.getByRole("button", { name: "Undo" }).click();
+  await e.getByRole("button", { name: "Add heart", exact: true }).click(); // the middle
+  await e.getByRole("button", { name: "Add rectangle", exact: true }).click(); // the top left
+
+  await page.mouse.click(...(await canvasAt(page, ...SPOTS.middle)));
+  await turnHandle(page, SPOTS.middle, 90);
+  await expect(e.getByRole("status")).toHaveText("Turned 90°");
+  await page.mouse.up();
+  await page.mouse.click(...(await canvasAt(page, ...SPOTS.topLeft)));
+  await turnHandle(page, SPOTS.topLeft, 90);
+  await expect(e.getByRole("status")).toHaveText("Turned 90°");
+  await page.mouse.up();
+  for (const [n, spot] of [[1, SPOTS.middle], [2, SPOTS.topLeft]] as const) {
+    await trayPhoto(e, n, "not placed").click();
+    await page.mouse.click(...(await canvasAt(page, spot[0], spot[1])));
+  }
+  await saveAs(page, "Turned");
+  const [saved] = await savedLayouts(page);
+  const [heart, rect] = saved!.layout.cells as unknown as Record<string, number | string>[];
+  expect(heart).toMatchObject({ shape: "heart", turn: 90 });
+  expect(rect).toMatchObject({ shape: "rect", rotate: 0, turn: 90 }); // a quarter turn: the turn field holds the whole angle
+  expect(rect!.w).toBeCloseTo(0.36, 2); // and its size is as it was
 });
 
 test("AC-CUSTOM-06 draws nothing over the photos", async ({ page }) => {

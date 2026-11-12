@@ -39,6 +39,26 @@ function rotateAround(p: Point, c: Point, deg: number): Point {
   return { x: c.x + dx * Math.cos(a) - dy * Math.sin(a), y: c.y + dx * Math.sin(a) + dy * Math.cos(a) };
 }
 
+/** How far a cell is turned, in degrees clockwise: a rect's `rotate` plus every turnable shape's `turn`. */
+export function cellAngle(cell: Cell): number {
+  switch (cell.shape) {
+    case "rect":
+      return cell.rotate + (cell.turn ?? 0);
+    case "arch":
+    case "pill":
+    case "heart":
+    case "star":
+      return cell.turn ?? 0;
+    default:
+      return 0;
+  }
+}
+
+/** `points` turned `deg` degrees clockwise around `c`. */
+export function rotatePoints(points: Point[], c: Point, deg: number): Point[] {
+  return deg ? points.map((p) => rotateAround(p, c, deg)) : points;
+}
+
 /** Corners of a frame (a rotated rectangle). */
 export function frameCorners(f: Frame): Point[] {
   const c = { x: f.cx, y: f.cy };
@@ -93,12 +113,21 @@ const UNIT_HEART: Point[] = (() => {
  * points along the curves of arches, capsules, hearts, stars and waves.
  */
 export function cellPolygon(cell: Exclude<Cell, { shape: "circle" }>, size: Size = STORY_CANVAS): Point[] {
+  const upright = uprightPolygon(cell, size);
+  const angle = cellAngle(cell);
+  if (!angle) return upright;
+  const b = pointsBox(upright);
+  return rotatePoints(upright, { x: b.x + b.w / 2, y: b.y + b.h / 2 }, angle);
+}
+
+/** A cell's outline before any turn. */
+function uprightPolygon(cell: Exclude<Cell, { shape: "circle" }>, size: Size): Point[] {
   const { width: W, height: H } = size;
   switch (cell.shape) {
     case "polygon":
       return cell.points.map(([x, y]) => ({ x: x * W, y: y * H }));
     case "rect":
-      return frameCorners(cellFrame(cell, size));
+      return frameCorners({ cx: (cell.x + cell.w / 2) * W, cy: (cell.y + cell.h / 2) * H, width: cell.w * W, height: cell.h * H, rotate: 0 });
     case "arch": {
       const [x0, y0, x1, y1] = [cell.x * W, cell.y * H, (cell.x + cell.w) * W, (cell.y + cell.h) * H];
       const r = (x1 - x0) / 2;
@@ -166,11 +195,12 @@ export function cellFrame(cell: Cell, size: Size = STORY_CANVAS): Frame {
       cy: (cell.y + cell.h / 2) * size.height,
       width: cell.w * size.width,
       height: cell.h * size.height,
-      rotate: cell.rotate,
+      rotate: cellAngle(cell),
     };
   }
-  const b = cellBounds(cell, size);
-  return { cx: b.x + b.w / 2, cy: b.y + b.h / 2, width: b.w, height: b.h, rotate: 0 };
+  // Turned or not, the photo fills the shape's own bounding box, which turns with it.
+  const b = cell.shape === "circle" ? cellBounds(cell, size) : pointsBox(uprightPolygon(cell, size));
+  return { cx: b.x + b.w / 2, cy: b.y + b.h / 2, width: b.w, height: b.h, rotate: cellAngle(cell) };
 }
 
 function polygonContains(points: Point[], p: Point): boolean {

@@ -179,3 +179,34 @@ describe("style", () => {
     expect(restyled.order).toEqual(scene.order);
   });
 });
+
+describe("AC-CUSTOM-21 a turned shape's photo turns with it", () => {
+  const blank = (cells: Layout["cells"]): Layout => ({ id: "t", name: "T", family: "shapes", allowOverlap: true, bleed: false, blurBackground: false, cells });
+  const shapes = [
+    { shape: "heart", cx: 0.5, cy: 0.5, r: 0.2, turn: 40, z: 0 },
+    { shape: "star", cx: 0.5, cy: 0.5, r: 0.2, turn: -130, z: 0 },
+    { shape: "arch", x: 0.3, y: 0.3, w: 0.28, h: 0.3, turn: 90, z: 0 },
+    { shape: "pill", x: 0.3, y: 0.45, w: 0.4, h: 0.12, turn: 180, z: 0 },
+  ] as const;
+
+  it.each(shapes)("keeps the $shape's photo frame upright in the shape, turned by the same angle, with the outline inside it", (cell) => {
+    const [turnedShape] = cellShapes(blank([cell]), style, STORY_CANVAS);
+    const [upright] = cellShapes(blank([{ ...cell, turn: 0 }]), style, STORY_CANVAS);
+    expect(turnedShape!.frame.rotate).toBe(cell.turn);
+    expect(upright!.frame.rotate).toBe(0);
+    // The same frame, just turned: the photo is cropped for the shape's own box, not the box of its turned outline.
+    expect(turnedShape!.frame.width).toBeCloseTo(upright!.frame.width, 6);
+    expect(turnedShape!.frame.height).toBeCloseTo(upright!.frame.height, 6);
+    expect(turnedShape!.frame.cx).toBeCloseTo(upright!.frame.cx, 6);
+    // Every point of the outline lies inside the (turned) frame: the photo fills the shape with no gaps.
+    const { frame, outline } = turnedShape!;
+    if (outline.kind !== "polygon") throw new Error("expected a polygon");
+    const a = (-frame.rotate * Math.PI) / 180;
+    for (const p of outline.points) {
+      const [dx, dy] = [p.x - frame.cx, p.y - frame.cy];
+      const [x, y] = [dx * Math.cos(a) - dy * Math.sin(a), dx * Math.sin(a) + dy * Math.cos(a)];
+      expect(Math.abs(x)).toBeLessThanOrEqual(frame.width / 2 + 0.5);
+      expect(Math.abs(y)).toBeLessThanOrEqual(frame.height / 2 + 0.5);
+    }
+  });
+});
