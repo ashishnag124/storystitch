@@ -219,9 +219,16 @@ test.describe("editing", () => {
 
   test("AC-EDIT-02 press and hold a photo, then drag it onto another to swap", async ({ page }) => {
     const [top, bottom] = await openTwoStacked(page);
+    // The photo lifts after a hold timer, and the app buzzes (10 ms) when it does. Moving before that turns the
+    // press into a pan, so wait for the buzz rather than guess how long a slow machine needs.
+    await page.evaluate(() => {
+      const w = window as unknown as { lifted: boolean };
+      w.lifted = false;
+      navigator.vibrate = (ms) => (ms === 10 && (w.lifted = true), true);
+    });
     await page.mouse.move(top!.x, top!.y);
     await page.mouse.down();
-    await page.waitForTimeout(600);
+    await page.waitForFunction(() => (window as unknown as { lifted: boolean }).lifted);
     await page.mouse.move(bottom!.x, bottom!.y, { steps: 8 });
     await page.mouse.up();
     await expect(page.getByRole("status")).toHaveText("Swapped photos 1 and 2.");
