@@ -1,6 +1,8 @@
-import { LayoutSchema, STORY_CANVAS, cellContains, cellPolygon, layoutProblems, layouts, type Cell, type Layout } from "@storystitch/shared";
+import { LayoutSchema, STORY_CANVAS, cellBounds, cellContains, editedLayoutProblems, cellPolygon, layoutProblems, layouts, type Cell, type Layout } from "@storystitch/shared";
 import { describe, expect, it } from "vitest";
 import {
+  ADD_SHAPES,
+  addCell,
   FIT_MAX_SHIFT,
   MIN_CELL,
   bringToFront,
@@ -310,5 +312,55 @@ describe("snapTo", () => {
   it("snaps to the nearest target within the threshold", () => {
     expect(snapTo(0.49, [1 / 3, 0.5], 0.02)).toBe(0.5);
     expect(snapTo(0.45, [1 / 3, 0.5], 0.02)).toBe(0.45);
+  });
+});
+
+describe("AC-CUSTOM-13 adding a shape", () => {
+  const fine = (layout: Layout) => expect(editedLayoutProblems(layout, 20)).toEqual([]);
+  const one = (): Layout => ({
+    id: "t",
+    name: "T",
+    family: "shapes",
+    allowOverlap: true,
+    bleed: false,
+    blurBackground: false,
+    cells: [{ shape: "rect", x: 0.25, y: 0.36, w: 0.5, h: 0.28, rotate: 0, z: 0 }],
+  });
+  const corner = (): Layout => ({ ...one(), cells: [{ shape: "rect", x: 0.1, y: 0.02, w: 0.2, h: 0.1, rotate: 0, z: 0 }] });
+
+  it("adds each shape in the middle when it's clear, as a new cell on top", () => {
+    for (const shape of ADD_SHAPES) {
+      const added = addCell(corner(), shape)!;
+      expect(added.origin).toEqual([0, null]);
+      expect(added.layout.cells).toHaveLength(2);
+      expect(added.layout.cells[1]!.shape).toBe(shape);
+      expect(added.layout.cells[1]!.z).toBe(1);
+      expect(LayoutSchema.safeParse(added.layout).success).toBe(true);
+      fine(added.layout);
+      const b = cellBounds(added.layout.cells[1]!);
+      expect(Math.abs(b.x + b.w / 2 - W / 2)).toBeLessThan(2);
+      expect(Math.abs(b.y + b.h / 2 - H / 2)).toBeLessThan(2);
+    }
+  });
+
+  it("finds another spot, without overlapping, when the middle is taken", () => {
+    const added = addCell(one(), "circle")!;
+    const b = cellBounds(added.layout.cells[1]!);
+    expect(Math.abs(b.y + b.h / 2 - H / 2)).toBeGreaterThan(100);
+    expect(editModeOf(added.layout)).toBe("free");
+    fine(added.layout);
+    let layout = added.layout;
+    for (const shape of ["heart", "star", "rect"] as const) layout = addCell(layout, shape)!.layout;
+    expect(layout.cells).toHaveLength(5);
+    fine(layout);
+  });
+
+  it("returns null at 8 cells and when nothing fits", () => {
+    const cells = Array.from({ length: 7 }, (_, i) => ({ shape: "circle" as const, cx: 0.5, cy: 0.1 + i * 0.12, r: 0.1, z: i + 1 }));
+    const eight = { ...corner(), cells: [corner().cells[0]!, ...cells] };
+    expect(eight.cells).toHaveLength(8);
+    expect(addCell(eight, "rect")).toBeNull();
+    const full = { ...one(), cells: [{ shape: "rect" as const, x: 0, y: 0, w: 1, h: 1, rotate: 0, z: 0 }] };
+    expect(addCell(full, "star")).toBeNull();
   });
 });

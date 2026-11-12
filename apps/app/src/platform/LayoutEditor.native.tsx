@@ -8,7 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AccessibilityInfo, KeyboardAvoidingView, PanResponder, StyleSheet, Text, TextInput, View, type AccessibilityActionEvent, type GestureResponderEvent } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, fontFamily, type as typography } from "../theme";
-import { SaveActions, UseActions } from "../LayoutSheetActions";
+import { BlankChoice, SaveActions, UseActions } from "../LayoutSheetActions";
 import { ToolGrid } from "../ui/Actions";
 import { Button } from "../ui/Button";
 import { useLayoutEditor, type CellMover, type Handle, type Move } from "../useLayoutEditor";
@@ -190,6 +190,7 @@ export default function LayoutEditor({ photos, style, start, signedIn, onCancel,
         <Text role="status" style={styles.status}>
           {editor.status}
         </Text>
+        {editor.blankKind && <BlankChoice editor={editor} />}
         {tools.length > 0 && <ToolGrid tools={tools} />}
       </View>
 

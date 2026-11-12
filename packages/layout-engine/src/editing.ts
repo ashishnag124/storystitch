@@ -741,6 +741,37 @@ export function duplicateCell(base: Layout, i: number): Edited | null {
   return null;
 }
 
+/** Shapes the editor can add to a free layout: all of them move and resize, and rectangles turn too. */
+export const ADD_SHAPES = ["rect", "circle", "heart", "star"] as const;
+export type AddShape = (typeof ADD_SHAPES)[number];
+
+/** Most cells a layout can have (the schema's limit). */
+const MAX_CELLS = 8;
+/** Where a new cell's center goes, in order: the middle, then two columns, the rows Instagram covers least first. */
+const SPOTS: Point[] = [
+  { x: 0.5, y: 0.5 },
+  ...[0.26, 0.74, 0.5, 0.12, 0.88].flatMap((y) => [0.26, 0.74].map((x) => ({ x, y }))),
+];
+
+/**
+ * Adds one cell of `shape` at a default size, in the middle if that spot is clear of the other cells, otherwise at
+ * the first clear spot. It looks for a clear spot even when the layout lets cells overlap, so new cells don't hide
+ * each other. Gets the next photo (see withOrigin). Null at 8 cells or when there's no room.
+ */
+export function addCell(base: Layout, shape: AddShape): Edited | null {
+  if (base.cells.length >= MAX_CELLS) return null;
+  const z = Math.max(...base.cells.map((c) => c.z)) + 1;
+  const r = 0.18;
+  const [w, h] = [0.36, 0.2];
+  const strict = { ...base, allowOverlap: false };
+  for (const { x, y } of SPOTS) {
+    const cell: Cell = shape === "rect" ? { shape, x: round4(x - w / 2), y: round4(y - h / 2), w, h, rotate: 0, z } : { shape, cx: x, cy: y, r, z };
+    const layout = { ...base, cells: [...base.cells, cell] };
+    if (cellsFit({ ...strict, cells: layout.cells }, [base.cells.length])) return { layout, origin: [...same(base), null] };
+  }
+  return null;
+}
+
 /** Removes cell `i`. Null for the last cell. */
 export function removeCell(base: Layout, i: number): Edited | null {
   if (base.cells.length < 2) return null;

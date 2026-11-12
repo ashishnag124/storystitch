@@ -26,6 +26,23 @@ export function blankDraft(): Draft {
   return { layout, order: [0] };
 }
 
+/**
+ * A blank 9:16 frame for shapes: one centered rectangle in a free layout (overlap allowed, like the built-in
+ * "shapes" layouts that mix hearts, stars and rectangles), so cells move, resize and can be added.
+ */
+export function blankShapesDraft(): Draft {
+  const layout: Layout = {
+    id: "blank",
+    name: "Blank",
+    family: "shapes",
+    allowOverlap: true,
+    bleed: false,
+    blurBackground: false,
+    cells: [{ shape: "rect", x: 0.25, y: 0.36, w: 0.5, h: 0.28, rotate: 0, z: 0 }],
+  };
+  return { layout, order: [0] };
+}
+
 /** Problems from layoutProblems, said plainly, with the cells they're about. */
 export function explain(problems: string[]): { text: string; cells: number[] }[] {
   return problems.map((p) => {

@@ -169,6 +169,36 @@ test("AC-CUSTOM-12 starts from a blank frame, splits it to one cell per photo, a
   expect(saved!.layout.cells).toHaveLength(3);
 });
 
+test("AC-CUSTOM-13 starts a blank frame as shapes, adds more, and uses it", async ({ page }) => {
+  await pickPhotos(page, 3);
+  await page.getByRole("button", { name: "Start from blank" }).click();
+  const e = editor(page);
+  await expect(e.getByRole("radio", { name: "Grid" })).toHaveAttribute("aria-checked", "true");
+  await e.getByRole("radio", { name: "Shapes" }).click();
+  await expect(e.getByRole("radio", { name: "Shapes" })).toHaveAttribute("aria-checked", "true");
+  await expect(e.getByRole("heading", { name: "1 of 3 photos" })).toBeVisible();
+  await e.getByRole("button", { name: "Done" }).click();
+  await expect(e.getByRole("status")).toHaveText("Add 2 more cells to fit 3 photos.");
+
+  await e.getByRole("button", { name: "Add shape" }).click();
+  await e.getByRole("button", { name: "Circle" }).click();
+  await expect(e.getByRole("heading", { name: "2 of 3 photos" })).toBeVisible();
+  await expect(e.getByRole("radio")).toHaveCount(0); // the choice is for the start only
+  await e.getByRole("button", { name: "Add shape" }).click();
+  await e.getByRole("button", { name: "Heart" }).click();
+  await expect(e.getByRole("heading", { name: "3 of 3 photos" })).toBeVisible();
+  await e.getByRole("button", { name: "Undo" }).click(); // takes the heart away
+  await expect(e.getByRole("heading", { name: "2 of 3 photos" })).toBeVisible();
+  await e.getByRole("button", { name: "Add shape" }).click();
+  await e.getByRole("button", { name: "Star" }).click();
+  await expect(e.getByRole("heading", { name: "3 of 3 photos" })).toBeVisible();
+
+  await e.getByRole("button", { name: "Done" }).click();
+  await page.getByRole("button", { name: "Use this layout" }).click();
+  await expect(e).toHaveCount(0);
+  await expect(page.getByRole("application", { name: /^Story preview: .*, 3 photos$/ })).toBeVisible();
+});
+
 test("AC-CUSTOM-06 draws nothing over the photos", async ({ page }) => {
   await signedIn(page);
   await pickPhotos(page, 3);

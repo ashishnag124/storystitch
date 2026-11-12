@@ -1,8 +1,11 @@
 // What the layout editor's sheets offer once a layout is done. Shared so web and iOS can't drift apart.
+import { StyleSheet, Text, View } from "react-native";
 import { navigate } from "./platform/route";
 import { Actions, QuietActions } from "./ui/Actions";
 import { Button } from "./ui/Button";
-import type { useLayoutEditor } from "./useLayoutEditor";
+import { Choice } from "./ui/Choice";
+import { colors, fontFamily, MIN_TARGET } from "./theme";
+import type { BlankKind, useLayoutEditor } from "./useLayoutEditor";
 
 interface Props {
   editor: ReturnType<typeof useLayoutEditor>;
@@ -35,3 +38,32 @@ export function UseActions({ editor }: Props) {
     </Actions>
   );
 }
+
+const KINDS: { kind: BlankKind; label: string }[] = [
+  { kind: "grid", label: "Grid" },
+  { kind: "shapes", label: "Shapes" },
+];
+
+/** How a blank frame starts, until the first edit: one cell to split into a grid, or shapes to add and move. */
+export function BlankChoice({ editor }: Props) {
+  return (
+    <View role="radiogroup" aria-label="Start with" style={styles.row}>
+      {KINDS.map(({ kind, label }) => {
+        const checked = editor.blankKind === kind;
+        return (
+          <Choice key={kind} role="radio" aria-checked={checked} aria-label={label} onPress={() => editor.chooseBlank(kind)} style={[styles.choice, checked && styles.checked]}>
+            <Text style={[styles.label, checked && styles.checkedLabel]}>{label}</Text>
+          </Choice>
+        );
+      })}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  row: { flexDirection: "row", gap: 8 },
+  choice: { flex: 1, minHeight: MIN_TARGET, alignItems: "center", justifyContent: "center", borderRadius: 999, borderWidth: 1, borderColor: colors.border },
+  checked: { borderColor: colors.accent, backgroundColor: colors.accent },
+  label: { fontFamily, fontSize: 15, fontWeight: "700", color: colors.text },
+  checkedLabel: { color: colors.accentText },
+});
