@@ -62,6 +62,16 @@ test("AC-ADMIN-03 an ordinary account is refused the dashboard", async ({ page }
   await expect(page.getByRole("heading", { name: "Daily totals" })).toHaveCount(0);
 });
 
+test("AC-ADMIN-03 an API without the admin routes gets a plain message, not a spinner", async ({ page }) => {
+  await page.setViewportSize(desktop);
+  await newAccount(page);
+  // What an API with ADMIN_ENABLED off answers.
+  await page.route("**/admin/stats*", (route) => route.fulfill({ status: 404, body: "404 Not Found" }));
+  await page.goto("/admin");
+  await expect(page.getByText("The admin dashboard isn't switched on for this site.")).toBeVisible();
+  await expect(page.getByText("Loading…")).toHaveCount(0);
+});
+
 test("AC-ADMIN-03 an admin sets up an authenticator, and signing in again needs its code", async ({ page }) => {
   await page.setViewportSize(desktop);
   const { email, secret } = await adminDashboard(page);

@@ -42,13 +42,13 @@ Web app on Cloudflare Pages, plus an API with Postgres on Railway (from v2). All
 | `EXPO_PUBLIC_FEATURE_FIT_LAYOUTS` (optional, default `false`) | `fit_layouts:` input to `_deploy-pages.yml` for web, `true` in `ci.yml` (staging) and `release.yml` (production); `apps/app/eas.json` for iOS, `true` in every profile; locally from `.env` | Expo app builds: grid layouts fit their lines to the photos (`fittedLayout`) |
 | `USAGE_INGEST_ENABLED` (optional, default `false`) | Railway variable on `api`, per environment, `true` on staging and production. Also the emergency off switch | `POST /usage/events` counts events only when `true` |
 | `EXPO_PUBLIC_FEATURE_PLUS` (optional, default `false`; needs accounts and an API URL), `EXPO_PUBLIC_REVENUECAT_WEB_KEY`, `EXPO_PUBLIC_REVENUECAT_IOS_KEY` (public RevenueCat keys) | Not wired into hosted builds yet: the change that turns Plus on for staging adds them to `_deploy-pages.yml` (web, from GitHub variables) and `apps/app/eas.json` (iOS); locally from `.env` | Expo app builds: with it on, the mark switch unlocks only when the API says the account has Plus |
-| `EXPO_PUBLIC_FEATURE_ADMIN` (optional, default `false`; needs accounts and an API URL) | Not wired into hosted builds yet: turning it on for staging adds it to `_deploy-pages.yml` (web, from a GitHub variable); locally from `.env`. Web only: iOS builds ignore it | Expo web build: the `/admin` dashboard (see "B5 checklist") |
-| `ADMIN_ENABLED` (optional, default `false`) | Railway variable on `api`, per environment, not set yet: staging first (see "B5 checklist") | `GET /admin/stats` and two-factor sign-in (authenticator app) exist only when it's on |
+| `EXPO_PUBLIC_FEATURE_ADMIN` (optional, default `false`; needs accounts and an API URL) | `admin:` input to `_deploy-pages.yml` for web, `true` in `ci.yml` (staging) and `release.yml` (production); locally from `.env`. Web only: iOS builds ignore it. Safe to ship on: the dashboard also needs an admin account with two-factor and the API's `ADMIN_ENABLED` | Expo web build: the `/admin` dashboard (see "B5 checklist") |
+| `ADMIN_ENABLED` (optional, default `false`) | Railway variable on `api`, per environment, not set yet: you set it in the "B5 checklist", staging first. Without it `/admin` says it isn't switched on | `GET /admin/stats` and two-factor sign-in (authenticator app) exist only when it's on |
 | `PAYMENTS_ENABLED` (optional, default `false`), `REVENUECAT_SECRET_KEY`, `REVENUECAT_PROJECT_ID`, `REVENUECAT_WEBHOOK_SECRET` (all three needed when it's on) | Railway variables on `api`, per environment, not set yet: staging first, with RevenueCat sandbox data (see "B4 checklist"). The webhook secret is the Authorization value set on RevenueCat's webhook | StoryStitch Plus: `POST /payments/revenuecat`, `GET /me/entitlements`, `POST /me/entitlements/refresh`, `POST /entitlements/check` exist only when it's on |
 | `TURNSTILE_SITE_KEY` (public), plus the Cloudflare and Resend keys | GitHub secrets, synced with `gh secret set -f ~/.config/new-project/secrets.env` | web builds (`EXPO_PUBLIC_TURNSTILE_SITE_KEY`) |
 | Accounts flag (`EXPO_PUBLIC_FEATURE_ACCOUNTS`) | `accounts:` input to `_deploy-pages.yml`: `true` in `ci.yml` (staging) and `release.yml` (production) | web builds |
 | Layout editor flag (`EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR`, needs accounts) | `layout_editor:` input to `_deploy-pages.yml`: `true` in `ci.yml` (staging) and `release.yml` (production) | web builds |
-| Blank layout flag (`EXPO_PUBLIC_FEATURE_BLANK_LAYOUT`, optional, default `false`; needs the layout editor) | Not wired into hosted builds yet, so it is off on staging and production; locally from `.env`; the E2E build turns it on in `apps/app/package.json` | Expo app builds: "Start from blank" in the Layouts tool |
+| Blank layout flag (`EXPO_PUBLIC_FEATURE_BLANK_LAYOUT`, optional, default `false`; needs the layout editor) | `blank_layout:` input to `_deploy-pages.yml` for web, `true` in `ci.yml` (staging) only; `apps/app/eas.json` `base` profile (staging iOS: preview and testflight) only, not `production`; locally from `.env`; the E2E build turns it on in `apps/app/package.json` | Expo app builds: "Start from blank" in the Layouts tool |
 | Local values (`DATABASE_URL`, `PORT`, `CORS_ORIGIN`, `EXPO_PUBLIC_API_URL`) | `.env` (copy of `.env.example`) | `pnpm dev`, tests |
 
 ## Reading usage numbers
@@ -82,7 +82,7 @@ What and why: the v2 section of `docs/product-brief.md`. Acceptance criteria: th
 | B2 | Optional email and password accounts (Better Auth, Resend, Turnstile), account deletion, behind `EXPO_PUBLIC_FEATURE_ACCOUNTS` | on in staging and production |
 | B3 | Save collages to Cloudflare R2, "My stories", storage limits | not started |
 | B4 | StoryStitch Plus: pay once ($4.99) to remove the mark, through RevenueCat (Apple in-app purchase on iOS, Paddle on web), behind `EXPO_PUBLIC_FEATURE_PLUS` and `PAYMENTS_ENABLED` | in progress; checklist below |
-| B5 | Admin analytics (`/admin`, desktop, admin login with authenticator code), behind `EXPO_PUBLIC_FEATURE_ADMIN` and `ADMIN_ENABLED` | built behind flags, off everywhere; checklist below |
+| B5 | Admin analytics (`/admin`, desktop, admin login with authenticator code), behind `EXPO_PUBLIC_FEATURE_ADMIN` (on in hosted web builds) and `ADMIN_ENABLED` (off until you set it) | built; waiting for you to do the "B5 checklist" |
 
 ### B0 checklist (yours)
 
@@ -245,17 +245,73 @@ The iOS purchase needs a new build: it adds native code, so an over-the-air upda
 
 ### B5 checklist: admin dashboard (yours)
 
-What and why: "Admin analytics" in `docs/product-brief.md`. Nothing is wired into hosted builds yet.
+You get a private page, `/admin`, with StoryStitch's usage numbers: daily totals, how many photo sets get exported, the most used layouts and the errors people hit. Only your account can open it, and only after you type a code from an authenticator app.
 
-1. On staging, set `ADMIN_ENABLED=true` on the Railway `api` service, and `EXPO_PUBLIC_FEATURE_ADMIN=true` for the web
-   build (Claude wires the second one into `_deploy-pages.yml` when you ask).
-2. Sign up on staging with the email you want as admin, and confirm it.
-3. On that environment's database run `update "user" set is_admin = true where email = '<your email>';`. Nothing in
-   the API can set it.
-4. Open `/admin` on a desktop, enter your password, add the key it shows to an authenticator app, and enter a code.
-   From then on `/admin` asks for a code after the password.
-5. If you lose the authenticator, remove its row: `delete from two_factor where user_id = (select id from "user" where email = '<your email>');`
-   and `update "user" set two_factor_enabled = false where email = '<your email>';`, then enroll again.
+**Already done for you.** The code is merged. The web flag (`EXPO_PUBLIC_FEATURE_ADMIN`) is on for staging after the next promotion to `main`, and for production after the next `/release`. Until you do step 1, the page says it isn't switched on. Nothing here touches the iOS app.
+
+You need: a desktop browser with a window at least 900 px wide, an authenticator app on your phone (for example Google Authenticator, Microsoft Authenticator or 1Password), the `railway` command logged in (see the B0 checklist), and `psql` installed.
+
+#### On staging
+
+1. **Switch the API on.** In a terminal, in the repo folder, paste:
+   ```bash
+   railway variable set ADMIN_ENABLED=true -s api -e staging
+   ```
+   Setting a variable starts a new deploy by itself. You should see the variable listed. To check the deploy finished:
+   open the Railway dashboard → the StoryStitch project → the `staging` environment → `api` → Deployments. The top one
+   should say "Active" (it takes a minute or two). Or run `curl https://api-staging.storystitch.ashishnag.com/health`
+   and look for `"database":"up"`.
+2. **Make an account for yourself.** Go to https://staging.storystitch.ashishnag.com/sign-up, use the email you want as
+   admin, and open the link in the email we send. You should land on the Account page saying "Your email is confirmed
+   and you're signed in."
+3. **Mark it as admin.** Nothing in the app can do this; it's one line in the database. This way of reaching the
+   staging database has not been tried yet. In a terminal run:
+   ```bash
+   railway connect Postgres --environment staging
+   ```
+   When the prompt appears (it ends in `=>` or `=#`), paste the next line with your own email, then press Enter:
+   ```sql
+   update "user" set is_admin = true where email = 'you@example.com';
+   ```
+   You should see `UPDATE 1`. If you see `UPDATE 0`, the email doesn't match: check the spelling. Type `\q` to leave.
+4. **Set up the authenticator.** On a desktop browser, open https://staging.storystitch.ashishnag.com/admin. If you
+   aren't signed in, it asks for your email and password first. Then, in order:
+   1. "Admin accounts need an authenticator app…": type your password and press **Set up**.
+   2. It shows a key made of letters and numbers. In your authenticator app choose to add an account by typing a key
+      (there is no QR code), name it StoryStitch, paste or type the key, and pick the time-based option.
+   3. Type the six-digit code the app now shows and press **Verify**.
+
+   You should see the dashboard. Finishing this signs your account out on every other device, so sign in again
+   wherever you need it. From now on `/admin` asks for your email, password and then a code.
+5. **Look around.** The buttons at the top switch between 7, 30 and 90 days. The page has four parts:
+   - **Daily totals**: one row per day, newest first.
+   - **Funnel**: photos picked, exported, and saved, with the percentage who got to the next step.
+   - **Top layouts**: the ten most exported layouts.
+   - **Errors by code**: how often each error was shown.
+
+   Know these limits. Top layouts count all time, so the 7/30/90 switch doesn't change them. "Saved" stays 0 until saved
+   collages exist. Visitors are daily estimates, so adding days gives visitor-days, not unique people.
+
+#### Then production
+
+Do the same, with these differences:
+
+- Wait until the production web build has the flag (it does after the next `/release`).
+- Step 1: `railway variable set ADMIN_ENABLED=true -s api -e production`, and check the `production` environment in Railway.
+- Step 2: your account on https://storystitch.ashishnag.com. Staging and production have separate accounts and databases, so sign up again.
+- Step 3: `railway connect Postgres --environment production`.
+- Step 4: https://storystitch.ashishnag.com/admin. Use a second entry in your authenticator app, named for production.
+
+#### If something goes wrong
+
+| What the page says | What it means and what to do |
+|---|---|
+| "This account can't open the admin dashboard." | The account isn't marked admin. Do step 3 for the environment you're on, with the exact email, then reload. Press **Sign out** if you used another account. |
+| "The admin dashboard isn't switched on for this site." | The API's `ADMIN_ENABLED` isn't `true` in this environment, or its deploy hasn't finished. Do step 1 and wait for "Active". |
+| "Open the admin dashboard on a desktop." | The browser window is under 900 px wide. Make it wider, or use a computer. |
+| "That code isn't right. Check the time on your device and try again." | Codes last 30 seconds. Wait for a new one. If it keeps failing, check your phone's clock is set automatically. After several wrong tries it asks you to wait. |
+| "Couldn't load the numbers. Try again in a moment." | The API didn't answer. Reload; if it persists, check the deploy in step 1. |
+| You lost the authenticator (new phone) | Remove its record, then do step 4 again. In `railway connect Postgres --environment staging` run both lines (use your email): `delete from two_factor where user_id = (select id from "user" where email = 'you@example.com');` then `update "user" set two_factor_enabled = false where email = 'you@example.com';` Each should print `DELETE 1` and `UPDATE 1`. |
 
 ### iOS delivery checklist (yours)
 
