@@ -219,6 +219,25 @@ test("AC-MOBILE-01 nothing scrolls sideways at phone width", async ({ page }) =>
   }
 });
 
+test("AC-MOBILE-06 each editor tab has an icon above its label, and the tab keeps its plain name", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 667 });
+  await page.goto("/");
+  await libraryInput(page).setInputFiles(await makePhotos(page, 8));
+  await expect(page.getByRole("application")).toBeVisible();
+  for (const name of ["Layouts", "Style", "Export"]) {
+    const tab = page.getByRole("tab", { name, exact: true });
+    const icon = tab.getByTestId(`tab-icon-${name.toLowerCase()}`);
+    await expect(icon).toBeVisible();
+    await expect(icon).toHaveAttribute("aria-hidden", "true");
+    const box = (await tab.boundingBox())!;
+    expect(box.height).toBeGreaterThanOrEqual(44);
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(375);
+    // The icon sits above the label.
+    expect((await icon.boundingBox())!.y).toBeLessThan((await tab.getByText(name, { exact: true }).boundingBox())!.y);
+  }
+});
+
 test("AC-MOBILE-04 the editor fits one phone screen: no page scrolling in any tool", async ({ page }) => {
   for (const size of [{ width: 375, height: 667 }, page.viewportSize()!]) {
     await page.setViewportSize(size);

@@ -155,6 +155,7 @@ reuse IDs.
 | AC-A11Y-03 | Every control is at least 44 × 44 CSS pixels. | auto |
 | AC-MOBILE-01 | Nothing scrolls sideways at phone width, on the pick screen or in the editor. | auto |
 | AC-MOBILE-04 | On phones the editor is one screen with no page scrolling: top bar with Share, the preview, the current tool and the tab bar all fit, in every tool and with a photo selected. | auto |
+| AC-MOBILE-06 | Each tab in the editor's tab bar (Layouts, Style, Export) has an icon above its label, hidden from screen readers so the tab's name is still just its label, and each tab is at least 44 px tall. | auto |
 | AC-MOBILE-02 | The full flow passes in emulated iPhone Safari (WebKit) and Android Chrome (Chromium). | auto |
 | AC-MOBILE-05 | Grouped actions keep to one hierarchy at phone width, on web and iOS: at most one gold primary, full width; at most one outlined secondary at the same width; anything else is smaller text in one row below, still at least 44 px tall. Destructive actions read as destructive. Nothing wraps into uneven rows, and tools of equal rank sit in even rows of equal widths. | auto |
 | AC-MOBILE-03 | Staging is checked by hand on a real iPhone (Safari) and Android phone (Chrome) before each release. | manual |
@@ -236,6 +237,8 @@ Behind `EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR` (needs accounts): on in staging and p
 | AC-CUSTOM-10 | On iOS, VoiceOver can do without dragging what a finger does to lines and handles: swipe up or down on a line, slanted line, resize handle or turn handle to step it, use the Move up, down, left and right actions on a corner (only the ways it can go) or on the Move photo element over the chosen photo in a free layout, and swipe on the preview to choose a photo. Each step says where it ended up or why it can't go further, and Undo reverses it. | auto |
 | AC-CUSTOM-11 | After Done, anyone can use the edited layout in their collage and export it without an account. Signed-out users are told an account is optional and only keeps the layout for later; if they create one or sign in, they come back to their layout, ready to name and save it. An unsaved layout stays in the Layouts tool while the photos are open, and isn't counted as an export of the layout it started from. | auto |
 | AC-CUSTOM-12 | With the blank layout flag on, "Start from blank" opens the layout editor on a single cell that fills the frame; splitting it builds a grid, Done proceeds once there's one cell per photo, and the result is used and saved like any edited layout. | auto |
+| AC-CUSTOM-13 | With the blank layout flag on, a blank frame can start as shapes instead of a grid: "Add shape" adds a rectangle, circle, heart or star (up to 8 cells) that moves, resizes and can be removed like any free cell, and Undo takes it away. | auto |
+| AC-CUSTOM-14 | With the blank layout flag on, dragging on empty space in a shapes layout draws a new rectangular cell; one that's too small, overlaps where it mustn't or would be a ninth cell isn't added. | auto |
 | AC-CUSTOM-08 | The layout editor feels right one-handed on a real iPhone and Android phone: lines, corners and photos are easy to grab and drag without precise aim. | manual |
 
 ## Describe a layout (iOS)

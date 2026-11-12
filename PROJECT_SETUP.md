@@ -250,7 +250,9 @@ You get a private page, `/admin`, with StoryStitch's usage numbers: daily totals
 
 **Already done for you.** The code is merged. The web flag (`EXPO_PUBLIC_FEATURE_ADMIN`) is on for staging after the next promotion to `main`, and for production after the next `/release`. Until you do step 1, the page says it isn't switched on. Nothing here touches the iOS app.
 
-You need: a desktop browser with a window at least 900 px wide, an authenticator app on your phone (for example Google Authenticator, Microsoft Authenticator or 1Password), the `railway` command logged in (see the B0 checklist), and `psql` installed.
+You need: a desktop browser with a window at least 900 px wide, an authenticator app on your phone (for example Google Authenticator, Microsoft Authenticator or 1Password), the `railway` command logged in (see the B0 checklist), and `psql` installed. To install it on a Mac, run `brew install libpq` and then `brew link --force libpq`. After that `psql --version` should print a version.
+
+**Before you start.** The promotion into `main` must be merged, and staging must have finished deploying both parts. The API deploys within a couple of minutes: run `curl https://api-staging.storystitch.ashishnag.com/health` and check that `version` shows the new commit. The staging website deploys only after the `check` job on `main` finishes, which takes longer. Until then `/admin` shows the old app.
 
 #### On staging
 
@@ -258,14 +260,14 @@ You need: a desktop browser with a window at least 900 px wide, an authenticator
    ```bash
    railway variable set ADMIN_ENABLED=true -s api -e staging
    ```
-   Setting a variable starts a new deploy by itself. You should see the variable listed. To check the deploy finished:
+   Setting a variable starts an API deploy straight away, from the latest `main`. You should see the variable listed. To check the deploy finished:
    open the Railway dashboard → the StoryStitch project → the `staging` environment → `api` → Deployments. The top one
    should say "Active" (it takes a minute or two). Or run `curl https://api-staging.storystitch.ashishnag.com/health`
    and look for `"database":"up"`.
 2. **Make an account for yourself.** Go to https://staging.storystitch.ashishnag.com/sign-up, use the email you want as
    admin, and open the link in the email we send. You should land on the Account page saying "Your email is confirmed
    and you're signed in."
-3. **Mark it as admin.** Nothing in the app can do this; it's one line in the database. This way of reaching the
+3. **Mark it as admin.** Nothing in the app can do this; it's one line in the database. Wait until the API deploy from step 1 has finished first: that deploy runs the migration that adds the `is_admin` column. This way of reaching the
    staging database has not been tried yet. In a terminal run:
    ```bash
    railway connect Postgres --environment staging
