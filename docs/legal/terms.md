@@ -48,6 +48,6 @@ StoryStitch you agree to them. If you don't agree, please don't use it.
 You can stop using StoryStitch and delete your account at any time. We may suspend or close accounts that break these
 terms.
 
-## Contact
+## Law and contact
 
-Questions: ashishnag94@gmail.com.
+These terms are governed by the laws of the State of California, USA. Questions: ashishnag94@gmail.com.
