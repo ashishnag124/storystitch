@@ -8,6 +8,7 @@ import { cellShapes, styleScale, type Scene, type Start, type Style } from "@sto
 import { DrawOutline, SaveActions, UseActions } from "../LayoutSheetActions";
 import { ToolGrid } from "../ui/Actions";
 import { PhotoTray } from "./PhotoTray";
+import { ShapePalette } from "./ShapePalette";
 import { Button } from "../ui/Button";
 import { useLayoutEditor, type Handle } from "../useLayoutEditor";
 import "./builder.css";
@@ -207,7 +208,7 @@ export default function LayoutEditor({ photos, style, start, signedIn, onCancel,
           {editor.status}
         </p>
         {editor.tray && <PhotoTray photos={photos} tray={editor.tray} />}
-        {tools.length > 0 && <ToolGrid tools={tools} scroll={editor.toolsScroll} />}
+        {editor.palette ? <ShapePalette palette={editor.palette} /> : tools.length > 0 && <ToolGrid tools={tools} scroll={editor.toolsScroll} />}
       </section>
 
       {saving && (

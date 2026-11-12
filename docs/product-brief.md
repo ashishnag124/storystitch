@@ -115,9 +115,10 @@ replaces parts of it. Build order and status: see "Backend milestones" in `PROJE
   asked to create an account or sign in, and comes straight back to the editor.
 - Full screen on the phone, with large touch targets, snapping, Undo, and buttons (Bigger, Smaller, Turn) for small
   adjustments without precise dragging. The preview shows the user's own photos.
-- "Start from blank" opens an empty canvas: the user adds shapes (a rectangle, circle, heart or star, or by dragging
-  on empty space to draw one), then drags their photos from a tray into the shapes, or taps a photo and then a
-  shape. Done goes ahead once every photo is in a shape and no shape is empty.
+- "Start from blank" opens an empty canvas: the user adds shapes from a row of them (tap one, or drag it onto the
+  canvas; or drag on empty space to draw a rectangle), then drags their photos from a tray into the shapes, or taps a
+  photo and then a shape. A photo dropped on empty space makes a shape of its own proportions there, and Tidy lines up
+  shapes that are nearly aligned. Done goes ahead once every photo is in a shape and no shape is empty.
 - How a layout is edited depends on what it's made of: grids by dragging the lines between cells and splitting,
   reshaping or removing cells; slanted layouts by dragging shared corners and lines; circles, shapes, prints and
   Polaroids by moving, resizing and turning cells.

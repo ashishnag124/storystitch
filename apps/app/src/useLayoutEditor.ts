@@ -4,7 +4,11 @@
 import {
   ADD_SHAPES,
   GRID_SHAPES,
+  PALETTE_SHAPES,
   addCell,
+  addCellAt,
+  addPhotoCell,
+  cellNear,
   MOVE_STEPS,
   bringToFront,
   canRotate,
@@ -22,6 +26,7 @@ import {
   moveCorner,
   moveDivider,
   moveLine,
+  reshapeFreeCell,
   removeCell,
   removeGridCell,
   reshapeCell,
@@ -29,8 +34,9 @@ import {
   scaleCell,
   snapTo,
   splitCell,
+  tidyCells,
   type Corners,
-  type AddShape,
+  type PaletteShape,
   type Edited,
   type Grid,
 } from "@storystitch/layout-engine";
@@ -57,7 +63,9 @@ const TURN_STEP = 4;
 /** How far one VoiceOver step moves a line or corner (canvas px): enough to change the percent it says. */
 const VOICEOVER_STEP_PX = 40;
 const NO_ROOM = "There's no room to move it that way.";
-const SHAPE_NAMES: Record<AddShape, string> = { rect: "Rectangle", circle: "Circle", heart: "Heart", star: "Star" };
+export const SHAPE_NAMES: Record<PaletteShape, string> = { rect: "Rectangle", square: "Square", circle: "Circle", heart: "Heart", star: "Star", arch: "Arch", pill: "Pill" };
+/** A drop within this many screen px of a shape counts as on it. */
+const NEAR_MISS_PX = 24;
 const DRAW_HINT = "Drag on empty space to draw a photo.";
 /** The most photos a layout holds. */
 const MAX_CELLS = 8;
@@ -137,6 +145,24 @@ export interface TrayPhoto {
   label: string;
 }
 
+/** What a finger carries from the tray or the palette to the canvas. */
+type Carried = { photo: number } | { shape: PaletteShape };
+
+/** The shape palette of a blank canvas, shown while no shape is chosen: tap a shape to add it in the middle, or drag it onto the canvas. */
+export interface Palette {
+  shapes: { shape: PaletteShape; label: string }[];
+  /** At 8 shapes. */
+  disabled: boolean;
+  /** The shape being dragged, where the finger is (screen px), once it has moved. */
+  ghost: { shape: PaletteShape; x: number; y: number } | null;
+  grab: (shape: PaletteShape, x: number, y: number) => void;
+  move: (x: number, y: number) => void;
+  drop: () => void;
+  cancel: () => void;
+  tap: (shape: PaletteShape) => void;
+  tidy: { onPress: () => void; disabled: boolean };
+}
+
 /** The photo tray of a blank canvas. A thumbnail drags onto a shape, or taps to be picked up and then a shape taps to take it. */
 export interface Tray {
   photos: TrayPhoto[];
@@ -172,8 +198,10 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
   const [adding, setAdding] = useState(false);
   /** A photo picked up from the tray by a tap, waiting for a shape. */
   const [picked, setPicked] = useState<number | null>(null);
-  const [ghost, setGhost] = useState<{ photo: number; x: number; y: number; target: number | null } | null>(null);
-  const photoDrag = useRef<{ photo: number; startX: number; startY: number; moved: boolean; target: number | null } | null>(null);
+  /** The shape whose Shape tool is open. */
+  const [reshaping, setReshaping] = useState<number | null>(null);
+  const [ghost, setGhost] = useState<{ item: Carried; x: number; y: number; target: number | null } | null>(null);
+  const carried = useRef<{ item: Carried; startX: number; startY: number; moved: boolean; target: number | null; at: Point } | null>(null);
   /** The corners of the cell being drawn, in layout px. */
   const [drawing, setDrawing] = useState<{ from: Point; to: Point } | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -240,9 +268,12 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
     setDragging(false);
     if (d?.kind === "draw") {
       setDrawing(null);
-      // A tap on empty space isn't a drag.
+      // A tap on empty space isn't a drag: it puts a picked-up photo there, or lets go of the chosen shape.
+      if (Math.hypot(d.to.x - d.from.x, d.to.y - d.from.y) < TAP_PX) {
+        if (picked !== null) return void putNewPhoto(picked, d.from);
+        return setSelected(null);
+      }
       setSelected(null);
-      if (Math.hypot(d.to.x - d.from.x, d.to.y - d.from.y) < TAP_PX) return;
       const edited = drawCell(d.base.layout, { x: d.from.x / W, y: d.from.y / H }, { x: d.to.x / W, y: d.to.y / H });
       if (!edited) return setMessage(d.base.layout.cells.length >= MAX_CELLS ? "A layout holds up to 8 photos." : "That's too small, or there's no room, for a photo there.");
       const next = withOrigin(d.base, edited, photoCount);
@@ -270,6 +301,27 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
     commit({ ...draft, order: placePhoto(order, cell, photo) });
     setSelected(cell);
     setPicked(null);
+  }
+
+  /** A new shape in the proportions of `photo`, centered on `at` (layout px), holding it. */
+  function putNewPhoto(photo: number, at: Point) {
+    const { width, height } = photos[photo]!;
+    const edited = addPhotoCell(layout, width / height, { x: at.x / W, y: at.y / H });
+    if (!edited) return void refuse(layout.cells.length >= MAX_CELLS ? "A layout holds up to 8 photos." : "There's no room for another photo.");
+    const made = withOrigin(draft, edited, 0);
+    const cell = made.layout.cells.length - 1;
+    commit({ ...made, order: placePhoto(made.order, cell, photo) });
+    setSelected(cell);
+    setPicked(null);
+  }
+
+  /** A new shape of the palette: in the middle, or centered on `at` (layout px). */
+  function putShape(shape: PaletteShape, at?: Point) {
+    const edited = at ? addCellAt(layout, shape, { x: at.x / W, y: at.y / H }) : addCell(layout, shape);
+    if (!edited) return void refuse(layout.cells.length >= MAX_CELLS ? "A layout holds up to 8 photos." : "There's no room for another photo.");
+    const next = withOrigin(draft, edited, photoCount);
+    commit(next);
+    setSelected(next.layout.cells.length - 1);
   }
 
   function screenToLayout(x: number, y: number): Point {
@@ -302,7 +354,10 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
     }
     const finger = fingers.at(-1)!;
     const hit = hitTest(layout.cells, screenToLayout(finger.x, finger.y));
-    if (picked !== null && hit >= 0) return placeIn(hit, picked);
+    if (picked !== null) {
+      const near = cellNear(layout, screenToLayout(finger.x, finger.y), layoutDelta(NEAR_MISS_PX, 0).x);
+      if (near >= 0) return placeIn(near, picked);
+    }
     if (hit < 0 && mode === "free" && BLANK_LAYOUT_ENABLED && fingers.length === 1) {
       // The chosen photo stays chosen until the finger lifts: its tools going away would resize the preview mid-drag.
       const from = screenToLayout(finger.x, finger.y);
@@ -550,7 +605,20 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
   }
   const canAdd = BLANK_LAYOUT_ENABLED && mode === "free";
   const full = layout.cells.length >= MAX_CELLS;
-  if (canAdd && adding) {
+  if (canAdd && blank && sel !== null && reshaping === sel) {
+    for (const shape of PALETTE_SHAPES) {
+      tools.push({
+        label: SHAPE_NAMES[shape],
+        onPress: () => {
+          const next = reshapeFreeCell(layout, sel, shape);
+          if (!next) return refuse("There's no room to change it to that shape.");
+          commit({ ...draft, layout: next });
+          setReshaping(null);
+        },
+      });
+    }
+    tools.push({ label: "Back", onPress: () => setReshaping(null) });
+  } else if (canAdd && adding) {
     for (const shape of ADD_SHAPES) {
       tools.push({
         label: SHAPE_NAMES[shape],
@@ -566,7 +634,7 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
     }
     tools.push({ label: "Back", onPress: () => setAdding(false) });
   } else if (sel !== null && mode === "free") {
-    if (canAdd) tools.push({ label: "Add shape", disabled: full, onPress: () => setAdding(true) });
+    if (canAdd && !blank) tools.push({ label: "Add shape", disabled: full, onPress: () => setAdding(true) });
     tools.push(
       { label: "Smaller", onPress: () => scaleBy(1 / SCALE_STEP) },
       { label: "Bigger", onPress: () => scaleBy(SCALE_STEP) },
@@ -576,9 +644,10 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
     if (selCell?.shape === "rect") {
       tools.push({ label: "⟲", name: "Turn left", onPress: () => turnBy(-TURN_STEP) }, { label: "⟳", name: "Turn right", onPress: () => turnBy(TURN_STEP) });
     }
+    if (blank) tools.push({ label: "Shape", onPress: () => setReshaping(sel) });
     if (blank && order[sel]! >= 0) tools.push({ label: "Take photo out", quiet: true, onPress: () => commit({ ...draft, order: takePhotoOut(order, sel) }) });
     tools.push({ label: "Remove", onPress: () => (setSelected(null), apply(removeCell(layout, sel, blank), "A layout needs at least one cell.")) });
-  } else if (canAdd) {
+  } else if (canAdd && !blank) {
     tools.push({ label: "Add shape", disabled: full, onPress: () => setAdding(true) });
   }
 
@@ -631,7 +700,7 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
   const usual = countHint || (canAdd && full ? "A layout holds up to 8 photos." : HINTS[mode](sel !== null));
   const blankNeed = picked !== null ? "Tap a shape to put this photo in it." : blankProblem(order, photos.length);
   const status = blank
-    ? message || (problems[0]?.text ?? (blankNeed || (canAdd && full ? "A layout holds up to 8 photos." : HINTS[mode](sel !== null))))
+    ? message || (problems[0]?.text ?? ([blankNeed || HINTS[mode](sel !== null), full && "A layout holds up to 8 photos."].filter(Boolean).join(" ")))
     : message || (problems[0] && !countHint ? problems[0].text : canDraw ? `${usual} ${DRAW_HINT}` : usual);
 
   // --- The photo tray of a blank canvas.
@@ -642,25 +711,36 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
     setPicked((p) => (p === photo ? null : photo));
     setMessage("");
   }
-  function grabPhoto(photo: number, x: number, y: number) {
-    photoDrag.current = { photo, startX: x, startY: y, moved: false, target: null };
+  function grab(item: Carried, x: number, y: number) {
+    carried.current = { item, startX: x, startY: y, moved: false, target: null, at: { x: -1, y: -1 } };
   }
-  function movePhoto(x: number, y: number) {
-    const d = photoDrag.current;
+  function moveCarried(x: number, y: number) {
+    const d = carried.current;
     if (!d || (!d.moved && Math.hypot(x - d.startX, y - d.startY) < TAP_SCREEN_PX)) return;
     d.moved = true;
-    const hit = hitTest(layout.cells, screenToLayout(x, y));
-    d.target = hit >= 0 ? hit : null;
-    setGhost({ photo: d.photo, x, y, target: d.target });
+    d.at = screenToLayout(x, y);
+    // A photo lands in the shape under it, or just beside it; a shape just lands.
+    const near = "photo" in d.item ? cellNear(layout, d.at, layoutDelta(NEAR_MISS_PX, 0).x) : -1;
+    d.target = near >= 0 ? near : null;
+    setGhost({ item: d.item, x, y, target: d.target });
   }
-  function dropPhoto() {
-    const d = photoDrag.current;
-    photoDrag.current = null;
+  function dropCarried() {
+    const d = carried.current;
+    carried.current = null;
     setGhost(null);
     if (!d) return;
-    if (!d.moved) pickUp(d.photo);
-    else if (d.target !== null) placeIn(d.target, d.photo);
+    const onCanvas = d.at.x >= 0 && d.at.x <= W && d.at.y >= 0 && d.at.y <= H;
+    if ("photo" in d.item) {
+      if (!d.moved) pickUp(d.item.photo);
+      else if (d.target !== null) placeIn(d.target, d.item.photo);
+      else if (onCanvas) putNewPhoto(d.item.photo, d.at);
+    } else if (!d.moved) putShape(d.item.shape);
+    else if (onCanvas) putShape(d.item.shape, d.at);
   }
+  const cancelCarried = () => {
+    carried.current = null;
+    setGhost(null);
+  };
   const tray: Tray | null = blank
     ? {
         photos: photos.map((_, index) => ({
@@ -669,17 +749,34 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
           picked: picked === index,
           label: `Photo ${index + 1}, ${picked === index ? "picked up" : placed(index) ? "placed" : "not placed"}`,
         })),
-        ghost: ghost && { photo: ghost.photo, x: ghost.x, y: ghost.y },
-        grab: grabPhoto,
-        move: movePhoto,
-        drop: dropPhoto,
-        cancel: () => {
-          photoDrag.current = null;
-          setGhost(null);
-        },
+        ghost: ghost && "photo" in ghost.item ? { photo: ghost.item.photo, x: ghost.x, y: ghost.y } : null,
+        grab: (photo, x, y) => grab({ photo }, x, y),
+        move: moveCarried,
+        drop: dropCarried,
+        cancel: cancelCarried,
         tap: pickUp,
       }
     : null;
+
+  function tidy() {
+    const next = tidyCells(layout);
+    if (next === layout) return setMessage("Already tidy.");
+    commit({ ...draft, layout: next });
+  }
+  const palette: Palette | null =
+    blank && canAdd && sel === null
+      ? {
+          shapes: PALETTE_SHAPES.map((shape) => ({ shape, label: `Add ${SHAPE_NAMES[shape].toLowerCase()}` })),
+          disabled: full,
+          ghost: ghost && "shape" in ghost.item ? { shape: ghost.item.shape, x: ghost.x, y: ghost.y } : null,
+          grab: (shape, x, y) => grab({ shape }, x, y),
+          move: moveCarried,
+          drop: dropCarried,
+          cancel: cancelCarried,
+          tap: (shape) => putShape(shape),
+          tidy: { onPress: tidy, disabled: layout.cells.length < 2 },
+        }
+      : null;
   const cellLabel = (i: number) => (order[i]! >= 0 ? `Shape with photo ${order[i]! + 1}` : "Empty shape");
 
   return {
@@ -701,6 +798,7 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
     tools,
     outline,
     tray,
+    palette,
     /** The shape a dragged photo would land in. */
     dropTarget: ghost?.target ?? null,
     /** On a blank canvas the tools are one scrolling row, so the preview keeps its height. */
