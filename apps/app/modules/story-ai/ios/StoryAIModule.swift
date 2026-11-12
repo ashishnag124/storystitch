@@ -35,11 +35,11 @@ public class StoryAIModule: Module {
       return "unsupported"
     }
 
-    AsyncFunction("generate") { (prompt: String) async throws -> String in
+    AsyncFunction("generate") { (prompt: String, temperature: Double) async throws -> String in
       #if canImport(FoundationModels)
         if #available(iOS 26.0, *) {
           do {
-            return try await generateSpec(prompt)
+            return try await generateSpec(prompt, temperature: temperature)
           } catch let failure as StoryAIFailure {
             throw StoryAIException(failure.rawValue)
           }

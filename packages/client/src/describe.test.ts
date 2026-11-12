@@ -1,7 +1,7 @@
 import { editModeOf, gridOf } from "@storystitch/layout-engine";
 import { LayoutSchema, LayoutSpecSchema, editedLayoutProblems, type LayoutSpec } from "@storystitch/shared";
 import { describe, expect, it } from "vitest";
-import { countProblem, describePrompt, layoutFromSpec } from "./describe";
+import { countProblem, describePrompt, layoutFromSpec, rankCandidates, structureLabel } from "./describe";
 
 const spec = (direction: LayoutSpec["direction"], ...bands: [photos: number, size?: number][]): LayoutSpec => ({
   direction,
@@ -174,8 +174,51 @@ describe("AC-AI-01 the prompt", () => {
     expect(describePrompt("x", 1)).toContain("That is 1 = 1.");
   });
 
-  it("includes the previous problem only on a retry", () => {
-    expect(describePrompt("one", 2)).not.toContain("last answer");
-    expect(describePrompt("one", 2, "The layout has 5 photos but must have exactly 2.")).toContain("The layout has 5 photos but must have exactly 2.");
+});
+
+describe("AC-AI-05 ranking the layouts to pick from", () => {
+  const answer = (direction: "rows" | "columns", ...bands: number[]) => {
+    const result = built(spec(direction, ...bands.map((n): [number] => [n])), bands.reduce((a, b) => a + b, 0));
+    return { draft: result.draft, adjusted: result.adjusted };
+  };
+
+  it("counts the same grid once, whichever way it was described", () => {
+    const ranked = rankCandidates([answer("rows", 2, 2), answer("columns", 2, 2), answer("rows", 1, 3)]);
+    expect(ranked.map((c) => [c.key, c.count])).toEqual([
+      ["grid 2x2", 2],
+      ["rows 1+3", 1],
+    ]);
+  });
+
+  it("puts the layout made most often first, and keeps ties in the order they were first made", () => {
+    const ranked = rankCandidates([answer("rows", 1, 3), answer("rows", 3, 1), answer("rows", 2, 2), answer("rows", 3, 1)]);
+    expect(ranked.map((c) => c.key)).toEqual(["rows 3+1", "rows 1+3", "grid 2x2"]);
+    expect(rankCandidates([answer("rows", 1, 3), answer("rows", 3, 1), answer("rows", 2, 2)]).map((c) => c.key)).toEqual(["rows 1+3", "rows 3+1", "grid 2x2"]);
+  });
+
+  it("offers at most three, and none for no answers", () => {
+    const four = [answer("rows", 1, 3), answer("rows", 3, 1), answer("rows", 2, 2), answer("columns", 1, 3)];
+    expect(rankCandidates(four)).toHaveLength(3);
+    expect(rankCandidates(four, 4)).toHaveLength(4);
+    expect(rankCandidates([])).toEqual([]);
+  });
+
+  it("keeps an answer that needed no adjusting over one that did", () => {
+    const adjusted = { ...answer("rows", 1, 3), adjusted: true };
+    const [only] = rankCandidates([adjusted, answer("rows", 1, 3)]);
+    expect(only).toMatchObject({ count: 2, adjusted: false });
+    expect(rankCandidates([adjusted])[0]!.adjusted).toBe(true);
+  });
+
+  it("says each structure in words for VoiceOver", () => {
+    const label = (direction: "rows" | "columns", ...bands: number[]) => structureLabel(answer(direction, ...bands).draft.layout);
+    expect(label("rows", 3, 3)).toBe("2 rows of 3");
+    expect(label("columns", 2, 2, 2)).toBe("2 rows of 3");
+    expect(label("rows", 3, 1)).toBe("2 rows, 3 photos then 1");
+    expect(label("columns", 1, 3)).toBe("2 columns, 1 photo then 3");
+    expect(label("rows", 2, 1, 3)).toBe("3 rows, 2 photos then 1 then 3");
+    expect(label("rows", 1, 1, 1)).toBe("3 photos stacked");
+    expect(label("rows", 3)).toBe("3 photos side by side");
+    expect(label("rows", 1)).toBe("1 photo");
   });
 });

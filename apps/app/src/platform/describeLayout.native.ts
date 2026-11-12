@@ -1,6 +1,5 @@
-import type { Draft } from "@storystitch/client";
 // Not from the package's index: the web build bundles everything the index exports, and the prompt is iOS only.
-import { countProblem, describePrompt, layoutFromSpec } from "@storystitch/client/describe";
+import { MAX_CANDIDATES, describePrompt, layoutFromSpec, rankCandidates, type Candidate } from "@storystitch/client/describe";
 import { LayoutSpecSchema } from "@storystitch/shared";
 import StoryAI from "../../modules/story-ai";
 
@@ -13,48 +12,62 @@ export async function describeAvailability(): Promise<"available" | "unsupported
   }
 }
 
-/** `adjusted`: the model got the number of photos wrong twice, so photos were added or taken away to fit. */
-export type DescribeResult = { ok: true; draft: Draft; adjusted: boolean } | { ok: false; reason: "unavailable" | "refused" | "no_layout" };
+/**
+ * The temperature of each request to the model. The first is low, for the model's best answer; the rest are higher, so
+ * that the answers differ. Asking stops early once there are three different layouts.
+ */
+export const TEMPERATURES = [0.2, 0.7, 0.7, 0.7];
+
+export type DescribeResult = { ok: true; candidates: Candidate[] } | { ok: false; reason: "unavailable" | "refused" | "no_layout" };
+
+interface Options {
+  temperatures?: number[];
+  /** Called with the layouts found so far, after each answer that made one. */
+  onProgress?: (candidates: Candidate[]) => void;
+  /** Checked before each request: when it returns true no more are made. */
+  cancelled?: () => boolean;
+}
 
 /**
- * Asks the on-device model for a layout with one cell per photo. Only the typed description and the photo count go to
- * the model. An answer that isn't usable, or has the wrong number of photos, is tried once more with what was wrong. If
- * the count is still off, the layout is put right rather than failing.
+ * Asks the on-device model several times for a layout with one cell per photo, and returns up to three different ones,
+ * the ones it made most often first. Only the typed description and the photo count go to the model. An answer that
+ * can't be read or made into a layout is skipped; one with the wrong number of photos is adjusted to fit (`adjusted`).
  */
-export async function describeLayout(description: string, photoCount: number): Promise<DescribeResult> {
-  let problem: string | undefined;
-  let fallback: Extract<DescribeResult, { ok: true }> | undefined;
-  for (let attempt = 0; attempt < 2; attempt++) {
+export async function describeLayouts(description: string, photoCount: number, { temperatures = TEMPERATURES, onProgress, cancelled }: Options = {}): Promise<DescribeResult> {
+  const prompt = describePrompt(description, photoCount);
+  const answers: Parameters<typeof rankCandidates>[0] = [];
+  let candidates: Candidate[] = [];
+  for (const temperature of temperatures) {
+    if (cancelled?.()) break;
     let answer: string;
     try {
-      answer = await StoryAI.generate(describePrompt(description, photoCount, problem));
+      answer = await StoryAI.generate(prompt, temperature);
     } catch (error) {
       const code = (error as { code?: string }).code;
-      if (code === "refused") return { ok: false, reason: "refused" };
-      if (code === "unavailable") return { ok: false, reason: "unavailable" };
-      problem = "The answer could not be read.";
+      if (answers.length === 0 && code === "refused") return { ok: false, reason: "refused" };
+      if (answers.length === 0 && code === "unavailable") return { ok: false, reason: "unavailable" };
       continue;
     }
-    let spec: unknown;
-    try {
-      spec = JSON.parse(answer);
-    } catch {
-      problem = "The answer was not valid JSON.";
-      continue;
-    }
-    const parsed = LayoutSpecSchema.safeParse(spec);
-    if (!parsed.success) {
-      problem = "The answer did not have the shape of a layout.";
-      continue;
-    }
-    const result = layoutFromSpec(parsed.data, photoCount);
-    if (!result.ok) {
-      problem = result.problem;
-      continue;
-    }
-    if (!result.adjusted) return result;
-    fallback = result;
-    problem = countProblem(parsed.data, photoCount) ?? undefined;
+    const made = layoutOf(answer, photoCount);
+    if (!made) continue;
+    answers.push(made);
+    candidates = rankCandidates(answers);
+    onProgress?.(candidates);
+    if (candidates.length >= MAX_CANDIDATES) break;
   }
-  return fallback ?? { ok: false, reason: "no_layout" };
+  return candidates.length > 0 ? { ok: true, candidates } : { ok: false, reason: "no_layout" };
+}
+
+/** The layout an answer describes, or null when it can't be read or made into one. */
+function layoutOf(answer: string, photoCount: number) {
+  let spec: unknown;
+  try {
+    spec = JSON.parse(answer);
+  } catch {
+    return null;
+  }
+  const parsed = LayoutSpecSchema.safeParse(spec);
+  if (!parsed.success) return null;
+  const result = layoutFromSpec(parsed.data, photoCount);
+  return result.ok ? result : null;
 }

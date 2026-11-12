@@ -33,12 +33,12 @@
 
   /// The model's answer as JSON text in the shape of LayoutSpec.
   @available(iOS 26.0, *)
-  func generateSpec(_ prompt: String) async throws -> String {
+  func generateSpec(_ prompt: String, temperature: Double) async throws -> String {
     guard SystemLanguageModel.default.isAvailable else { throw StoryAIFailure.unavailable }
     do {
       let session = LanguageModelSession()
-      // A low temperature: a layout should follow the description, not be a surprise.
-      let response = try await session.respond(to: prompt, generating: Spec.self, options: GenerationOptions(temperature: 0.2))
+      // The app asks several times at different temperatures to offer different layouts.
+      let response = try await session.respond(to: prompt, generating: Spec.self, options: GenerationOptions(temperature: temperature))
       return response.content.generatedContent.jsonString
     } catch {
       throw errorCode(error)
