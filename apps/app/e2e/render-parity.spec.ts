@@ -10,7 +10,7 @@ const skiaDir = dirname(fromApp.resolve("@shopify/react-native-skia/package.json
 const canvasKitDir = dirname(fromSkia.resolve("canvaskit-wasm/package.json"));
 
 interface ParityPage {
-  compareRenderers(styles: object[]): Promise<{ id: string; styled: number; differentPct: number; meanDiff: number; canvas: string; skia: string }[]>;
+  compareRenderers(styles: object[], zoom?: number): Promise<{ id: string; styled: number; differentPct: number; meanDiff: number; canvas: string; skia: string }[]>;
 }
 
 /** The part of esbuild's plugin API used here. esbuild is a dependency of apps/app, so its types aren't available. */
@@ -29,6 +29,8 @@ async function bundle() {
     format: "iife",
     platform: "browser",
     logLevel: "silent",
+    // The renderers read the blur fill flag from the environment; the parity run has it on.
+    define: { "process.env": "{}", "process.env.EXPO_PUBLIC_FEATURE_BLUR_FILL": '"true"' },
     plugins: [
       {
         name: "parity",
@@ -84,4 +86,21 @@ test("AC-IOS-12 every layout draws the same on Canvas and Skia", async ({ page }
   const worstOf = (blurred: boolean) => Math.max(...results.filter((r) => r.styled >= BLURRED_FROM === blurred).map((r) => r.differentPct));
   expect(worstOf(false)).toBeLessThan(3);
   expect(worstOf(true)).toBeLessThan(7);
+});
+
+test("AC-IOS-12 AC-CROP-07 the blurred fill of a zoomed-out photo draws the same on Canvas and Skia", async ({ page }, info) => {
+  test.skip(info.project.name !== "android-chrome", "Only needs one browser");
+  test.setTimeout(240_000);
+  const script = await bundle();
+  await page.route("http://parity.test/**", (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === "/canvaskit.wasm") return route.fulfill({ body: readFileSync(join(canvasKitDir, "bin/full/canvaskit.wasm")), contentType: "application/wasm" });
+    if (path === "/parity.js") return route.fulfill({ body: script, contentType: "text/javascript" });
+    return route.fulfill({ body: '<!doctype html><script src="/parity.js"></script>', contentType: "text/html" });
+  });
+  await page.goto("http://parity.test/");
+  const results = await page.evaluate(() => (window as unknown as ParityPage).compareRenderers([{ background: { kind: "color", color: "#ffffff" } }], 0.6));
+  expect(results.length).toBeGreaterThan(20);
+  // The blur is close but not exact between the two (see above).
+  expect(Math.max(...results.map((r) => r.differentPct))).toBeLessThan(7);
 });

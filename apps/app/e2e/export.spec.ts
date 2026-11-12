@@ -204,3 +204,34 @@ test("AC-EXPORT-09 the StoryStitch mark is small, see-through and in from the lo
   expect(box.y1).toBeLessThan(1920 - 48);
   expect(box.y1).toBeGreaterThan(1920 - 110);
 });
+
+test("AC-CROP-07 a photo that doesn't cover its cell has a blurred copy of itself around it, in the preview and the export", async ({ page }) => {
+  // A solid red portrait photo in the wide cells of "Two stacked", zoomed out by hand: the bars left and right of the photo
+  // would be the pale background, and are (slightly darkened) red now. The outer margin outside the cell stays pale.
+  const red = await drawJpeg(page, 1500, 2600, "g.fillStyle='#e02020';g.fillRect(0,0,w,h);");
+  await libraryInput(page).setInputFiles([
+    { name: "photo-1.jpg", mimeType: "image/jpeg", buffer: red },
+    { name: "photo-2.jpg", mimeType: "image/jpeg", buffer: red },
+  ]);
+  await page.getByRole("radio", { name: "Two stacked" }).click();
+  const canvas = page.getByRole("application");
+  const box = (await canvas.boundingBox())!;
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height * 0.25);
+  await page.getByRole("slider", { name: "Zoom" }).fill("0.5");
+
+  const bar: [number, number] = [150, 480];
+  const margin: [number, number] = [5, 480];
+  const isRed = ([r, g, b]: number[]) => r! > 150 && g! < 90 && b! < 90;
+  /** The preview's pixels at the same places as the export's (1080×1920). */
+  const preview = (points: [number, number][]) =>
+    canvas.evaluate((el, points) => {
+      const c = el as HTMLCanvasElement;
+      const ctx = c.getContext("2d")!;
+      return points.map(([x, y]) => [...ctx.getImageData((x * c.width) / 1080, (y * c.height) / 1920, 1, 1).data.slice(0, 3)]);
+    }, points);
+  await expect.poll(async () => isRed((await preview([bar]))[0]!)).toBe(true);
+  expect((await preview([margin]))[0]![1]).toBeGreaterThan(220);
+  const [exportedBar, exportedMargin] = await pixels(page, await exportImage(page), [bar, margin]);
+  expect(isRed(exportedBar!)).toBe(true);
+  expect(exportedMargin![1]).toBeGreaterThan(220);
+});

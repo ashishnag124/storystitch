@@ -56,6 +56,13 @@ export function sourceRect(image: Size, frame: Size, crop: Crop): Rect {
   };
 }
 
+/** Whether the crop shows past the photo's edge, so part of the frame has none of the photo in it (zoom below 1). */
+export function leavesUncovered(image: Size, frame: Size, crop: Crop): boolean {
+  const r = sourceRect(image, frame, crop);
+  const slack = 0.01;
+  return r.x < -slack || r.y < -slack || r.x + r.width > image.width + slack || r.y + r.height > image.height + slack;
+}
+
 /** The same crop with its center pulled back so the frame never shows past the photo's edge. */
 export function clampCrop(image: Size, frame: Size, crop: Crop): Crop {
   const r = sourceRect(image, frame, crop);

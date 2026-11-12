@@ -120,4 +120,6 @@ jobs:
       admin: true
       # Staging only, until it has been tried on a phone.
       blank_layout: true
+      # Staging only, until the owner has looked at it.
+      blur_fill: true
     secrets: inherit
