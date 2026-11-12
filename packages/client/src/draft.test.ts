@@ -1,7 +1,7 @@
-import { ADD_SHAPES, addCell, editModeOf, splitCell, removeCell } from "@storystitch/layout-engine";
+import { ADD_SHAPES, addCell, drawCell, editModeOf, removeCell, splitCell } from "@storystitch/layout-engine";
 import { LayoutSchema, editedLayoutProblems, layoutProblems, layouts } from "@storystitch/shared";
 import { describe, expect, it } from "vitest";
-import { blankDraft, blankShapesDraft, explain, withOrigin } from "./draft";
+import { blankDraft, blankOrder, blankProblem, explain, placePhoto, takePhotoOut, unplacedPhotos, withOrigin } from "./draft";
 
 const byId = (id: string) => layouts.find((l) => l.id === id)!;
 
@@ -35,38 +35,49 @@ describe("AC-CUSTOM-02 photos follow their cells", () => {
   });
 });
 
-describe("AC-CUSTOM-12 a blank frame", () => {
-  it("is one full-canvas cell that validates and opens as a grid", () => {
-    const { layout, order } = blankDraft();
-    expect(LayoutSchema.safeParse(layout).success).toBe(true);
-    expect(layoutProblems(layout)).toEqual([]);
-    expect(editModeOf(layout)).toBe("grid");
-    expect(layout.cells).toEqual([{ shape: "rect", x: 0, y: 0, w: 1, h: 1, rotate: 0, z: 0 }]);
-    expect(order).toEqual([0]);
+describe("AC-CUSTOM-12 a blank canvas", () => {
+  it("starts with no shapes, as a free layout, and fills with empty shapes", () => {
+    let draft = blankDraft();
+    expect(draft.layout.cells).toEqual([]);
+    expect(draft.order).toEqual([]);
+    expect(editModeOf(draft.layout)).toBe("free");
+    for (const shape of ADD_SHAPES) draft = withOrigin(draft, addCell(draft.layout, shape)!, 0);
+    draft = withOrigin(draft, drawCell(draft.layout, { x: 0.05, y: 0.8 }, { x: 0.5, y: 0.95 })!, 0);
+    expect(draft.layout.cells).toHaveLength(5);
+    expect(draft.order).toEqual([-1, -1, -1, -1, -1]); // new shapes wait for a photo
+    expect(LayoutSchema.safeParse(draft.layout).success).toBe(true);
+    expect(editedLayoutProblems(draft.layout)).toEqual([]);
   });
 
-  it("validates after splitting to N cells, each with its own photo", () => {
-    let draft = blankDraft();
-    for (let n = 2; n <= 4; n++) {
-      draft = withOrigin(draft, splitCell(draft.layout, draft.layout.cells.length - 1, n % 2 ? "down" : "across")!, n);
-      expect(draft.layout.cells).toHaveLength(n);
-      expect(editedLayoutProblems(draft.layout)).toEqual([]);
-      expect(editModeOf(draft.layout)).toBe("grid");
-      expect(draft.order).toEqual(Array.from({ length: n }, (_, i) => i));
-    }
+  it("can have its last shape removed", () => {
+    const draft = withOrigin(blankDraft(), addCell(blankDraft().layout, "circle")!, 0);
+    expect(removeCell(draft.layout, 0)).toBeNull();
+    expect(removeCell(draft.layout, 0, true)!.layout.cells).toEqual([]);
   });
 });
 
-describe("AC-CUSTOM-13 a blank frame of shapes", () => {
-  it("is one centered cell that validates, opens as a free layout and takes added shapes", () => {
-    let draft = blankShapesDraft();
-    expect(LayoutSchema.safeParse(draft.layout).success).toBe(true);
-    expect(layoutProblems(draft.layout)).toEqual([]);
-    expect(editModeOf(draft.layout)).toBe("free");
-    expect(draft.order).toEqual([0]);
-    for (const shape of ADD_SHAPES.slice(0, 3)) draft = withOrigin(draft, addCell(draft.layout, shape)!, 4);
-    expect(draft.order).toEqual([0, 1, 2, 3]);
-    expect(editModeOf(draft.layout)).toBe("free");
-    expect(editedLayoutProblems(draft.layout)).toEqual([]);
+describe("AC-CUSTOM-15 placing photos in shapes", () => {
+  it("places a photo, replaces one, moves one and takes one out", () => {
+    expect(placePhoto([-1, -1, -1], 1, 2)).toEqual([-1, 2, -1]);
+    expect(placePhoto([0, 2, -1], 1, 3)).toEqual([0, 3, -1]); // 2 is unplaced again
+    expect(unplacedPhotos([0, 3, -1], 4)).toEqual([1, 2]);
+    expect(placePhoto([0, 2, -1], 2, 0)).toEqual([-1, 2, 0]); // moved: its old shape is empty
+    expect(placePhoto([0, 2], 0, 0)).toEqual([0, 2]);
+    expect(takePhotoOut([0, 2, -1], 1)).toEqual([0, -1, -1]);
+  });
+
+  it("says what's missing, in plain words", () => {
+    expect(blankProblem([], 3)).toBe("Add a shape or drag on the canvas to draw one.");
+    expect(blankProblem([0, -1, -1], 3)).toBe("Drag 2 more photos into shapes.");
+    expect(blankProblem([0, -1], 2)).toBe("Drag 1 more photo into shapes.");
+    expect(blankProblem([0], 3)).toBe("Add 2 more shapes, then drag photos into them.");
+    expect(blankProblem([0, 1, -1], 2)).toBe("1 shape is empty. Add a photo or remove it.");
+    expect(blankProblem([0, 1, -1, -1], 2)).toBe("2 shapes are empty. Add a photo or remove them.");
+  });
+
+  it("builds the order only once every photo is in a shape and no shape is empty", () => {
+    expect(blankOrder([2, 0, -1], 3)).toBeNull();
+    expect(blankOrder([2, 0], 3)).toBeNull();
+    expect(blankOrder([2, 0, 1], 3)).toEqual([2, 0, 1]);
   });
 });

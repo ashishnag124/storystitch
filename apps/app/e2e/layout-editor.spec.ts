@@ -144,28 +144,70 @@ test("AC-CUSTOM-02 AC-CUSTOM-05 AC-CUSTOM-06 AC-CUSTOM-07 reworks a grid by remo
   expect(saved!.layout.cells).toHaveLength(3);
 });
 
-test("AC-CUSTOM-12 starts from a blank frame, splits it to one cell per photo, and saves it", async ({ page }) => {
+/** Where a fraction of the editor's canvas is on screen now: the tools under it change, and it fits the space left. */
+async function canvasAt(page: Page, fx: number, fy: number) {
+  const canvas = editor(page).locator("canvas.builder-canvas");
+  await expect.poll(async () => (await canvas.boundingBox())?.width ?? 0).toBeGreaterThan(100);
+  let box = (await canvas.boundingBox())!;
+  for (let again = true; again; ) {
+    await page.waitForTimeout(150); // until it has stopped resizing
+    const now = (await canvas.boundingBox())!;
+    again = now.width !== box.width || now.height !== box.height;
+    box = now;
+  }
+  return [box.x + box.width * fx, box.y + box.height * fy] as const;
+}
+
+/** A mouse drag in small steps, like a finger. */
+async function sweep(page: Page, from: readonly [number, number], to: readonly [number, number]) {
+  await page.mouse.move(...from);
+  await page.mouse.down();
+  for (let i = 1; i <= 10; i++) await page.mouse.move(from[0] + ((to[0] - from[0]) * i) / 10, from[1] + ((to[1] - from[1]) * i) / 10);
+  await page.mouse.up();
+}
+
+async function openBlank(page: Page, photos: number) {
+  await pickPhotos(page, photos);
+  await page.getByRole("button", { name: "Start from blank" }).click();
+  return editor(page);
+}
+
+/** Adds shapes from the palette: the first goes in the middle, the next two in the top left and top right. Each is chosen when added, so this lets go of it, which brings the palette back. */
+async function addShapes(e: Locator, ...shapes: string[]) {
+  const page = e.page();
+  for (const shape of shapes) {
+    await e.getByRole("button", { name: `Add ${shape.toLowerCase()}`, exact: true }).click();
+    await page.mouse.click(...(await canvasAt(page, 0.03, 0.97)));
+  }
+}
+const SPOTS = { middle: [0.5, 0.5], topLeft: [0.26, 0.26], topRight: [0.74, 0.26] } as const;
+
+/** Drags a tray photo (1 is the first) to a fraction of the canvas. */
+async function dragPhoto(page: Page, photo: number, to: readonly [number, number]) {
+  const thumb = editor(page).getByRole("button", { name: new RegExp(`^Photo ${photo},`) });
+  const box = (await thumb.boundingBox())!;
+  await sweep(page, [box.x + box.width / 2, box.y + box.height / 2], await canvasAt(page, to[0], to[1]));
+}
+const trayPhoto = (e: Locator, photo: number, state: string) => e.getByRole("button", { name: `Photo ${photo}, ${state}` });
+
+test("AC-CUSTOM-12 starts from an empty canvas: no splitting, and shapes of your own", async ({ page }) => {
   await signedIn(page);
-  await pickPhotos(page, 3);
-  const blank = page.getByRole("button", { name: "Start from blank" });
-  await expect(blank).toBeVisible();
-  await expect(page.getByRole("button", { name: "Edit this layout" })).toHaveCSS("background-color", "rgb(255, 194, 75)"); // still the primary
-  await blank.click();
-  const e = editor(page);
-  await expect(e.getByRole("heading", { name: "1 of 3 photos" })).toBeVisible();
-  await expect(e.getByRole("separator")).toHaveCount(0); // one cell: no lines
+  const e = await openBlank(page, 3);
+  await expect(e.getByRole("heading", { name: "0 of 3 photos" })).toBeVisible();
+  await expect(e.getByRole("status")).toHaveText("Add a shape or drag on the canvas to draw one.");
+  for (const name of ["Split across", "Split down", "Shape", "Grid", "Shapes"]) await expect(e.getByRole("button", { name, exact: true })).toHaveCount(0);
+  await expect(e.getByRole("radio")).toHaveCount(0);
   await e.getByRole("button", { name: "Done" }).click();
-  await expect(e.getByRole("status")).toHaveText("Split 2 more cells to fit 3 photos.");
+  await expect(e.getByRole("status")).toHaveText("Add a shape or drag on the canvas to draw one.");
 
-  await e.getByRole("button", { name: "Split across" }).click(); // the one cell starts out chosen
-  await expect(e.getByRole("heading", { name: "2 of 3 photos" })).toBeVisible();
-  await tapAt(page, 0.5, 0.2); // the top row, clear of the line
-  await e.getByRole("button", { name: "Split down" }).click();
+  await addShapes(e, "Rectangle", "Circle", "Heart");
+  for (const [n, spot] of [[1, SPOTS.middle], [2, SPOTS.topLeft], [3, SPOTS.topRight]] as const) {
+    await trayPhoto(e, n, "not placed").click();
+    await page.mouse.click(...(await canvasAt(page, spot[0], spot[1])));
+  }
   await expect(e.getByRole("heading", { name: "3 of 3 photos" })).toBeVisible();
-
   await saveAs(page, "From blank");
   const [saved] = await savedLayouts(page);
-  expect(saved!.name).toBe("From blank");
   expect(saved!.layout.cells).toHaveLength(3);
 });
 
@@ -176,28 +218,60 @@ test("AC-AI-03 the web app has no Describe a layout, even with its flag set", as
   await expect(page.getByRole("button", { name: "Describe a layout" })).toHaveCount(0);
 });
 
-test("AC-CUSTOM-13 starts a blank frame as shapes, adds more, and uses it", async ({ page }) => {
-  await pickPhotos(page, 3);
-  await page.getByRole("button", { name: "Start from blank" }).click();
-  const e = editor(page);
-  await expect(e.getByRole("radio", { name: "Grid" })).toHaveAttribute("aria-checked", "true");
-  await e.getByRole("radio", { name: "Shapes" }).click();
-  await expect(e.getByRole("radio", { name: "Shapes" })).toHaveAttribute("aria-checked", "true");
-  await expect(e.getByRole("heading", { name: "1 of 3 photos" })).toBeVisible();
+test("AC-CUSTOM-13 adds shapes from the picker: empty, and undoable", async ({ page }) => {
+  const e = await openBlank(page, 3);
+  await addShapes(e, "Circle");
+  await expect(e.getByRole("heading", { name: "0 of 3 photos" })).toBeVisible();
+  await expect(e.getByRole("status")).toHaveText("Add 2 more shapes, then drag photos into them.");
+  await addShapes(e, "Heart", "Star");
+  await expect(e.getByRole("status")).toHaveText("Drag 3 more photos into shapes.");
+  await e.getByRole("button", { name: "Undo" }).click(); // takes the star away
+  await expect(e.getByRole("status")).toHaveText("Undone.");
   await e.getByRole("button", { name: "Done" }).click();
-  await expect(e.getByRole("status")).toHaveText("Add 2 more cells to fit 3 photos.");
+  await expect(e.getByRole("status")).toHaveText("Add 1 more shape, then drag photos into them.");
+  await addShapes(e, "Rectangle");
+  await expect(e.getByRole("status")).toHaveText("Drag 3 more photos into shapes.");
+});
 
-  await e.getByRole("button", { name: "Add shape" }).click();
-  await e.getByRole("button", { name: "Circle" }).click();
+test("AC-CUSTOM-14 draws a shape by dragging on empty space; too small isn't added", async ({ page }) => {
+  const e = await openBlank(page, 3);
+  await expect(e.getByRole("status")).toContainText("drag on the canvas to draw one");
+  await sweep(page, await canvasAt(page, 0.1, 0.12), await canvasAt(page, 0.6, 0.14)); // too thin to be a photo
+  await expect(e.getByRole("status")).toContainText("too small");
+  await expect(e.getByRole("status")).not.toContainText("Add 2 more");
+
+  await sweep(page, await canvasAt(page, 0.85, 0.2), await canvasAt(page, 0.15, 0.3)); // dragged backwards
+  await expect(e.getByRole("status")).toHaveText("Add 2 more shapes, then drag photos into them.");
+  await sweep(page, await canvasAt(page, 0.1, 0.75), await canvasAt(page, 0.9, 0.9));
+  await expect(e.getByRole("status")).toHaveText("Add 1 more shape, then drag photos into them.");
+  await e.getByRole("button", { name: "Undo" }).click();
+  await expect(e.getByRole("status")).toHaveText("Undone.");
+
+  await page.mouse.click(...(await canvasAt(page, 0.9, 0.5))); // a tap on empty space draws nothing
+  await e.getByRole("button", { name: "Done" }).click();
+  await expect(e.getByRole("status")).toHaveText("Add 2 more shapes, then drag photos into them.");
+});
+
+test("AC-CUSTOM-15 drags photos from the tray into shapes, replaces and moves them, then uses the layout", async ({ page }) => {
+  const e = await openBlank(page, 3);
+  await addShapes(e, "Rectangle", "Circle", "Heart");
+  await expect(e.getByRole("group", { name: "Your photos" }).getByRole("button")).toHaveCount(3);
+  for (const n of [1, 2, 3]) await expect(trayPhoto(e, n, "not placed")).toBeVisible();
+
+  await dragPhoto(page, 1, SPOTS.middle);
+  await expect(trayPhoto(e, 1, "placed")).toBeVisible();
+  await expect(e.getByRole("heading", { name: "1 of 3 photos" })).toBeVisible();
+  await dragPhoto(page, 2, SPOTS.topLeft);
+  await dragPhoto(page, 3, SPOTS.middle); // onto a filled shape: replaces photo 1
+  await expect(trayPhoto(e, 1, "not placed")).toBeVisible();
   await expect(e.getByRole("heading", { name: "2 of 3 photos" })).toBeVisible();
-  await expect(e.getByRole("radio")).toHaveCount(0); // the choice is for the start only
-  await e.getByRole("button", { name: "Add shape" }).click();
-  await e.getByRole("button", { name: "Heart" }).click();
-  await expect(e.getByRole("heading", { name: "3 of 3 photos" })).toBeVisible();
-  await e.getByRole("button", { name: "Undo" }).click(); // takes the heart away
+  await dragPhoto(page, 1, [-0.05, 0.5]); // off the canvas: nothing
+  await expect(trayPhoto(e, 1, "not placed")).toBeVisible();
+  await dragPhoto(page, 2, SPOTS.topRight); // placed elsewhere: moves, and its old shape is empty
   await expect(e.getByRole("heading", { name: "2 of 3 photos" })).toBeVisible();
-  await e.getByRole("button", { name: "Add shape" }).click();
-  await e.getByRole("button", { name: "Star" }).click();
+  await e.getByRole("button", { name: "Done" }).click();
+  await expect(e.getByRole("status")).toHaveText("Drag 1 more photo into shapes.");
+  await dragPhoto(page, 1, SPOTS.topLeft);
   await expect(e.getByRole("heading", { name: "3 of 3 photos" })).toBeVisible();
 
   await e.getByRole("button", { name: "Done" }).click();
@@ -206,49 +280,124 @@ test("AC-CUSTOM-13 starts a blank frame as shapes, adds more, and uses it", asyn
   await expect(page.getByRole("application", { name: /^Story preview: .*, 3 photos$/ })).toBeVisible();
 });
 
-test("AC-CUSTOM-14 draws a cell by dragging on empty space of a shapes frame", async ({ page }) => {
-  await pickPhotos(page, 3);
-  await page.getByRole("button", { name: "Start from blank" }).click();
-  const e = editor(page);
-  await e.getByRole("radio", { name: "Shapes" }).click();
+test("AC-CUSTOM-15 taps a photo, then a shape, and takes a photo out again", async ({ page }) => {
+  const e = await openBlank(page, 3);
+  await addShapes(e, "Rectangle", "Circle", "Heart");
+  await e.getByRole("button", { name: "Done" }).click();
+  await expect(e.getByRole("status")).toHaveText("Drag 3 more photos into shapes.");
+
+  await trayPhoto(e, 2, "not placed").click();
+  await expect(e.getByRole("button", { name: "Photo 2, picked up" })).toHaveAttribute("aria-pressed", "true");
+  await expect(e.getByRole("status")).toHaveText("Tap a shape to put this photo in it.");
+  await page.mouse.click(...(await canvasAt(page, ...SPOTS.topLeft)));
+  await expect(trayPhoto(e, 2, "placed")).toBeVisible();
   await expect(e.getByRole("heading", { name: "1 of 3 photos" })).toBeVisible();
-  await expect(e.getByRole("status")).toContainText("Drag on empty space to draw a photo.");
 
-  const canvas = e.locator("canvas");
-  await expect.poll(async () => (await canvas.boundingBox())?.width ?? 0).toBeGreaterThan(100);
-  // Where a fraction of the canvas is on screen now: the tools below it change height, and it fits the space left.
-  async function at(fx: number, fy: number) {
-    let box = (await canvas.boundingBox())!;
-    for (let again = true; again; ) {
-      await page.waitForTimeout(150); // until it has stopped resizing
-      const now = (await canvas.boundingBox())!;
-      again = now.width !== box.width || now.height !== box.height;
-      box = now;
-    }
-    return [box.x + box.width * fx, box.y + box.height * fy] as const;
+  await e.getByRole("button", { name: "Take photo out" }).click(); // the shape is still chosen
+  await expect(trayPhoto(e, 2, "not placed")).toBeVisible();
+  await expect(e.getByRole("button", { name: "Take photo out" })).toHaveCount(0);
+
+  for (const [n, spot] of [[1, SPOTS.middle], [2, SPOTS.topLeft], [3, SPOTS.topRight]] as const) {
+    await trayPhoto(e, n, "not placed").click();
+    await page.mouse.click(...(await canvasAt(page, spot[0], spot[1])));
   }
-  async function sweep(a: [number, number], b: [number, number]) {
-    const [from, to] = [await at(...a), await at(...b)];
-    await page.mouse.move(...from);
-    await page.mouse.down();
-    for (let i = 1; i <= 8; i++) await page.mouse.move(from[0] + ((to[0] - from[0]) * i) / 8, from[1] + ((to[1] - from[1]) * i) / 8);
-    await page.mouse.up();
-  }
-
-  await sweep([0.1, 0.12], [0.6, 0.14]); // too thin to be a photo
-  await expect(e.getByRole("heading", { name: "1 of 3 photos" })).toBeVisible();
-  await expect(e.getByRole("status")).toContainText("too small");
-
-  await sweep([0.85, 0.2], [0.15, 0.3]); // dragged backwards, above the first photo
-  await expect(e.getByRole("heading", { name: "2 of 3 photos" })).toBeVisible();
-  await expect(e.getByRole("radio")).toHaveCount(0);
-  await sweep([0.1, 0.75], [0.9, 0.9]);
   await expect(e.getByRole("heading", { name: "3 of 3 photos" })).toBeVisible();
-  await e.getByRole("button", { name: "Undo" }).click();
-  await expect(e.getByRole("heading", { name: "2 of 3 photos" })).toBeVisible();
+  await e.getByRole("button", { name: "Done" }).click();
+  await expect(page.getByText(/no account needed/)).toBeVisible();
+});
 
-  await page.mouse.click(...(await at(0.9, 0.5))); // a tap on empty space draws nothing
+/** Drags a palette shape (by its "Add ..." label) onto a fraction of the canvas. */
+async function dragShape(page: Page, label: string, to: readonly [number, number]) {
+  const box = (await editor(page).getByRole("button", { name: label, exact: true }).boundingBox())!;
+  await sweep(page, [box.x + box.width / 2, box.y + box.height / 2], await canvasAt(page, to[0], to[1]));
+}
+
+test("AC-CUSTOM-13 adds shapes from the palette by tap or drag, changes a shape, and stops at 8", async ({ page }) => {
+  const e = await openBlank(page, 3);
+  const palette = e.getByRole("group", { name: "Shapes" });
+  for (const name of ["rectangle", "square", "circle", "heart", "star", "arch", "pill"]) await expect(palette.getByRole("button", { name: `Add ${name}`, exact: true })).toBeVisible();
+  for (const button of await palette.getByRole("button").all()) expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await expect(e.getByRole("button", { name: "Add shape" })).toHaveCount(0);
+
+  await dragShape(page, "Add star", [0.7, 0.7]); // lands where it's dropped, and is chosen
+  await expect(e.getByRole("status")).toHaveText("Add 2 more shapes, then drag photos into them.");
+  await expect(palette).toHaveCount(0); // a shape is chosen: its tools take the palette's place
+  await e.getByRole("button", { name: "Shape", exact: true }).click();
+  await e.getByRole("button", { name: "Pill", exact: true }).click(); // changes it, keeping its place
+  await expect(e.getByRole("button", { name: "Shape", exact: true })).toBeVisible();
+  await e.getByRole("button", { name: "Undo" }).click(); // takes the change back
+  await e.getByRole("button", { name: "Undo" }).click(); // and then the shape
+  await expect(e.getByRole("status")).toHaveText("Undone.");
+  await e.getByRole("button", { name: "Done" }).click();
+  await expect(e.getByRole("status")).toHaveText("Add a shape or drag on the canvas to draw one.");
+
+  await dragShape(page, "Add circle", [-0.1, 0.5]); // off the canvas: nothing is added
+  await expect(e.getByRole("status")).toHaveText("Add a shape or drag on the canvas to draw one.");
+  await e.getByRole("button", { name: "Add circle" }).click(); // a tap adds it in the middle
+  await expect(e.getByRole("button", { name: "Shape", exact: true })).toBeVisible();
+
+  // Eight in all: then the palette is off.
+  for (let n = 2; n <= 8; n++) {
+    await page.mouse.click(...(await canvasAt(page, 0.03, 0.97)));
+    await dragShape(page, "Add circle", [0.2 + ((n * 0.13) % 0.6), 0.15 + ((n * 0.11) % 0.7)]);
+  }
+  await page.mouse.click(...(await canvasAt(page, 0.03, 0.97)));
+  await expect(e.getByRole("button", { name: "Add circle" })).toBeDisabled();
+  await expect(e.getByRole("status")).toContainText("A layout holds up to 8 photos.");
+});
+
+test("AC-CUSTOM-16 a photo dropped on empty space makes a shape in its proportions; just beside a shape it goes in that shape", async ({ page }) => {
+  await signedIn(page);
+  const e = await openBlank(page, 3);
+  await dragPhoto(page, 2, [0.3, 0.3]); // a portrait photo
+  await expect(trayPhoto(e, 2, "placed")).toBeVisible();
+  await expect(e.getByRole("heading", { name: "1 of 3 photos" })).toBeVisible();
+  await expect(e.getByRole("status")).toHaveText("Add 2 more shapes, then drag photos into them.");
+
+  // A few px of screen below the shape's lower edge (it ends near 0.41 of the canvas's height): into it, replacing photo 2.
+  await dragPhoto(page, 1, [0.3, 0.45]);
+  await expect(trayPhoto(e, 2, "not placed")).toBeVisible();
+  await expect(trayPhoto(e, 1, "placed")).toBeVisible();
+  await expect(e.getByRole("heading", { name: "1 of 3 photos" })).toBeVisible();
+
+  await dragPhoto(page, 3, [0.7, 0.7]); // far from it: a new shape, a square one
   await expect(e.getByRole("heading", { name: "2 of 3 photos" })).toBeVisible();
+  await trayPhoto(e, 2, "not placed").click(); // taking a photo by tap, then tapping empty space, does the same
+  await page.mouse.click(...(await canvasAt(page, 0.3, 0.85)));
+  await expect(e.getByRole("heading", { name: "3 of 3 photos" })).toBeVisible();
+
+  await saveAs(page, "By photo");
+  const [saved] = await savedLayouts(page);
+  const ratios = saved!.layout.cells.map((c) => (c.w! * 1080) / (c.h! * 1920));
+  // Three shapes: the first made for photo 2 (1500x2600), the second for photo 3 (square), the third for photo 2 again.
+  expect(ratios).toHaveLength(3);
+  expect(ratios[0]).toBeCloseTo(1500 / 2600, 1);
+  expect(ratios[1]).toBeCloseTo(1, 1);
+  expect(ratios[2]).toBeCloseTo(1500 / 2600, 1);
+});
+
+test("AC-CUSTOM-17 tidies shapes that are nearly lined up, and says so when there's nothing to do", async ({ page }) => {
+  await signedIn(page);
+  const e = await openBlank(page, 2);
+  await expect(e.getByRole("button", { name: "Tidy" })).toBeDisabled(); // one shape or none: nothing to line up
+  await dragShape(page, "Add circle", [0.3, 0.3]);
+  await page.mouse.click(...(await canvasAt(page, 0.03, 0.97)));
+  await dragShape(page, "Add circle", [0.33, 0.62]); // a little off line with the first
+  await page.mouse.click(...(await canvasAt(page, 0.03, 0.97)));
+  await e.getByRole("button", { name: "Tidy" }).click();
+  await expect(e.getByRole("status")).not.toHaveText("Already tidy.");
+  await e.getByRole("button", { name: "Tidy" }).click();
+  await expect(e.getByRole("status")).toHaveText("Already tidy."); // the second time does nothing
+
+  for (const [n, spot] of [[1, [0.3, 0.3]], [2, [0.3, 0.62]]] as const) {
+    await trayPhoto(e, n, "not placed").click();
+    await page.mouse.click(...(await canvasAt(page, spot[0], spot[1])));
+  }
+  await saveAs(page, "Tidied");
+  const [saved] = await savedLayouts(page);
+  const [a, b] = saved!.layout.cells as unknown as { cx: number; r: number }[];
+  expect(a!.cx).toBeCloseTo(b!.cx, 3); // one column now
+  expect(a!.cx).toBeCloseTo(0.31, 1);
 });
 
 test("AC-CUSTOM-06 draws nothing over the photos", async ({ page }) => {

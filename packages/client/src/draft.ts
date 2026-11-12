@@ -14,35 +14,49 @@ export interface Start extends Draft {
   notice?: string;
 }
 
-/** A blank 9:16 frame for the layout editor: one grid cell filling the canvas (the style's margin sits inside it). */
+/**
+ * What "Start from blank" opens on: a 9:16 canvas with no shapes yet, in a free layout (overlap allowed, like the
+ * built-in "shapes" layouts that mix hearts, stars and rectangles) so shapes can be added, moved and resized. The
+ * editor holds the zero cells; Done only goes ahead once there's one shape per photo (see blankProblem).
+ */
 export function blankDraft(): Draft {
-  const layout: Layout = {
-    id: "blank",
-    name: "Blank",
-    family: "grid",
-    allowOverlap: false,
-    bleed: false,
-    blurBackground: false,
-    cells: [{ shape: "rect", x: 0, y: 0, w: 1, h: 1, rotate: 0, z: 0 }],
-  };
-  return { layout, order: [0] };
+  const layout: Layout = { id: "blank", name: "Blank", family: "shapes", allowOverlap: true, bleed: false, blurBackground: false, cells: [] };
+  return { layout, order: [] };
 }
 
-/**
- * A blank 9:16 frame for shapes: one centered rectangle in a free layout (overlap allowed, like the built-in
- * "shapes" layouts that mix hearts, stars and rectangles), so cells move, resize and can be added.
- */
-export function blankShapesDraft(): Draft {
-  const layout: Layout = {
-    id: "blank",
-    name: "Blank",
-    family: "shapes",
-    allowOverlap: true,
-    bleed: false,
-    blurBackground: false,
-    cells: [{ shape: "rect", x: 0.25, y: 0.36, w: 0.5, h: 0.28, rotate: 0, z: 0 }],
-  };
-  return { layout, order: [0] };
+/** Puts `photo` in `cell` of a blank canvas. A photo placed elsewhere leaves its old shape empty; the photo that was in `cell` is unplaced. */
+export function placePhoto(order: number[], cell: number, photo: number): number[] {
+  return order.map((o, i) => (i === cell ? photo : o === photo ? -1 : o));
+}
+
+/** Takes the photo out of `cell`, which stays as an empty shape. */
+export function takePhotoOut(order: number[], cell: number): number[] {
+  return order.map((o, i) => (i === cell ? -1 : o));
+}
+
+/** The photos (by index) that aren't in any shape. */
+export function unplacedPhotos(order: number[], photoCount: number): number[] {
+  return Array.from({ length: photoCount }, (_, p) => p).filter((p) => !order.includes(p));
+}
+
+/** What a blank canvas still needs before Done, said plainly; "" when every photo is in a shape and no shape is empty. */
+export function blankProblem(order: number[], photoCount: number): string {
+  if (!order.length) return "Add a shape or drag on the canvas to draw one.";
+  const empty = order.filter((o) => o < 0).length;
+  const unplaced = unplacedPhotos(order, photoCount).length;
+  const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
+  if (unplaced > empty) {
+    const more = unplaced - empty;
+    return `Add ${more} more ${plural(more, "shape", "shapes")}, then drag ${plural(unplaced, "the photo", "photos")} into ${plural(unplaced, "it", "them")}.`;
+  }
+  if (unplaced > 0) return `Drag ${unplaced} more ${plural(unplaced, "photo", "photos")} into shapes.`;
+  if (empty > 0) return `${empty} ${plural(empty, "shape is", "shapes are")} empty. Add a photo or remove ${plural(empty, "it", "them")}.`;
+  return "";
+}
+
+/** The order for the collage once a blank canvas is complete: photo index per shape. Null while blankProblem has something to say. */
+export function blankOrder(order: number[], photoCount: number): number[] | null {
+  return blankProblem(order, photoCount) ? null : order;
 }
 
 /** Problems from layoutProblems, said plainly, with the cells they're about. */

@@ -187,6 +187,7 @@ export function drawDraft(
   blurred: SkImage | null,
   selected: number | null,
   problems: number[],
+  target: number | null = null,
 ) {
   const shapes = cellShapes(scene.layout, scene.style, size);
   const { radius, border } = styleScale(scene.layout, scene.style, size);
@@ -195,7 +196,15 @@ export function drawDraft(
   for (const i of drawOrder(scene.layout.cells)) {
     const crop = crops[i];
     if (crop) drawCell(canvas, shapes[i]!, imageFor(order[i]!), crop, radius, border, scene.style.borderColor);
-    else canvas.drawPath(outlinePath(shapes[i]!.photo ?? shapes[i]!.outline, radius), paintOf("rgba(43, 19, 64, 0.5)"));
+    else {
+      canvas.drawPath(outlinePath(shapes[i]!.photo ?? shapes[i]!.outline, radius), paintOf("rgba(43, 19, 64, 0.5)"));
+      // A plus, to say a photo goes here.
+      const { cx, cy, width, height } = shapes[i]!.frame;
+      const arm = Math.min(width, height) * 0.18;
+      const paint = paintOf("rgba(255, 244, 232, 0.85)", PaintStyle.Stroke, 10);
+      canvas.drawLine(cx - arm, cy, cx + arm, cy, paint);
+      canvas.drawLine(cx, cy - arm, cx, cy + arm, paint);
+    }
   }
   const outline = (cell: number, color: string, dash: number[]) => {
     if (!shapes[cell]) return;
@@ -205,6 +214,7 @@ export function drawDraft(
   };
   for (const cell of problems) outline(cell, "#ff8f8f", [28, 18]);
   if (selected !== null) outline(selected, "#ffc24b", []);
+  if (target !== null) outline(target, "#7dffb0", []);
 }
 
 /** Draws one cell of `scene` moved from its own place into `to`, for animating it over the scene. */

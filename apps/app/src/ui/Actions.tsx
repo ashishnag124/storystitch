@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { StyleSheet, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 import { Button, type ButtonProps } from "./Button";
 
 /**
@@ -18,7 +18,16 @@ export const Actions = ({ children }: { children: ReactNode }) => <View style={s
 export const QuietActions = ({ children }: { children: ReactNode }) => <View style={styles.quiet}>{children}</View>;
 
 /** Tools of equal rank, in even rows of equal widths. */
-export function ToolGrid({ tools }: { tools: ButtonProps[] }) {
+export function ToolGrid({ tools, scroll }: { tools: ButtonProps[]; /** One row that scrolls sideways, for when the rows would take the room the preview needs. */ scroll?: boolean }) {
+  if (scroll) {
+    return (
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollRow}>
+        {tools.map((t) => (
+          <Button key={t.label} {...t} />
+        ))}
+      </ScrollView>
+    );
+  }
   // Three to a row when that comes out even, otherwise two.
   const flexBasis = tools.length % 3 === 0 ? "30%" : "40%";
   return (
@@ -37,4 +46,5 @@ const styles = StyleSheet.create({
   quiet: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "center", columnGap: 16 },
   tools: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   tool: { flexGrow: 1 },
+  scrollRow: { gap: 8, paddingHorizontal: 2 },
 });
