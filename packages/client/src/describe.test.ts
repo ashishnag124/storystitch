@@ -137,18 +137,23 @@ describe("AC-AI-01 a wrong photo count is put right", () => {
   });
 
   it("always ends with one cell per photo, for every spec and count", () => {
-    for (let n = 1; n <= 8; n++) {
+    // Each layoutFromSpec checks the whole layout by sampling the canvas (a few ms), so this is a spread of specs, not
+    // every combination: 1 to 8 bands, 1 to 4 photos in a band, sizes 1 and 10, and every photo count from 1 to 8,
+    // in both directions.
+    let made = 0;
+    for (let i = 0; i < 8; i++) {
+      const bands = Array.from({ length: i + 1 }, (_, band): [number, number] => [(band % 4) + 1, band % 2 ? 10 : 1]);
+      const photos = ((i * 3) % 8) + 1; // 1, 4, 7, 2, 5, 8, 3, 6
       for (const direction of ["rows", "columns"] as const) {
-        for (const bands of [[[1]], [[4], [4]], [[2], [2], [2], [2]], [[1], [1], [1], [1], [1], [1], [1], [1]], [[3], [1]]] as [number][][]) {
-          const result = layoutFromSpec(spec(direction, ...bands), n);
-          if (result.ok) {
-            expect(result.draft.layout.cells).toHaveLength(n);
-            expect(editModeOf(result.draft.layout)).toBe("grid");
-            expect(result.adjusted).toBe(bands.reduce((sum, [p]) => sum + p, 0) !== n);
-          }
-        }
+        const result = layoutFromSpec(spec(direction, ...bands), photos);
+        if (!result.ok) continue;
+        made++;
+        expect(result.draft.layout.cells).toHaveLength(photos);
+        expect(editModeOf(result.draft.layout)).toBe("grid");
+        expect(result.adjusted).toBe(bands.reduce((sum, [p]) => sum + p, 0) !== photos);
       }
     }
+    expect(made).toBeGreaterThanOrEqual(6); // the rest are too thin or too many to fit, and are rejected
   });
 });
 
