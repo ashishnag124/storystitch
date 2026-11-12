@@ -66,15 +66,17 @@ describe("AC-AI-01 a spec becomes a grid layout", () => {
     }
   });
 
-  it("raises a band that is too small, and rejects it when that leaves its photos too wide and short", () => {
-    expect(layoutFromSpec(spec("rows", [2, 10], [2, 10], [2, 10], [2, 1]), 8)).toEqual({ ok: false, problem: "Photo 7 is too long and thin; use fewer photos in its row." });
+  it("raises a band that is too small to the smallest it can be", () => {
+    const { layout } = built(spec("rows", [2, 10], [2, 10], [2, 10], [2, 1]), 8).draft;
+    expect((layout.cells as Box[]).at(-1)!.h * 1920).toBeGreaterThanOrEqual(108);
   });
 
   it("rejects what cannot be made, with the reason", () => {
     const tooMany = spec("columns", ...Array.from({ length: 11 }, (): [number] => [1]));
     expect(layoutFromSpec(tooMany, 11)).toEqual({ ok: false, problem: "There are too many columns to fit; use fewer." });
-    expect(layoutFromSpec(spec("columns", [1], [1], [1], [1]), 4)).toEqual({ ok: false, problem: "Photo 1 is too long and thin; use fewer photos in its column." });
-    expect(layoutFromSpec(spec("rows", [4]), 4)).toMatchObject({ ok: false, problem: expect.stringContaining("too long and thin") });
+    const six = spec("columns", ...Array.from({ length: 6 }, (): [number] => [1]));
+    expect(layoutFromSpec(six, 6)).toEqual({ ok: false, problem: "Photo 1 is too long and thin; use fewer photos in its column." });
+    expect(built(spec("columns", [1], [1], [1], [1]), 4).draft.layout.cells).toHaveLength(4); // 4 across at full height is allowed
   });
 
   it("rejects malformed specs", () => {
@@ -162,11 +164,13 @@ describe("AC-AI-01 the prompt", () => {
   it("gives two examples that add up to the photo count", () => {
     const four = describePrompt("x", 4);
     expect(four).toContain("That is 1 + 3 = 4.");
-    expect(four).toContain("That is 2 + 2 = 4.");
+    expect(four).toContain("That is 3 + 1 = 4.");
     const six = describePrompt("x", 6);
-    expect(six).toContain("That is 1 + 3 + 2 = 6.");
-    expect(six).toContain("That is 3 + 3 = 6.");
-    expect(describePrompt("x", 8)).toContain("That is 1 + 4 + 3 = 8.");
+    expect(six).toContain("That is 2 + 4 = 6.");
+    expect(six).toContain("That is 4 + 2 = 6.");
+    expect(describePrompt("x", 5)).toContain("That is 2 + 3 = 5.");
+    expect(describePrompt("x", 7)).toContain("That is 4 + 3 = 7.");
+    expect(describePrompt("x", 8)).toContain("That is 4 + 4 = 8.");
     expect(describePrompt("x", 1)).toContain("That is 1 = 1.");
   });
 

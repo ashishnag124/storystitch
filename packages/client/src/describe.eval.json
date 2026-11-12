@@ -1,0 +1,46 @@
+{
+  "about": "Descriptions to run through the real on-device model (apps/app/scripts/eval-describe.mjs) and score against what each one means. `expected` lists every acceptable structure: direction, and photos per band in order; layouts that make the same grid count as the same (see describe.eval.ts). `sizeOrder` says what the description claims about sizes: { largest: i } means band i is strictly the biggest, { equal: true } means all bands are the same size.",
+  "split": {
+    "heldOut": "12 cases written before any prompt or schema was changed or measured. They are never looked at to guide a change, and neither they nor their expectations are edited afterwards.",
+    "tuning": "24 cases that failures may be read from and tuned against."
+  },
+  "cases": [
+    { "id": "h01", "set": "heldOut", "description": "three rows of two", "photos": 6, "expected": [{ "direction": "rows", "bands": [2, 2, 2] }] },
+    { "id": "h02", "set": "heldOut", "description": "two columns of four", "photos": 8, "expected": [{ "direction": "columns", "bands": [4, 4] }] },
+    { "id": "h03", "set": "heldOut", "description": "one large photo at the top and four small ones underneath", "photos": 5, "expected": [{ "direction": "rows", "bands": [1, 4], "sizeOrder": { "largest": 0 } }] },
+    { "id": "h04", "set": "heldOut", "description": "a big photo on the left and three small ones stacked on the right", "photos": 4, "expected": [{ "direction": "columns", "bands": [1, 3], "sizeOrder": { "largest": 0 } }] },
+    { "id": "h05", "set": "heldOut", "description": "each photo in its own column", "photos": 4, "expected": [{ "direction": "columns", "bands": [1, 1, 1, 1] }] },
+    { "id": "h06", "set": "heldOut", "description": "a vertical stack of three photos", "photos": 3, "expected": [{ "direction": "rows", "bands": [1, 1, 1] }] },
+    { "id": "h07", "set": "heldOut", "description": "one on top, three in the middle, two at the bottom", "photos": 6, "expected": [{ "direction": "rows", "bands": [1, 3, 2] }] },
+    { "id": "h08", "set": "heldOut", "description": "two on the left, two in the middle, three on the right", "photos": 7, "expected": [{ "direction": "columns", "bands": [2, 2, 3] }] },
+    { "id": "h09", "set": "heldOut", "description": "four rows, the second one the tallest", "photos": 4, "expected": [{ "direction": "rows", "bands": [1, 1, 1, 1], "sizeOrder": { "largest": 1 } }] },
+    { "id": "h10", "set": "heldOut", "description": "a wide photo on top and two equal ones below", "photos": 3, "expected": [{ "direction": "rows", "bands": [1, 2], "sizeOrder": { "largest": 0 } }] },
+    { "id": "h11", "set": "heldOut", "description": "3x2", "photos": 6, "expected": [{ "direction": "rows", "bands": [2, 2, 2] }, { "direction": "rows", "bands": [3, 3] }] },
+    { "id": "h12", "set": "heldOut", "description": "big photo up top, then two rows of two", "photos": 5, "expected": [{ "direction": "rows", "bands": [1, 2, 2], "sizeOrder": { "largest": 0 } }] },
+
+    { "id": "t01", "set": "tuning", "description": "two rows of three", "photos": 6, "expected": [{ "direction": "rows", "bands": [3, 3] }] },
+    { "id": "t02", "set": "tuning", "description": "three columns of two", "photos": 6, "expected": [{ "direction": "columns", "bands": [2, 2, 2] }] },
+    { "id": "t03", "set": "tuning", "description": "4 rows with 2 photos each", "photos": 8, "expected": [{ "direction": "rows", "bands": [2, 2, 2, 2] }] },
+    { "id": "t04", "set": "tuning", "description": "two columns, two photos in each", "photos": 4, "expected": [{ "direction": "columns", "bands": [2, 2] }] },
+    { "id": "t05", "set": "tuning", "description": "one big photo on top, three small ones below", "photos": 4, "expected": [{ "direction": "rows", "bands": [1, 3], "sizeOrder": { "largest": 0 } }] },
+    { "id": "t06", "set": "tuning", "description": "a big photo on the left and two small ones on the right", "photos": 3, "expected": [{ "direction": "columns", "bands": [1, 2], "sizeOrder": { "largest": 0 } }] },
+    { "id": "t07", "set": "tuning", "description": "two small photos on top and one big one on the bottom", "photos": 3, "expected": [{ "direction": "rows", "bands": [2, 1], "sizeOrder": { "largest": 1 } }] },
+    { "id": "t08", "set": "tuning", "description": "a big photo on the right, four small ones stacked on the left", "photos": 5, "expected": [{ "direction": "columns", "bands": [4, 1], "sizeOrder": { "largest": 1 } }] },
+    { "id": "t09", "set": "tuning", "description": "each photo in its own row", "photos": 3, "expected": [{ "direction": "rows", "bands": [1, 1, 1] }] },
+    { "id": "t10", "set": "tuning", "description": "four photos stacked on top of each other", "photos": 4, "expected": [{ "direction": "rows", "bands": [1, 1, 1, 1] }] },
+    { "id": "t11", "set": "tuning", "description": "three photos side by side", "photos": 3, "expected": [{ "direction": "rows", "bands": [3] }] },
+    { "id": "t12", "set": "tuning", "description": "two photos side by side", "photos": 2, "expected": [{ "direction": "rows", "bands": [2] }] },
+    { "id": "t13", "set": "tuning", "description": "two on top, one in the middle, three at the bottom", "photos": 6, "expected": [{ "direction": "rows", "bands": [2, 1, 3] }] },
+    { "id": "t14", "set": "tuning", "description": "one on top, two in the middle, one at the bottom", "photos": 4, "expected": [{ "direction": "rows", "bands": [1, 2, 1] }] },
+    { "id": "t15", "set": "tuning", "description": "three on top and four below", "photos": 7, "expected": [{ "direction": "rows", "bands": [3, 4] }] },
+    { "id": "t16", "set": "tuning", "description": "two on the left, three on the right", "photos": 5, "expected": [{ "direction": "columns", "bands": [2, 3] }] },
+    { "id": "t17", "set": "tuning", "description": "four photos stacked in rows, the first one tallest", "photos": 4, "expected": [{ "direction": "rows", "bands": [1, 1, 1, 1], "sizeOrder": { "largest": 0 } }] },
+    { "id": "t18", "set": "tuning", "description": "three rows, the last one the biggest", "photos": 3, "expected": [{ "direction": "rows", "bands": [1, 1, 1], "sizeOrder": { "largest": 2 } }] },
+    { "id": "t19", "set": "tuning", "description": "two rows of equal height, two photos in each", "photos": 4, "expected": [{ "direction": "rows", "bands": [2, 2], "sizeOrder": { "equal": true } }] },
+    { "id": "t20", "set": "tuning", "description": "three photos in a column, the middle one the tallest", "photos": 3, "expected": [{ "direction": "rows", "bands": [1, 1, 1], "sizeOrder": { "largest": 1 } }] },
+    { "id": "t21", "set": "tuning", "description": "2x2", "photos": 4, "expected": [{ "direction": "rows", "bands": [2, 2] }] },
+    { "id": "t22", "set": "tuning", "description": "2x3", "photos": 6, "expected": [{ "direction": "rows", "bands": [3, 3] }, { "direction": "rows", "bands": [2, 2, 2] }] },
+    { "id": "t23", "set": "tuning", "description": "a big one then a bunch of little ones underneath", "photos": 5, "expected": [{ "direction": "rows", "bands": [1, 4], "sizeOrder": { "largest": 0 } }, { "direction": "rows", "bands": [1, 2, 2], "sizeOrder": { "largest": 0 } }] },
+    { "id": "t24", "set": "tuning", "description": "one hero on top, the rest in a row below", "photos": 4, "expected": [{ "direction": "rows", "bands": [1, 3], "sizeOrder": { "largest": 0 } }] }
+  ]
+}
