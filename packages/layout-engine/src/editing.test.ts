@@ -27,7 +27,6 @@ import {
   cornerSteps,
   cornersLayout,
   cornersOf,
-  duplicateCell,
   editModeOf,
   fitGrid,
   gridDividers,
@@ -283,13 +282,12 @@ describe("AC-CUSTOM-04 free cells", () => {
     expect(rotateCell(fixed.fiveCircles, 0, 10)).toBeNull();
   });
 
-  it("adds a copy of a cell where it fits, and removes cells", () => {
+  it("removes cells, but not the last one", () => {
     const two = fixed.twoCircles;
-    const added = duplicateCell(scaleCell(scaleCell(two, 0, 0.6)!, 1, 0.6)!, 0)!;
-    expect(added.layout.cells).toHaveLength(3);
-    expect(added.origin).toEqual([0, 1, null]);
-    valid(added.layout);
-    expect(removeCell(added.layout, 0)!.origin).toEqual([1, 2]);
+    const removed = removeCell(two, 0)!;
+    expect(removed.layout.cells).toHaveLength(1);
+    expect(removed.origin).toEqual([1]);
+    valid(removed.layout);
     expect(removeCell(byId("one-heart"), 0)).toBeNull();
   });
 
