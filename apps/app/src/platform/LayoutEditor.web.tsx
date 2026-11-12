@@ -5,7 +5,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, type KeyboardEvent, ty
 import type { Photo } from "./photos";
 import { drawBlurredBackground, drawCell, fillBackground, hasBlurredBackground, outlinePath, previewOf } from "./render";
 import { cellShapes, styleScale, type Scene, type Start, type Style } from "@storystitch/client";
-import { SaveActions, UseActions } from "../LayoutSheetActions";
+import { BlankChoice, SaveActions, UseActions } from "../LayoutSheetActions";
 import { ToolGrid } from "../ui/Actions";
 import { Button } from "../ui/Button";
 import { useLayoutEditor, type Handle } from "../useLayoutEditor";
@@ -187,6 +187,7 @@ export default function LayoutEditor({ photos, style, start, signedIn, onCancel,
         <p className="builder-status" role="status">
           {editor.status}
         </p>
+        {editor.blankKind && <BlankChoice editor={editor} />}
         {tools.length > 0 && <ToolGrid tools={tools} />}
       </section>
 

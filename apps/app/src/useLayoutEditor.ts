@@ -2,7 +2,9 @@
 // LayoutEditor.web.tsx and LayoutEditor.native.tsx draw it and feed it touches. How cells can change depends on the
 // layout (editModeOf): lines in grids, shared corners and lines in slanted layouts, and whole cells otherwise.
 import {
+  ADD_SHAPES,
   GRID_SHAPES,
+  addCell,
   MOVE_STEPS,
   bringToFront,
   canRotate,
@@ -27,13 +29,15 @@ import {
   snapTo,
   splitCell,
   type Corners,
+  type AddShape,
   type Edited,
   type Grid,
 } from "@storystitch/layout-engine";
 import { STORY_CANVAS, cellBounds, editedLayoutProblems, hitTest, type Layout, type Point, type SavedLayout } from "@storystitch/shared";
-import { SaveError, autoCrop, explain, styleScale, withOrigin, type CropSource, type Draft, type Start, type Style } from "@storystitch/client";
+import { SaveError, autoCrop, blankDraft, blankShapesDraft, explain, styleScale, withOrigin, type CropSource, type Draft, type Start, type Style } from "@storystitch/client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { saveLayout } from "./api";
+import { BLANK_LAYOUT_ENABLED } from "./config";
 import { track } from "./usage";
 
 const { width: W, height: H } = STORY_CANVAS;
@@ -48,6 +52,9 @@ const TURN_STEP = 4;
 /** How far one VoiceOver step moves a line or corner (canvas px): enough to change the percent it says. */
 const VOICEOVER_STEP_PX = 40;
 const NO_ROOM = "There's no room to move it that way.";
+const SHAPE_NAMES: Record<AddShape, string> = { rect: "Rectangle", circle: "Circle", heart: "Heart", star: "Star" };
+/** The most photos a layout holds. */
+const MAX_CELLS = 8;
 /** How long after the last change the overlay check runs (it samples the whole canvas). */
 const CHECK_DELAY_MS = 150;
 
@@ -109,7 +116,11 @@ export interface Tool {
   /** Said instead of the label, when the label is only a symbol. */
   name?: string;
   onPress: () => void;
+  disabled?: boolean;
 }
+
+/** The two ways a blank frame can start. */
+export type BlankKind = "grid" | "shapes";
 
 interface Options {
   photos: CropSource[];
@@ -122,10 +133,11 @@ interface Options {
 }
 
 export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOrigin }: Options) {
-  const mode = useMemo(() => editModeOf(start.layout), [start.layout]);
+  const [mode, setMode] = useState(() => editModeOf(start.layout));
   const [draft, setDraft] = useState<Draft>({ layout: start.layout, order: start.order });
   const [history, setHistory] = useState<Draft[]>([]);
   const [selected, setSelected] = useState<number | null>(mode === "grid" && start.layout.cells.length === 1 ? 0 : null);
+  const [adding, setAdding] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [problems, setProblems] = useState<{ text: string; cells: number[] }[]>([]);
   const [message, setMessage] = useState("");
@@ -187,6 +199,16 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
     drag.current = null;
     setDragging(false);
     if (d && d.base.layout !== draft.layout) setHistory((h) => [...h, d.base]);
+  }
+  // A blank frame starts as a grid or as shapes, until the first edit. Undo back to the start brings the choice back.
+  const blankKind: BlankKind | null = BLANK_LAYOUT_ENABLED && start.layout.id === "blank" && history.length === 0 ? (mode === "free" ? "shapes" : "grid") : null;
+  function chooseBlank(kind: BlankKind) {
+    const next = kind === "shapes" ? blankShapesDraft() : blankDraft();
+    setDraft(next);
+    setMode(kind === "shapes" ? "free" : "grid");
+    setSelected(kind === "grid" ? 0 : null);
+    setAdding(false);
+    setMessage("");
   }
   const refuse = (text: string) => {
     setMessage(text);
@@ -460,7 +482,25 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
       { label: "Remove", onPress: () => (setSelected(null), apply(removeGridCell(layout, sel), "A layout needs at least one cell.")) },
     );
   }
-  if (sel !== null && mode === "free") {
+  const canAdd = BLANK_LAYOUT_ENABLED && mode === "free";
+  const full = layout.cells.length >= MAX_CELLS;
+  if (canAdd && adding) {
+    for (const shape of ADD_SHAPES) {
+      tools.push({
+        label: SHAPE_NAMES[shape],
+        onPress: () => {
+          const edited = addCell(layout, shape);
+          if (!edited) return refuse("There's no room for another photo.");
+          const next = withOrigin(draft, edited, photos.length);
+          commit(next);
+          setSelected(next.layout.cells.length - 1);
+          setAdding(false);
+        },
+      });
+    }
+    tools.push({ label: "Back", onPress: () => setAdding(false) });
+  } else if (sel !== null && mode === "free") {
+    if (canAdd) tools.push({ label: "Add shape", disabled: full, onPress: () => setAdding(true) });
     tools.push(
       { label: "Smaller", onPress: () => scaleBy(1 / SCALE_STEP) },
       { label: "Bigger", onPress: () => scaleBy(SCALE_STEP) },
@@ -471,6 +511,8 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
       tools.push({ label: "⟲", name: "Turn left", onPress: () => turnBy(-TURN_STEP) }, { label: "⟳", name: "Turn right", onPress: () => turnBy(TURN_STEP) });
     }
     tools.push({ label: "Remove", onPress: () => (setSelected(null), apply(removeCell(layout, sel), "A layout needs at least one cell.")) });
+  } else if (canAdd) {
+    tools.push({ label: "Add shape", disabled: full, onPress: () => setAdding(true) });
   }
 
   // --- Done: check the layout, then use it as it is, or name it and save it.
@@ -521,6 +563,8 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
     handles,
     cellMover,
     tools,
+    blankKind,
+    chooseBlank,
     pressPreview,
     movePreview,
     grabHandle,
@@ -531,7 +575,7 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
     done,
     use: () => onUse(layout, order),
     countText,
-    status: message || countHint || problems[0]?.text || HINTS[mode](sel !== null),
+    status: message || countHint || problems[0]?.text || (canAdd && full ? "A layout holds up to 8 photos." : HINTS[mode](sel !== null)),
     saving,
     setSaving,
     save,
