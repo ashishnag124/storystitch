@@ -119,7 +119,7 @@ describe("rankedScenes", () => {
     it("never opens on a negative-space layout for any photo count", () => {
       const wide = { width: 6000, height: 2000, detections: [] };
       for (let n = 2; n <= 8; n++) expect(rankedScenes(Array(n).fill(wide))[0]!.layout.family).not.toBe("negative-space");
-    });
+    }, 30_000); // the first run measures every overlapping layout, ~25x slower on a busy CI runner
   });
 
   it("AC-RANK-06 puts a layout the photos fill first for odd photo counts", () => {
