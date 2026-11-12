@@ -48,12 +48,16 @@
   /// What the app is told about an error from the model. Newer systems throw LanguageModelError, older ones GenerationError.
   @available(iOS 26.0, *)
   private func errorCode(_ error: Error) -> StoryAIFailure {
-    if #available(iOS 27.0, *), let error = error as? LanguageModelError {
-      switch error {
-      case .guardrailViolation, .refusal, .unsupportedLanguageOrLocale: return .refused
-      default: return .failed
+    // LanguageModelError exists only in the iOS 27 SDK (Swift 6.4, Xcode 27). #available can't hide a type the SDK
+    // doesn't declare, so on Xcode 26 this is left out at compile time and GenerationError below covers every iOS.
+    #if compiler(>=6.4)
+      if #available(iOS 27.0, *), let error = error as? LanguageModelError {
+        switch error {
+        case .guardrailViolation, .refusal, .unsupportedLanguageOrLocale: return .refused
+        default: return .failed
+        }
       }
-    }
+    #endif
     if let error = error as? LanguageModelSession.GenerationError {
       switch error {
       case .guardrailViolation, .refusal, .unsupportedLanguageOrLocale: return .refused
