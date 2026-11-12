@@ -95,6 +95,34 @@ Pick a mix of portrait and landscape photos and check that the suggested layouts
 
 The notes for the reviewer below still apply as they are, with the same demo account and Sign-in required. There's still nothing to buy: StoryStitch Plus is switched off in this build.
 
+## Version 1.3.1
+
+Built from release v1.3.1. Promotional text, keywords and description stay as above. Everything below goes in the new 1.3.1 version in App Store Connect.
+
+### What's new
+
+```text
+• Start a collage from a blank canvas: add shapes, then drag your photos into them from a tray.
+• Pinch to resize a shape and twist to turn it. Drag a shape off the edge to remove it.
+• New icons on the Layouts, Style and Export tabs make the tools easier to find.
+• Terms of use and refund policy pages added, plus privacy policy updates.
+• Better cropping for group photos, and other fixes.
+```
+
+### App Review
+
+The notes for the reviewer below still apply, with the same demo account and Sign-in required. Add this to them:
+
+```text
+Layouts tab > "Start from blank" opens an empty canvas. Add shapes from the palette, drag photos into them from the tray, pinch to resize and twist to turn a shape, drag a shape off the edge to remove it.
+
+This build includes native code for an upcoming on-device text-to-layout feature (Apple's Foundation Models framework, iOS 26+). It is switched off in this build and has no user interface; it will be submitted for review when it is enabled. No data leaves the device.
+```
+
+### Screenshots
+
+Screenshot 08 (Style) is out of date, and none of the screenshots show the blank canvas.
+
 ## Review history
 
 | Date | Build | Result |
