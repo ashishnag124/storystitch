@@ -235,6 +235,7 @@ Behind `EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR` (needs accounts): on in staging and p
 | AC-CUSTOM-09 | A saved layout this app version can't read is left out of the Layouts tool, and the user's other saved layouts still appear. | auto |
 | AC-CUSTOM-10 | On iOS, VoiceOver can do without dragging what a finger does to lines and handles: swipe up or down on a line, slanted line, resize handle or turn handle to step it, use the Move up, down, left and right actions on a corner (only the ways it can go) or on the Move photo element over the chosen photo in a free layout, and swipe on the preview to choose a photo. Each step says where it ended up or why it can't go further, and Undo reverses it. | auto |
 | AC-CUSTOM-11 | After Done, anyone can use the edited layout in their collage and export it without an account. Signed-out users are told an account is optional and only keeps the layout for later; if they create one or sign in, they come back to their layout, ready to name and save it. An unsaved layout stays in the Layouts tool while the photos are open, and isn't counted as an export of the layout it started from. | auto |
+| AC-CUSTOM-12 | With the blank layout flag on, "Start from blank" opens the layout editor on a single cell that fills the frame; splitting it builds a grid, Done proceeds once there's one cell per photo, and the result is used and saved like any edited layout. | auto |
 | AC-CUSTOM-08 | The layout editor feels right one-handed on a real iPhone and Android phone: lines, corners and photos are easy to grab and drag without precise aim. | manual |
 
 ## Saved collages
@@ -285,6 +286,6 @@ flag is off, AC-EXPORT-09 describes the switch exactly.
 |---|---|---|
 | AC-ADMIN-01 | The app records first-party events: visit, screen views, tagged button presses, photos picked (count), layout chosen, export, share, save, sign-up and error. | auto |
 | AC-ADMIN-02 | Events and stored counts never contain image data, file names, layout names, emails, IP addresses, user agents or any account or device ID. Daily visitors are counted with a hash held in memory that changes daily and is never stored. | auto |
-| AC-ADMIN-03 | `/admin` opens only for admin accounts signed in with email, password and an authenticator code; everyone else is refused. | planned |
-| AC-ADMIN-04 | The dashboard shows daily totals, the picked → exported → saved funnel, most-used layouts and errors. | planned |
-| AC-ADMIN-05 | At phone width, `/admin` says to open it on a desktop. | planned |
+| AC-ADMIN-03 | `/admin` opens only for admin accounts signed in with email, password and an authenticator code; everyone else is refused. | auto |
+| AC-ADMIN-04 | The dashboard shows daily totals, the picked → exported → saved funnel, most-used layouts and errors. | auto |
+| AC-ADMIN-05 | At phone width, `/admin` says to open it on a desktop. | auto |

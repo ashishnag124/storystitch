@@ -80,3 +80,35 @@ export const EntitlementCheckSchema = z.object({ appUserId: AnonymousBuyerIdSche
 
 export type Entitlements = z.infer<typeof EntitlementsSchema>;
 export type EntitlementCheck = z.infer<typeof EntitlementCheckSchema>;
+
+/** Events summed per day on the admin dashboard, in column order. `visitors` is the API's own estimate. */
+export const ADMIN_DAILY_EVENTS = [
+  "visitors",
+  "visit_started",
+  "photos_picked",
+  "collage_exported",
+  "collage_shared",
+  "layout_saved",
+  "signed_up",
+  "error_shown",
+] as const;
+
+const Count = z.number().int().nonnegative();
+
+/**
+ * `GET /admin/stats?days=1..90`: usage counts for the admin dashboard, all platforms added together. Counts only, as
+ * AC-ADMIN-02 requires. 401 when signed out; 403 unless the account is an admin that signed in with its authenticator.
+ */
+export const AdminStatsSchema = z.object({
+  days: z.number().int().min(1).max(90),
+  /** Every UTC day of the period, newest first. */
+  daily: z.array(z.object({ day: z.string(), counts: z.record(z.enum(ADMIN_DAILY_EVENTS), Count) })),
+  /** Sets of photos picked, then how many of those were exported and saved (nothing is saved yet, so 0). */
+  funnel: z.object({ picked: Count, exported: Count, saved: Count }),
+  /** Built-in layout ids with their all-time export counts, most first (up to 10). */
+  topLayouts: z.array(z.object({ layout: z.string(), exports: Count })),
+  /** Errors shown in the period, by code, most first. */
+  errors: z.array(z.object({ code: z.string(), count: Count })),
+});
+
+export type AdminStats = z.infer<typeof AdminStatsSchema>;

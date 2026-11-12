@@ -5,4 +5,6 @@ import { lazy } from "react";
 const accounts = process.env.EXPO_PUBLIC_FEATURE_ACCOUNTS === "true";
 
 export const Accounts = accounts ? lazy(() => import("../Accounts")) : null;
+// The admin dashboard is web only: the native side exports null.
+export const Admin = accounts && process.env.EXPO_PUBLIC_FEATURE_ADMIN === "true" ? lazy(() => import("./Admin")) : null;
 export const LayoutEditor = accounts && process.env.EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR === "true" ? lazy(() => import("./LayoutEditor")) : null;

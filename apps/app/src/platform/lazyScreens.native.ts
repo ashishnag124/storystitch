@@ -5,4 +5,5 @@ import Editor from "./LayoutEditor";
 const accounts = process.env.EXPO_PUBLIC_FEATURE_ACCOUNTS === "true";
 
 export const Accounts = accounts ? AccountScreens : null;
+export const Admin = null;
 export const LayoutEditor = accounts && process.env.EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR === "true" ? Editor : null;

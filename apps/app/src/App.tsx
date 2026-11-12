@@ -8,7 +8,7 @@ import { Editor } from "./Editor";
 import { PickScreen } from "./PickScreen";
 import { PERF_READOUT } from "./config";
 import { PerfReadout } from "./PerfReadout";
-import { Accounts } from "./platform/lazyScreens";
+import { Accounts, Admin } from "./platform/lazyScreens";
 import { useEmailLinks } from "./platform/emailLinks";
 import { ACCOUNT_PATHS, useLocation } from "./platform/route";
 import { UnsupportedPhotoError, analyzePhoto, closePhoto, loadPhoto, type PickedPhoto, type Photo } from "./platform/photos";
@@ -70,7 +70,7 @@ export default function App() {
 
   // VoiceOver stays on an open account screen, which covers this one. The bot check's page also holds only the check.
   const { pathname } = useLocation();
-  const covered = Boolean(Accounts) && (pathname === "/bot-check" || ACCOUNT_PATHS.some((p) => p === pathname));
+  const covered = (Boolean(Accounts) && (pathname === "/bot-check" || ACCOUNT_PATHS.some((p) => p === pathname))) || (Boolean(Admin) && pathname === "/admin");
 
   const screen = screenFor(pathname, photos.length > 0);
   useEffect(() => track("screen_viewed", { screen }), [screen]);
@@ -88,6 +88,11 @@ export default function App() {
         {Accounts && (
           <Suspense fallback={null}>
             <Accounts />
+          </Suspense>
+        )}
+        {Admin && (
+          <Suspense fallback={null}>
+            <Admin />
           </Suspense>
         )}
         {linkResult && <LinkResult {...linkResult} onClose={() => setLinkResult(null)} />}

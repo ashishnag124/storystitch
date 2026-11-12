@@ -11,7 +11,7 @@ export interface UsageRow {
   count: number;
 }
 
-const day = (date: Date) => date.toISOString().slice(0, 10);
+export const day = (date: Date) => date.toISOString().slice(0, 10);
 
 /** The first day of the `days` days ending on `today`. */
 const firstDay = (days: number, today: Date) => day(new Date(today.getTime() - (days - 1) * 86_400_000));

@@ -15,6 +15,10 @@ export const user = pgTable("user", {
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
+  /** Set by hand in SQL, never through the API: no Better Auth field maps to it. Opens /admin/stats (with two-factor). */
+  isAdmin: boolean("is_admin").notNull().default(false),
+  /** Better Auth's two-factor plugin (ADMIN_ENABLED). True once an authenticator code has been verified. */
+  twoFactorEnabled: boolean("two_factor_enabled").default(false),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });
@@ -143,4 +147,21 @@ export const entitlement = pgTable(
     grantedAt: timestamp("granted_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.userId, t.key] })],
+);
+
+/** Authenticator-app secrets (Better Auth's two-factor plugin, only with ADMIN_ENABLED). Secret and backup codes are stored encrypted. */
+export const twoFactor = pgTable(
+  "two_factor",
+  {
+    id: text("id").primaryKey(),
+    secret: text("secret").notNull(),
+    backupCodes: text("backup_codes").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    verified: boolean("verified").default(true),
+    failedVerificationCount: integer("failed_verification_count").default(0),
+    lockedUntil: timestamp("locked_until", { withTimezone: true }),
+  },
+  (t) => [index("two_factor_secret_idx").on(t.secret), index("two_factor_user_id_idx").on(t.userId)],
 );
