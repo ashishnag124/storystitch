@@ -238,7 +238,17 @@ Behind `EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR` (needs accounts): on in staging and p
 | AC-CUSTOM-12 | With the blank layout flag on, "Start from blank" opens the layout editor on a single cell that fills the frame; splitting it builds a grid, Done proceeds once there's one cell per photo, and the result is used and saved like any edited layout. | auto |
 | AC-CUSTOM-08 | The layout editor feels right one-handed on a real iPhone and Android phone: lines, corners and photos are easy to grab and drag without precise aim. | manual |
 
-## Saved collages
+## Describe a layout (iOS)
+
+Behind `EXPO_PUBLIC_FEATURE_DESCRIBE_LAYOUT` (needs the layout editor, iOS only): off in staging and production.
+
+| ID | Criterion | Check |
+|---|---|---|
+| AC-AI-01 | A layout spec from the model (bands of photos, each with a count and a size) becomes a valid grid layout of rectangles with one cell per photo, filling the frame, in rows or columns, that the grid tools can edit. A spec with too few or too many photos is put right deterministically (the last bands fill up first, the fullest band gives up photos first) and reported as adjusted; cells that can't be big enough or are too long and thin to fill with a photo, and malformed specs, are rejected with a reason. | auto |
+| AC-AI-02 | A bad first answer from the model (unreadable, or the wrong number of photos) is retried once with the reason. If the second answer's count is still off, the layout is adjusted to the photos and the editor opens saying "Adjusted to fit your N photos."; two unreadable answers show a friendly message and never open the editor; a refusal or an unready model shows its own message at once. | auto |
+| AC-AI-03 | The web build has no "Describe a layout", even with its flag set. On iOS the action is hidden when the model isn't available or the flag is off. | auto |
+| AC-AI-04 | On a real iPhone with Apple Intelligence, sample descriptions each produce a layout that matches what was asked, with the phone in airplane mode. | manual |
+
 
 | ID | Criterion | Check |
 |---|---|---|

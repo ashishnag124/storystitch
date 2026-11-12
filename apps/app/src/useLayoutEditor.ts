@@ -128,7 +128,7 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
   const [selected, setSelected] = useState<number | null>(mode === "grid" && start.layout.cells.length === 1 ? 0 : null);
   const [dragging, setDragging] = useState(false);
   const [problems, setProblems] = useState<{ text: string; cells: number[] }[]>([]);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(start.notice ?? "");
   const [saving, setSaving] = useState<{ name: string; busy: boolean; error: string } | null>(null);
   const [view, setView] = useState({ width: 0, height: 0 });
   const drag = useRef<Drag | null>(null);

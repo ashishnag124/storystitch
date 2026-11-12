@@ -49,6 +49,7 @@ Web app on Cloudflare Pages, plus an API with Postgres on Railway (from v2). All
 | Accounts flag (`EXPO_PUBLIC_FEATURE_ACCOUNTS`) | `accounts:` input to `_deploy-pages.yml`: `true` in `ci.yml` (staging) and `release.yml` (production) | web builds |
 | Layout editor flag (`EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR`, needs accounts) | `layout_editor:` input to `_deploy-pages.yml`: `true` in `ci.yml` (staging) and `release.yml` (production) | web builds |
 | Blank layout flag (`EXPO_PUBLIC_FEATURE_BLANK_LAYOUT`, optional, default `false`; needs the layout editor) | `blank_layout:` input to `_deploy-pages.yml` for web, `true` in `ci.yml` (staging) only; `apps/app/eas.json` `base` profile (staging iOS: preview and testflight) only, not `production`; locally from `.env`; the E2E build turns it on in `apps/app/package.json` | Expo app builds: "Start from blank" in the Layouts tool |
+| Describe a layout flag (`EXPO_PUBLIC_FEATURE_DESCRIBE_LAYOUT`, optional, default `false`; iOS only; needs the layout editor) | Not wired into hosted builds (not in `eas.json` or any workflow), so it is off on staging and production; locally from `.env`; the E2E build turns it on in `apps/app/package.json` to check the web app still has none of it | iOS app builds: "Describe a layout" in the Layouts tool, on iPhones with Apple Intelligence |
 | Local values (`DATABASE_URL`, `PORT`, `CORS_ORIGIN`, `EXPO_PUBLIC_API_URL`) | `.env` (copy of `.env.example`) | `pnpm dev`, tests |
 
 ## Reading usage numbers
