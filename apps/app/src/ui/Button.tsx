@@ -15,12 +15,14 @@ export interface ButtonProps {
   /** Reads as destructive: filled when primary, red text when quiet. */
   danger?: boolean;
   big?: boolean;
+  /** Tighter, for a row that has to fit a few buttons across a phone. */
+  compact?: boolean;
   disabled?: boolean;
   /** Counts presses in usage reports, under this name. Never the label: labels can hold what the user typed. */
   trackAs?: UsageControl;
 }
 
-export function Button({ label, name, onPress, primary, quiet, danger, big, disabled, trackAs }: ButtonProps) {
+export function Button({ label, name, onPress, primary, quiet, danger, big, compact, disabled, trackAs }: ButtonProps) {
   return (
     <Pressable
       role="button"
@@ -30,9 +32,9 @@ export function Button({ label, name, onPress, primary, quiet, danger, big, disa
         if (trackAs) track("control_pressed", { control: trackAs });
         onPress();
       }}
-      style={[styles.button, primary && styles.primary, danger && styles.danger, quiet && quietStyles.button, big && styles.big, disabled && styles.disabled]}
+      style={[styles.button, primary && styles.primary, danger && styles.danger, quiet && quietStyles.button, big && styles.big, compact && styles.compact, disabled && styles.disabled]}
     >
-      <Text style={[styles.label, name !== undefined && styles.symbol, primary && styles.primaryLabel, quiet && quietStyles.label, quiet && danger && styles.dangerLabel, big && styles.bigLabel]}>{label}</Text>
+      <Text style={[styles.label, name !== undefined && styles.symbol, primary && styles.primaryLabel, quiet && quietStyles.label, quiet && danger && styles.dangerLabel, big && styles.bigLabel, compact && styles.compactLabel]}>{label}</Text>
     </Pressable>
   );
 }
@@ -57,10 +59,12 @@ const styles = StyleSheet.create({
   primary: { borderColor: colors.accent, backgroundColor: colors.accent },
   danger: { borderColor: colors.danger, backgroundColor: colors.danger },
   big: { minHeight: 56, paddingHorizontal: 32 },
+  compact: { paddingHorizontal: 8 },
   disabled: { opacity: 0.55 },
   label: { fontFamily, fontSize: 16, fontWeight: "700", color: colors.text },
   symbol: { fontSize: 34 },
   primaryLabel: { color: colors.accentText },
   dangerLabel: { color: colors.danger },
   bigLabel: { fontSize: 18, fontWeight: "800" },
+  compactLabel: { fontSize: 14, textAlign: "center" },
 });

@@ -312,8 +312,10 @@ test("AC-CUSTOM-13 adds shapes from the palette by tap or drag, changes a shape,
   for (const button of await palette.getByRole("button").all()) expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   await expect(e.getByRole("button", { name: "Add shape" })).toHaveCount(0);
 
-  await dragShape(page, "Add star", [0.7, 0.7]); // lands where it's dropped, and is chosen
+  await dragShape(page, "Add star", [0.7, 0.7]); // lands where it's dropped
   await expect(e.getByRole("status")).toHaveText("Add 2 more shapes, then drag photos into them.");
+  await expect(palette).toBeVisible(); // not chosen, so the palette stays
+  await page.mouse.click(...(await canvasAt(page, 0.7, 0.7)));
   await expect(palette).toHaveCount(0); // a shape is chosen: its tools take the palette's place
   await e.getByRole("button", { name: "Shape", exact: true }).click();
   await e.getByRole("button", { name: "Pill", exact: true }).click(); // changes it, keeping its place
@@ -327,7 +329,7 @@ test("AC-CUSTOM-13 adds shapes from the palette by tap or drag, changes a shape,
   await dragShape(page, "Add circle", [-0.1, 0.5]); // off the canvas: nothing is added
   await expect(e.getByRole("status")).toHaveText("Add a shape or drag on the canvas to draw one.");
   await e.getByRole("button", { name: "Add circle" }).click(); // a tap adds it in the middle
-  await expect(e.getByRole("button", { name: "Shape", exact: true })).toBeVisible();
+  await expect(e.getByRole("button", { name: "Add heart" })).toBeVisible();
 
   // Eight in all: then the palette is off.
   for (let n = 2; n <= 8; n++) {
@@ -391,6 +393,133 @@ test("AC-CUSTOM-17 tidies shapes that are nearly lined up, and says so when ther
   const [a, b] = saved!.layout.cells as unknown as { cx: number; r: number }[];
   expect(a!.cx).toBeCloseTo(b!.cx, 3); // one column now
   expect(a!.cx).toBeCloseTo(0.31, 1);
+});
+
+/** Two fingers (Chrome only: the harness drives touch through the DevTools Protocol). */
+async function twoFingers(page: Page, centre: readonly [number, number], steps: { spread: number; degrees: number }[]) {
+  const cdp = await page.context().newCDPSession(page);
+  const points = ({ spread, degrees }: { spread: number; degrees: number }) => {
+    const a = (degrees * Math.PI) / 180;
+    return [
+      { x: centre[0] - spread * Math.cos(a), y: centre[1] - spread * Math.sin(a), id: 1 },
+      { x: centre[0] + spread * Math.cos(a), y: centre[1] + spread * Math.sin(a), id: 2 },
+    ];
+  };
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: points(steps[0]!) });
+  for (const step of steps.slice(1)) await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: points(step) });
+  return { end: () => cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] }) };
+}
+
+test("AC-CUSTOM-18 a blank canvas has no size or turn buttons, keeps the palette while adding, and keeps its handles", async ({ page }) => {
+  const e = await openBlank(page, 3);
+  await e.getByRole("button", { name: "Add rectangle" }).click();
+  await expect(e.getByRole("button", { name: "Add circle" })).toBeVisible(); // not chosen: the palette stays
+  await e.getByRole("button", { name: "Add circle" }).click();
+  await e.getByRole("button", { name: "Add heart" }).click();
+  await expect(e.getByRole("status")).toHaveText("Drag 3 more photos into shapes.");
+
+  await page.mouse.click(...(await canvasAt(page, ...SPOTS.middle))); // choose the rectangle
+  await expect(e.getByRole("status")).toHaveText("Drag to move. Pinch to resize, twist to turn.");
+  for (const name of ["Shape", "Add copy", "Remove"]) await expect(e.getByRole("button", { name, exact: true })).toBeVisible();
+  for (const name of ["Bigger", "Smaller", "Turn left", "Turn right"]) await expect(e.getByRole("button", { name, exact: true })).toHaveCount(0);
+  for (const name of [/^Resize photo/, /^Turn photo/]) {
+    const handle = e.getByRole("button", { name });
+    const box = (await handle.boundingBox())!;
+    expect(Math.min(box.width, box.height)).toBeGreaterThanOrEqual(44);
+  }
+  await page.mouse.click(...(await canvasAt(page, ...SPOTS.topLeft))); // the circle: it can't turn, so only a size hint and no turn handle
+  await expect(e.getByRole("status")).toHaveText("Drag to move. Pinch to resize.");
+  await expect(e.getByRole("button", { name: /^Turn photo/ })).toHaveCount(0);
+
+  // The handle still resizes, and says by how much while it does.
+  const resize = e.getByRole("button", { name: /^Resize photo/ });
+  const box = (await resize.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  for (let i = 1; i <= 6; i++) await page.mouse.move(box.x + box.width / 2 + i * 6, box.y + box.height / 2 + i * 6);
+  await expect(e.getByRole("status")).toHaveText(/^\d+%$/);
+  await page.mouse.up();
+});
+
+test("AC-CUSTOM-18 two fingers pinch and twist the chosen shape wherever they are", async ({ page, browserName }) => {
+  test.skip(browserName !== "chromium", "Multi-touch is driven through the Chrome DevTools Protocol; the handles above cover the rest");
+  await signedIn(page);
+  const e = await openBlank(page, 1);
+  await e.getByRole("button", { name: "Add rectangle" }).click();
+  await trayPhoto(e, 1, "not placed").click();
+  await page.mouse.click(...(await canvasAt(page, ...SPOTS.middle)));
+  await page.mouse.click(...(await canvasAt(page, 0.03, 0.97))); // let go of it
+  // Two fingers away from it, on empty canvas, with nothing chosen: nothing happens to it. Choose it, then pinch and twist elsewhere.
+  await page.mouse.click(...(await canvasAt(page, ...SPOTS.middle)));
+  const at = await canvasAt(page, 0.5, 0.2);
+  const gesture = await twoFingers(page, at, [
+    { spread: 30, degrees: 0 },
+    { spread: 36, degrees: 5 },
+    { spread: 42, degrees: 10 },
+    { spread: 48, degrees: 14 },
+    { spread: 54, degrees: 15 },
+  ]);
+  await expect(e.getByRole("status")).toHaveText("Turned 15°");
+  await gesture.end();
+  await e.getByRole("button", { name: "Done" }).click();
+  await page.getByLabel("Name").fill("Pinched");
+  await page.getByRole("button", { name: "Save layout" }).click();
+  await expect(editor(page)).toHaveCount(0);
+  const [saved] = await savedLayouts(page);
+  const cell = saved!.layout.cells[0] as unknown as { w: number; rotate: number };
+  expect(cell.rotate).toBe(15); // turned, and stuck to a 15° step
+  expect(cell.w).toBeGreaterThan(0.36 * 1.5); // 1.8 times as wide
+});
+
+test("AC-CUSTOM-19 dragging a shape off the edge removes it, and Undo brings it back", async ({ page }) => {
+  const e = await openBlank(page, 3);
+  await e.getByRole("button", { name: "Add circle" }).click();
+  await e.getByRole("button", { name: "Add heart" }).click();
+  await expect(e.getByRole("status")).toHaveText("Add 1 more shape, then drag photos into them.");
+  const from = await canvasAt(page, ...SPOTS.topLeft);
+  const box = (await e.locator("canvas.builder-canvas").boundingBox())!;
+  await sweep(page, from, [box.x - 40, from[1]]); // mostly off the left edge, then let go
+  await expect(e.getByRole("status")).toHaveText("Removed. Undo brings it back.");
+  await e.getByRole("button", { name: "Done" }).click();
+  await expect(e.getByRole("status")).toHaveText("Add 2 more shapes, then drag photos into them."); // one shape left
+  await e.getByRole("button", { name: "Undo" }).click();
+  await e.getByRole("button", { name: "Done" }).click();
+  await expect(e.getByRole("status")).toHaveText("Add 1 more shape, then drag photos into them.");
+  // Only partly off: it settles back inside.
+  await sweep(page, await canvasAt(page, ...SPOTS.topRight), [box.x + box.width - 10, from[1]]);
+  await expect(e.getByRole("status")).not.toHaveText("Removed. Undo brings it back.");
+});
+
+test("AC-CUSTOM-20 holding a shape lifts its photo out to another shape or back to the tray", async ({ page }) => {
+  const e = await openBlank(page, 2);
+  await addShapes(e, "Rectangle", "Circle");
+  await dragPhoto(page, 1, SPOTS.middle);
+  await expect(trayPhoto(e, 1, "placed")).toBeVisible();
+  // Press and hold on it, then drag to the other shape: the photo moves there.
+  const [x, y] = await canvasAt(page, ...SPOTS.middle);
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.waitForTimeout(600);
+  const [tx, ty] = await canvasAt(page, ...SPOTS.topLeft);
+  for (let i = 1; i <= 8; i++) await page.mouse.move(x + ((tx - x) * i) / 8, y + ((ty - y) * i) / 8);
+  await page.mouse.up();
+  await page.mouse.click(...(await canvasAt(page, ...SPOTS.middle)));
+  await expect(e.getByRole("button", { name: "Take photo out" })).toHaveCount(0); // the rectangle is empty
+  await page.mouse.click(...(await canvasAt(page, ...SPOTS.topLeft)));
+  await expect(e.getByRole("button", { name: "Take photo out" })).toBeVisible(); // and the circle has it
+  // Hold and drop it on the tray: it's taken out.
+  const [cx, cy] = await canvasAt(page, ...SPOTS.topLeft);
+  const tray = (await e.getByRole("group", { name: "Your photos" }).boundingBox())!;
+  await page.mouse.move(cx, cy);
+  await page.mouse.down();
+  await page.waitForTimeout(600);
+  for (let i = 1; i <= 8; i++) await page.mouse.move(cx, cy + ((tray.y + tray.height / 2 - cy) * i) / 8);
+  await page.mouse.up();
+  await expect(trayPhoto(e, 1, "not placed")).toBeVisible();
+  // A plain drag still just moves the shape.
+  await dragPhoto(page, 1, SPOTS.topLeft);
+  await sweep(page, await canvasAt(page, ...SPOTS.topLeft), await canvasAt(page, 0.3, 0.4));
+  await expect(trayPhoto(e, 1, "placed")).toBeVisible();
 });
 
 test("AC-CUSTOM-06 draws nothing over the photos", async ({ page }) => {

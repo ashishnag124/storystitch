@@ -5,6 +5,7 @@ import {
   ADD_SHAPES,
   GRID_SHAPES,
   PALETTE_SHAPES,
+  REMOVE_OFF_CANVAS,
   addCell,
   addCellAt,
   addPhotoCell,
@@ -23,15 +24,21 @@ import {
   gridLayout,
   gridOf,
   moveCell,
+  moveCellInside,
+  moveCellLoose,
   moveCorner,
   moveDivider,
   moveLine,
+  offCanvas,
+  pinchCell,
   reshapeFreeCell,
   removeCell,
   removeGridCell,
   reshapeCell,
   rotateCell,
   scaleCell,
+  snapRotation,
+  snapSize,
   snapTo,
   splitCell,
   tidyCells,
@@ -40,7 +47,7 @@ import {
   type Edited,
   type Grid,
 } from "@storystitch/layout-engine";
-import { STORY_CANVAS, cellBounds, editedLayoutProblems, hitTest, type Layout, type Point, type SavedLayout } from "@storystitch/shared";
+import { STORY_CANVAS, cellBounds, editedLayoutProblems, hitTest, type Cell, type Layout, type Point, type SavedLayout } from "@storystitch/shared";
 import { SaveError, autoCrop, blankProblem, explain, placePhoto, styleScale, takePhotoOut, withOrigin, type CropSource, type Draft, type Start, type Style } from "@storystitch/client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { saveLayout } from "./api";
@@ -53,6 +60,10 @@ const HANDLE_PX = 48;
 /** Lines snap to halves, thirds and quarters, and to each other, within this many screen px. */
 const SNAP_PX = 12;
 const SNAP_FRACTIONS = [0.25, 1 / 3, 0.5, 2 / 3, 0.75];
+/** How long a finger rests on a shape with a photo before the photo lifts out of it. */
+const HOLD_MS = 400;
+/** A finger that moves this far (screen px) while resting is dragging the shape instead. */
+const HOLD_SLOP_PX = 8;
 /** A finger on a thumbnail that moves less than this (screen px) is a tap. */
 const TAP_SCREEN_PX = 8;
 /** A press that moves less than this (layout px) is a tap, not the start of a drawing. */
@@ -87,10 +98,11 @@ type LineTarget =
 /** A drag in progress. Positions are screen px; `base` is the draft when it started. */
 type Drag =
   | (LineTarget & { x: number; y: number; base: Draft })
-  | { kind: "move"; cell: number; x: number; y: number; base: Draft }
-  | { kind: "resize"; cell: number; center: Point; distance: number; base: Draft }
-  | { kind: "rotate"; cell: number; center: Point; angle: number; rotate: number; base: Draft }
-  | { kind: "pinch"; cell: number; distance: number; angle: number; rotate: number; base: Draft }
+  | { kind: "move"; cell: number; x: number; y: number; base: Draft; /** How far it has been dragged (normalized), on a blank canvas. */ total?: Point }
+  | { kind: "lift"; cell: number; photo: number; x: number; y: number; base: Draft }
+  | { kind: "resize"; cell: number; center: Point; distance: number; base: Draft; stuck?: boolean }
+  | { kind: "rotate"; cell: number; center: Point; angle: number; rotate: number; base: Draft; stuck?: boolean }
+  | { kind: "pinch"; cell: number; distance: number; angle: number; rotate: number; base: Draft; size?: boolean; angleStuck?: boolean }
   | { kind: "draw"; from: Point; to: Point; base: Draft };
 
 /** What VoiceOver does in place of a drag. `run` returns what to say when the move can't be made. */
@@ -133,6 +145,7 @@ export interface Tool {
   onPress: () => void;
   disabled?: boolean;
   quiet?: boolean;
+  compact?: boolean;
 }
 
 /** A photo in the tray under the preview, for a blank canvas. */
@@ -198,6 +211,13 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
   const [adding, setAdding] = useState(false);
   /** A photo picked up from the tray by a tap, waiting for a shape. */
   const [picked, setPicked] = useState<number | null>(null);
+  /** What the gesture in progress is doing, in a few words ("Turned 15°"). */
+  const [live, setLive] = useState("");
+  /** A shape being dragged off the canvas fades by `alpha`. */
+  const [fade, setFade] = useState<{ cell: number; alpha: number } | null>(null);
+  /** Counts snaps, for a light tick on iOS. */
+  const [ticks, setTicks] = useState(0);
+  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** The shape whose Shape tool is open. */
   const [reshaping, setReshaping] = useState<number | null>(null);
   const [ghost, setGhost] = useState<{ item: Carried; x: number; y: number; target: number | null } | null>(null);
@@ -266,6 +286,23 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
     const d = drag.current;
     drag.current = null;
     setDragging(false);
+    setLive("");
+    setFade(null);
+    if (holdTimer.current) clearTimeout(holdTimer.current);
+    if (d?.kind === "lift") return void dropLifted(d);
+    if (d?.kind === "move" && blank && d.total) {
+      // Past the edge by most of its area: gone. Otherwise back inside the canvas.
+      const moved = draft.layout.cells[d.cell]!;
+      if (offCanvas(moved) >= REMOVE_OFF_CANVAS) {
+        const next = withOrigin(draft, removeCell(draft.layout, d.cell, true)!, 0);
+        setHistory((h) => [...h, d.base]);
+        setDraft(next);
+        setSelected(null);
+        return setMessage("Removed. Undo brings it back.");
+      }
+      setHistory((h) => [...h, d.base]);
+      return setDraft({ ...d.base, layout: moveCellInside(d.base.layout, d.cell, d.total.x, d.total.y) });
+    }
     if (d?.kind === "draw") {
       setDrawing(null);
       // A tap on empty space isn't a drag: it puts a picked-up photo there, or lets go of the chosen shape.
@@ -278,7 +315,8 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
       if (!edited) return setMessage(d.base.layout.cells.length >= MAX_CELLS ? "A layout holds up to 8 photos." : "That's too small, or there's no room, for a photo there.");
       const next = withOrigin(d.base, edited, photoCount);
       commit(next);
-      setSelected(next.layout.cells.length - 1);
+      // On a blank canvas the new shape isn't chosen, so the palette stays and more can be added.
+      if (!blank) setSelected(next.layout.cells.length - 1);
       return;
     }
     if (d && d.base.layout !== draft.layout) setHistory((h) => [...h, d.base]);
@@ -303,6 +341,19 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
     setPicked(null);
   }
 
+  /** A photo lifted out of its shape is let go: swapped into the shape under it, or taken out when over the tray below the canvas. */
+  function dropLifted(d: Extract<Drag, { kind: "lift" }>) {
+    setGhost(null);
+    const target = cellNear(layout, screenToLayout(d.x, d.y), layoutDelta(NEAR_MISS_PX, 0).x);
+    if (target >= 0 && target !== d.cell) {
+      const next = [...order];
+      next[d.cell] = order[target]!;
+      next[target] = d.photo;
+      return commit({ ...draft, order: next });
+    }
+    if (d.y > frameOrigin().y + view.height) commit({ ...draft, order: takePhotoOut(order, d.cell) });
+  }
+
   /** A new shape in the proportions of `photo`, centered on `at` (layout px), holding it. */
   function putNewPhoto(photo: number, at: Point) {
     const { width, height } = photos[photo]!;
@@ -311,7 +362,6 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
     const made = withOrigin(draft, edited, 0);
     const cell = made.layout.cells.length - 1;
     commit({ ...made, order: placePhoto(made.order, cell, photo) });
-    setSelected(cell);
     setPicked(null);
   }
 
@@ -319,9 +369,7 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
   function putShape(shape: PaletteShape, at?: Point) {
     const edited = at ? addCellAt(layout, shape, { x: at.x / W, y: at.y / H }) : addCell(layout, shape);
     if (!edited) return void refuse(layout.cells.length >= MAX_CELLS ? "A layout holds up to 8 photos." : "There's no room for another photo.");
-    const next = withOrigin(draft, edited, photoCount);
-    commit(next);
-    setSelected(next.layout.cells.length - 1);
+    commit(withOrigin(draft, edited, photoCount));
   }
 
   function screenToLayout(x: number, y: number): Point {
@@ -339,12 +387,16 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
       setDrawing(null);
       setDragging(false);
     }
-    if (fingers.length === 2 && mode === "free" && selected !== null) {
+    if (holdTimer.current) clearTimeout(holdTimer.current);
+    // Two fingers act on the chosen shape wherever they are; on a blank canvas, on a shape they land on if none is chosen.
+    const pinched = selected ?? (blank && fingers.length === 2 ? [hitTest(layout.cells, screenToLayout(fingers[0]!.x, fingers[0]!.y)), hitTest(layout.cells, screenToLayout(fingers[1]!.x, fingers[1]!.y))].find((h) => h >= 0) ?? null : null);
+    if (fingers.length === 2 && mode === "free" && pinched !== null) {
       const [a, b] = fingers as [Point, Point];
-      const cell = layout.cells[selected]!;
+      const cell = layout.cells[pinched]!;
+      setSelected(pinched);
       startDrag({
         kind: "pinch",
-        cell: selected,
+        cell: pinched,
         distance: Math.hypot(b.x - a.x, b.y - a.y),
         angle: Math.atan2(b.y - a.y, b.x - a.x),
         rotate: cell.shape === "rect" ? cell.rotate : 0,
@@ -369,6 +421,16 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
     const base = layout.allowOverlap ? { ...draft, layout: bringToFront(layout, hit) } : draft;
     if (base !== draft) setDraft(base);
     startDrag({ kind: "move", cell: hit, x: finger.x, y: finger.y, base });
+    // Resting on a shape that holds a photo lifts the photo out of it.
+    if (blank && order[hit]! >= 0) {
+      holdTimer.current = setTimeout(() => {
+        const d = drag.current;
+        if (d?.kind !== "move" || d.cell !== hit || d.total) return;
+        drag.current = { kind: "lift", cell: hit, photo: order[hit]!, x: d.x, y: d.y, base: d.base };
+        setGhost({ item: { photo: order[hit]! }, x: d.x, y: d.y, target: null });
+        setTicks((t) => t + 1);
+      }, HOLD_MS);
+    }
   }
 
   function movePreview(fingers: Point[]) {
@@ -376,15 +438,44 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
     if (d?.kind === "draw") {
       d.to = screenToLayout(fingers[0]!.x, fingers[0]!.y);
       if (Math.hypot(d.to.x - d.from.x, d.to.y - d.from.y) >= TAP_PX) setDrawing({ from: d.from, to: d.to });
+    } else if (d?.kind === "lift") {
+      d.x = fingers[0]!.x;
+      d.y = fingers[0]!.y;
+      const near = cellNear(layout, screenToLayout(d.x, d.y), layoutDelta(NEAR_MISS_PX, 0).x);
+      setGhost({ item: { photo: d.photo }, x: d.x, y: d.y, target: near >= 0 && near !== d.cell ? near : null });
     } else if (d?.kind === "move") {
       const delta = layoutDelta(fingers[0]!.x - d.x, fingers[0]!.y - d.y);
+      if (blank) {
+        // On a blank canvas a shape can be dragged off the edge: most of the way off and let go, it's removed.
+        if (!d.total && Math.hypot(fingers[0]!.x - d.x, fingers[0]!.y - d.y) <= HOLD_SLOP_PX) return;
+        if (holdTimer.current) clearTimeout(holdTimer.current);
+        d.total = { x: delta.x / W, y: delta.y / H };
+        const loose = moveCellLoose(d.base.layout, d.cell, d.total.x, d.total.y);
+        setDraft({ ...d.base, layout: loose });
+        const off = offCanvas(loose.cells[d.cell]!);
+        setFade(off > 0.02 ? { cell: d.cell, alpha: 1 - 0.85 * Math.min(1, off / REMOVE_OFF_CANVAS) } : null);
+        return;
+      }
       const moved = moveCell(d.base.layout, d.cell, delta.x / W, delta.y / H);
       if (moved) setDraft({ ...d.base, layout: moved });
     } else if (d?.kind === "pinch" && fingers.length === 2) {
       const [a, b] = fingers as [Point, Point];
-      const scaled = scaleCell(d.base.layout, d.cell, Math.hypot(b.x - a.x, b.y - a.y) / d.distance);
-      if (!scaled) return;
+      const scale = Math.hypot(b.x - a.x, b.y - a.y) / d.distance;
       const turn = ((Math.atan2(b.y - a.y, b.x - a.x) - d.angle) * 180) / Math.PI;
+      if (blank) {
+        // Size and turn together, each sticking gently to what looks deliberate.
+        const result = pinchCell(d.base.layout, d.cell, scale, turn, d.rotate);
+        if (!result) return;
+        if ((result.size && !d.size) || (result.angle && !d.angleStuck)) setTicks((t) => t + 1);
+        d.size = result.size;
+        d.angleStuck = result.angle;
+        setDraft({ ...d.base, layout: result.layout });
+        const now = result.layout.cells[d.cell]!;
+        setLive(now.shape === "rect" && Math.abs(turn) > 2 ? `Turned ${Math.round(now.rotate)}°` : `${Math.round(scale * 100)}%`);
+        return;
+      }
+      const scaled = scaleCell(d.base.layout, d.cell, scale);
+      if (!scaled) return;
       const turned = canRotate(scaled.cells[d.cell]!) ? rotateCell(scaled, d.cell, d.rotate + turn) : null;
       setDraft({ ...d.base, layout: turned ?? scaled });
     }
@@ -425,13 +516,24 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
       if (next) setDraft({ ...d.base, layout: cornersLayout(d.base.layout, next) });
     } else if (d.kind === "resize") {
       const p = screenToLayout(x, y);
-      const scaled = scaleCell(d.base.layout, d.cell, Math.hypot(p.x - d.center.x, p.y - d.center.y) / d.distance);
-      if (scaled) setDraft({ ...d.base, layout: scaled });
+      const factor = Math.hypot(p.x - d.center.x, p.y - d.center.y) / d.distance;
+      const scaled = scaleCell(d.base.layout, d.cell, factor);
+      if (!scaled) return;
+      const sticky = blank ? snapSize(scaled, d.cell) : { layout: scaled, snapped: false };
+      if (sticky.snapped && !d.stuck) setTicks((t) => t + 1);
+      d.stuck = sticky.snapped;
+      setDraft({ ...d.base, layout: sticky.layout });
+      if (blank) setLive(`${Math.round(factor * 100)}%`);
     } else if (d.kind === "rotate") {
       const p = screenToLayout(x, y);
       const angle = (Math.atan2(p.y - d.center.y, p.x - d.center.x) * 180) / Math.PI;
-      const turned = rotateCell(d.base.layout, d.cell, d.rotate + angle - d.angle);
-      if (turned) setDraft({ ...d.base, layout: turned });
+      const snap = blank ? snapRotation(d.rotate + angle - d.angle) : { value: d.rotate + angle - d.angle, snapped: false };
+      const turned = rotateCell(d.base.layout, d.cell, snap.value);
+      if (!turned) return;
+      if (snap.snapped && !d.stuck) setTicks((t) => t + 1);
+      d.stuck = snap.snapped;
+      setDraft({ ...d.base, layout: turned });
+      if (blank) setLive(`Turned ${Math.round((turned.cells[d.cell] as Extract<Cell, { shape: "rect" }>).rotate)}°`);
     }
   }
 
@@ -635,13 +737,13 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
     tools.push({ label: "Back", onPress: () => setAdding(false) });
   } else if (sel !== null && mode === "free") {
     if (canAdd && !blank) tools.push({ label: "Add shape", disabled: full, onPress: () => setAdding(true) });
-    tools.push(
-      { label: "Smaller", onPress: () => scaleBy(1 / SCALE_STEP) },
-      { label: "Bigger", onPress: () => scaleBy(SCALE_STEP) },
-      { label: "Add copy", onPress: () => apply(duplicateCell(layout, sel), "There's no room for another photo.") },
-    );
+    // On a blank canvas pinching and twisting do what Bigger, Smaller and Turn do.
+    if (!blank) {
+      tools.push({ label: "Smaller", onPress: () => scaleBy(1 / SCALE_STEP) }, { label: "Bigger", onPress: () => scaleBy(SCALE_STEP) });
+    }
+    tools.push({ label: "Add copy", onPress: () => apply(duplicateCell(layout, sel), "There's no room for another photo.") });
     // Before Remove, so the two turns share a row of the grid.
-    if (selCell?.shape === "rect") {
+    if (!blank && selCell?.shape === "rect") {
       tools.push({ label: "⟲", name: "Turn left", onPress: () => turnBy(-TURN_STEP) }, { label: "⟳", name: "Turn right", onPress: () => turnBy(TURN_STEP) });
     }
     if (blank) tools.push({ label: "Shape", onPress: () => setReshaping(sel) });
@@ -650,6 +752,9 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
   } else if (canAdd && !blank) {
     tools.push({ label: "Add shape", disabled: full, onPress: () => setAdding(true) });
   }
+
+  // One short row on a blank canvas: tight buttons, so a few fit across a phone without scrolling.
+  if (blank) for (const t of tools) t.compact = true;
 
   /** The cell being drawn, as a box in screen px from the frame's top left. */
   let outline: Handle["box"] | null = null;
@@ -699,8 +804,11 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
   const canDraw = canAdd && !full && sel === null;
   const usual = countHint || (canAdd && full ? "A layout holds up to 8 photos." : HINTS[mode](sel !== null));
   const blankNeed = picked !== null ? "Tap a shape to put this photo in it." : blankProblem(order, photos.length);
-  const status = blank
-    ? message || (problems[0]?.text ?? ([blankNeed || HINTS[mode](sel !== null), full && "A layout holds up to 8 photos."].filter(Boolean).join(" ")))
+  const blankHint = sel === null ? "Tap a shape to choose it." : selCell && canRotate(selCell) ? "Drag to move. Pinch to resize, twist to turn." : "Drag to move. Pinch to resize.";
+  const status = live
+    ? live
+    : blank
+    ? message || (problems[0]?.text ?? ([sel !== null && picked === null ? blankHint : blankNeed || blankHint, full && "A layout holds up to 8 photos."].filter(Boolean).join(" ")))
     : message || (problems[0] && !countHint ? problems[0].text : canDraw ? `${usual} ${DRAW_HINT}` : usual);
 
   // --- The photo tray of a blank canvas.
@@ -799,6 +907,9 @@ export function useLayoutEditor({ photos, style, start, onUse, onSaved, frameOri
     outline,
     tray,
     palette,
+    /** A shape being dragged off the edge, and how faint to draw it. */
+    fade,
+    snapTicks: ticks,
     /** The shape a dragged photo would land in. */
     dropTarget: ghost?.target ?? null,
     /** On a blank canvas the tools are one scrolling row, so the preview keeps its height. */
