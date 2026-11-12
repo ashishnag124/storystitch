@@ -14,9 +14,10 @@ import {
   type Outline,
   type Scene,
 } from "@storystitch/client";
-import { CENTER_CROP, sourceRect, type Crop } from "@storystitch/layout-engine";
+import { CENTER_CROP, leavesUncovered, sourceRect, type Crop } from "@storystitch/layout-engine";
 import { drawOrder, type Size } from "@storystitch/shared";
 import { ClipOp, FilterMode, MipmapMode, PaintStyle, Skia, StrokeJoin, matchFont, type SkCanvas, type SkFont, type SkImage, type SkPaint, type SkPath } from "@shopify/react-native-skia";
+import { BLUR_FILL_ENABLED } from "../config";
 import type { Photo } from "./photos.native";
 
 /** Anything drawable with its pixel size: a preview copy or a decoded original. */
@@ -80,6 +81,7 @@ export function drawCell(canvas: SkCanvas, shape: CellShape, img: Drawable, crop
   canvas.save();
   canvas.translate(frame.cx, frame.cy);
   canvas.rotate(frame.rotate, 0, 0);
+  if (BLUR_FILL_ENABLED && leavesUncovered(img, frame, crop)) drawBlurFill(canvas, img, frame);
   canvas.drawImageRectOptions(
     img.image,
     Skia.XYWHRect(x0, y0, x1 - x0, y1 - y0),
@@ -110,8 +112,8 @@ const SMOOTH = [1, 0] as const;
 /** A heavily blurred copy of the photo: shrunk to a few pixels, as on web, so both platforms blur the same. */
 export function blurredImage(size: Size, img: Drawable): SkImage {
   const src = sourceRect(img, size, CENTER_CROP);
-  const tiny = shrink(img.image, src, 18, Math.round((18 * size.height) / size.width));
-  const [width, height] = [72, Math.round((72 * size.height) / size.width)];
+  const tiny = shrink(img.image, src, 18, Math.max(1, Math.round((18 * size.height) / size.width)));
+  const [width, height] = [72, Math.max(1, Math.round((72 * size.height) / size.width))];
   const surface = Skia.Surface.Make(width, height);
   if (!surface) throw new Error("Couldn't make a surface");
   surface.getCanvas().drawImageRectCubic(tiny, Skia.XYWHRect(0, 0, tiny.width(), tiny.height()), Skia.XYWHRect(0, 0, width, height), ...SMOOTH);
@@ -122,6 +124,25 @@ export function blurredImage(size: Size, img: Drawable): SkImage {
 export function drawBlurredBackground(canvas: SkCanvas, size: Size, blurred: SkImage) {
   canvas.drawImageRectCubic(blurred, Skia.XYWHRect(0, 0, blurred.width(), blurred.height()), Skia.XYWHRect(0, 0, size.width, size.height), ...SMOOTH);
   canvas.drawRect(Skia.XYWHRect(0, 0, size.width, size.height), paintOf("rgba(0, 0, 0, 0.12)"));
+}
+
+/** Blurred copies by photo and cell shape, so dragging a photo around doesn't blur it again on every frame. */
+const blurCache = new WeakMap<SkImage, Map<string, SkImage>>();
+
+/** Fills a frame (drawn centered on the origin) with the photo, blurred, in the same look as the blurred background. */
+function drawBlurFill(canvas: SkCanvas, img: Drawable, frame: Size) {
+  const copies = blurCache.get(img.image) ?? new Map<string, SkImage>();
+  blurCache.set(img.image, copies);
+  const key = (frame.width / frame.height).toFixed(3);
+  let blurred = copies.get(key);
+  if (!blurred) {
+    if (copies.size >= 16) copies.clear();
+    blurred = blurredImage(frame, img);
+    copies.set(key, blurred);
+  }
+  const rect = Skia.XYWHRect(-frame.width / 2, -frame.height / 2, frame.width, frame.height);
+  canvas.drawImageRectCubic(blurred, Skia.XYWHRect(0, 0, blurred.width(), blurred.height()), rect, ...SMOOTH);
+  canvas.drawRect(rect, paintOf("rgba(0, 0, 0, 0.12)"));
 }
 
 /** Fills the canvas with the scene's background color, or the default one under a blurred photo. */

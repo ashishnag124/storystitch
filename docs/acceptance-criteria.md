@@ -55,6 +55,7 @@ reuse IDs.
 | AC-CROP-04 | A photo with no detected subject gets a center crop. | auto |
 | AC-CROP-05 | When no crop avoids cutting a face, the photo zooms out (showing background) instead. | auto |
 | AC-CROP-06 | Manual crops stay in bounds: panning follows the finger, zoom stays between 0.5× and 4×, and at 1× or more the photo covers its cell. | auto |
+| AC-CROP-07 | When a photo doesn't cover its cell, the rest of the cell shows a blurred copy of that photo, in the preview and in the exported image; a photo that covers its cell is drawn as before. | auto |
 
 ## Assignment and ranking
 

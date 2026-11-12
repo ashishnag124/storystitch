@@ -58,6 +58,40 @@ describe("smartCrop", () => {
     for (const f of faces) expect(contains(crop, px(padFace(f.box), wide))).toBe(true);
   });
 
+  it("AC-CROP-05 zooms out only as far as the faces it keeps need, leaving a far face out", () => {
+    // Two heads overlapping and a bit wider than the crop (37.5% of the photo), and a third head far away.
+    const faces = [face(0.1, 0.3, 0.16, 0.2, 0.9), face(0.27, 0.3, 0.16, 0.2, 0.85), face(0.8, 0.3, 0.1, 0.13, 0.7)];
+    const result = smartCrop(wide, tallFrame, faces);
+    expect(result.zoom).toBeLessThan(1);
+    expect(result.zoom).toBeGreaterThan(0.8); // fitting all three heads would need MIN_ZOOM
+    const crop = sourceRect(wide, tallFrame, result);
+    expect(contains(crop, px(padFace(faces[0]!.box), wide))).toBe(true);
+    expect(contains(crop, px(padFace(faces[1]!.box), wide))).toBe(true);
+    expect(disjoint(crop, px(padFace(faces[2]!.box), wide))).toBe(true);
+  });
+
+  it("AC-CROP-05 at MIN_ZOOM, when no run of faces fits, centers on all the faces and keeps the top face", () => {
+    // Four heads in a row, each overlapping the next, together too wide even for MIN_ZOOM (crop 37.5% of the photo).
+    const faces = [face(0.1, 0.3, 0.2, 0.27, 0.8), face(0.3, 0.3, 0.2, 0.27, 0.9), face(0.5, 0.3, 0.2, 0.27, 0.8), face(0.7, 0.3, 0.2, 0.27, 0.8)];
+    const result = smartCrop(wide, tallFrame, faces);
+    expect(result.zoom).toBe(MIN_ZOOM);
+    expect(result.cx).toBeCloseTo(0.5, 2); // the heads span 6% to 94% of the photo
+    expect(contains(sourceRect(wide, tallFrame, result), px(padFace(faces[1]!.box), wide))).toBe(true);
+  });
+
+  it("AC-CROP-02 keeps every face whole when the zoomed-out crop is longer than the photo", () => {
+    const image = { width: 3000, height: 4000 };
+    const frame = { width: 400, height: 800 }; // the crop is 2/3 of the photo's width
+    const faces = [face(0.02, 0.2, 0.4, 0.3, 0.9), face(0.5, 0.2, 0.4, 0.3, 0.8)];
+    const result = smartCrop(image, frame, faces);
+    expect(result.zoom).toBeLessThan(1);
+    expect(result.zoom).toBeGreaterThanOrEqual(MIN_ZOOM);
+    expect(result.cx).toBe(0.5);
+    const crop = sourceRect(image, frame, result);
+    expect(crop.width).toBeGreaterThanOrEqual(image.width);
+    for (const f of faces) expect(contains(crop, px(padFace(f.box), image))).toBe(true);
+  });
+
   it("AC-CROP-03 moves the subject out of a safe-zone band", () => {
     const tall = { width: 3000, height: 4000 };
     const wideFrame = { width: 1000, height: 500 }; // crop slides along y
