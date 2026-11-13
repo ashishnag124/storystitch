@@ -23,6 +23,7 @@ import {
   type Point,
   type Size,
 } from "@storystitch/shared";
+import type { Caption } from "./captions";
 
 /** A solid color, a heavily blurred copy of the photo in the first cell, or Auto: a pale tint from the photos (`Style.auto`). */
 export type Background = { kind: "color"; color: string } | { kind: "blur" } | { kind: "auto" };
@@ -75,6 +76,8 @@ export interface Scene {
   style: Style;
   order: number[];
   crops: Crop[];
+  /** Text on top of the collage (see captions.ts). None when left out. */
+  captions?: Caption[];
 }
 
 /** What cropping needs to know about a photo. */

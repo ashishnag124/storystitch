@@ -1,5 +1,6 @@
 export * from "./api";
 export * from "./autoColor";
+export * from "./captions";
 export * from "./draft";
 export * from "./emailLink";
 export * from "./mark";

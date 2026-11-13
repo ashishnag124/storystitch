@@ -6,6 +6,8 @@ import { shareOrDownload } from "./exportImage.native";
 vi.mock("@shopify/react-native-skia", () => ({}));
 vi.mock("./photos.native", () => ({}));
 vi.mock("./render.native", () => ({}));
+vi.mock("./captionFonts.native", () => ({}));
+vi.mock("./captionRender.native", () => ({}));
 vi.mock("expo-file-system/legacy", () => ({
   EncodingType: { Base64: "base64" },
   cacheDirectory: "file:///cache/",

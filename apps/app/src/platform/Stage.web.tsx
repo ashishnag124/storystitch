@@ -8,6 +8,7 @@ import {
   cellShapes,
   lerp,
   lerpBox,
+  moveCaption,
   swapCells,
   type Box,
   type Scene,
@@ -15,6 +16,8 @@ import {
 import { MAX_ZOOM, MIN_ZOOM, clampCrop, panCrop, sourceRect, type Crop } from "@storystitch/layout-engine";
 import { STORY_CANVAS, hitTest, type Frame, type Point } from "@storystitch/shared";
 import { useCallback, useEffect, useImperativeHandle, useRef, useState, type KeyboardEvent, type PointerEvent, type Ref } from "react";
+import { loadCaptionFonts } from "./captionFonts.web";
+import { drawCaptions, hitCaption, layoutCaption } from "./captionRender.web";
 import { haptic, prefersReducedMotion, tween } from "./motion.web";
 import type { Photo } from "./photos";
 import { drawMark, drawScene, markFont, outlineBounds, previewOf, snapshotCell, type Marks } from "./render";
@@ -34,6 +37,7 @@ type Gesture =
   | { kind: "pan"; cell: number; x: number; y: number; t: number; vx: number; vy: number }
   | { kind: "lift"; from: number; over: number }
   | { kind: "pinch"; cell: number; distance: number; zoom: number; mid: Point }
+  | { kind: "caption"; index: number; grab: Point } // dragging a caption, grabbed this far from its center
   | { kind: "ended" };
 
 /** Photos animating over the scene (canvas pixels): one under the finger, or several gliding to new cells. */
@@ -67,12 +71,15 @@ interface Props {
   onStatus: (text: string) => void;
   /** Shows the "Made with StoryStitch" mark, as the export will have it. */
   mark: boolean;
+  /** The chosen caption, outlined; tapping or dragging a caption chooses it. */
+  caption?: number | null;
+  onCaption?: (index: number | null) => void;
 }
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
 
 /** The preview: everything drawn on the canvas, and every gesture and key on it. */
-export function Stage({ ref, scene, photos, selected, onSelect, onScene, onStatus, mark }: Props) {
+export function Stage({ ref, scene, photos, selected, onSelect, onScene, onStatus, mark, caption = null, onCaption }: Props) {
   const [lifted, setLifted] = useState<{ from: number; over: number } | null>(null);
   const [showNumbers, setShowNumbers] = useState(false);
   const [coach, setCoach] = useState(true);
@@ -88,21 +95,22 @@ export function Stage({ ref, scene, photos, selected, onSelect, onScene, onStatu
   const imageFor = useCallback((i: number) => previewOf(photos[i]!), [photos]);
 
   // The latest state, for drawing from animation frames.
-  const latest = useRef({ scene, selected, lifted, showNumbers, mark });
+  const latest = useRef({ scene, selected, lifted, showNumbers, mark, caption });
   useEffect(() => {
-    latest.current = { scene, selected, lifted, showNumbers, mark };
+    latest.current = { scene, selected, lifted, showNumbers, mark, caption };
   });
 
   /** Draws the scene plus whatever is animating over it. */
   const draw = useCallback(() => {
     const ctx = canvasRef.current?.getContext("2d");
     if (!ctx) return;
-    const { scene, selected, lifted, showNumbers, mark } = latest.current;
+    const { scene, selected, lifted, showNumbers, mark, caption } = latest.current;
     const o = overlay.current;
     const marks: Marks = lifted
       ? { dim: lifted.from, target: lifted.over === lifted.from ? undefined : lifted.over, hidden: o.hidden }
       : { selected: selected ?? undefined, numbers: showNumbers, hidden: o.hidden };
     drawScene(ctx, STORY_CANVAS, scene, imageFor, marks);
+    if (scene.captions?.length) drawCaptions(ctx, STORY_CANVAS, scene.captions, caption);
     if (mark) drawMark(ctx, STORY_CANVAS);
     if (o.fade) {
       ctx.save();
@@ -137,9 +145,12 @@ export function Stage({ ref, scene, photos, selected, onSelect, onScene, onStatu
     }
   }, [imageFor]);
 
-  useEffect(draw, [scene, selected, lifted, showNumbers, mark, draw]);
+  useEffect(draw, [scene, selected, lifted, showNumbers, mark, caption, draw]);
   // Draws the mark again once its font has loaded.
   useEffect(() => void document.fonts.load(markFont(STORY_CANVAS)).then(draw), [draw]);
+  // Captions' fonts load the first time there are captions; draw them again once they have.
+  const hasCaptions = Boolean(scene.captions?.length);
+  useEffect(() => void (hasCaptions && loadCaptionFonts().then(draw, console.error)), [hasCaptions, draw]);
 
   // Fit the 9:16 preview into whatever space the screen leaves between the top bar and the tools.
   useEffect(() => {
@@ -329,6 +340,16 @@ export function Stage({ ref, scene, photos, selected, onSelect, onScene, onStatu
     const g = gesture.current;
     if (pointers.current.size === 1) {
       const at = canvasPoint({ x: e.clientX, y: e.clientY });
+      // A caption sits over the photos, so a touch on one moves the caption.
+      const ctx = e.currentTarget.getContext("2d")!;
+      const hit = scene.captions?.length ? hitCaption(ctx, STORY_CANVAS, scene.captions, at) : -1;
+      if (hit >= 0) {
+        const { box } = layoutCaption(ctx, scene.captions![hit]!, STORY_CANVAS);
+        gesture.current = { kind: "caption", index: hit, grab: { x: at.x - (box.x + box.w / 2), y: at.y - (box.y + box.h / 2) } };
+        onCaption?.(hit);
+        onStatus(`Caption ${hit + 1} selected.`);
+        return;
+      }
       const cell = hitTest(scene.layout.cells, at);
       if (cell < 0) return;
       const timer = setTimeout(() => {
@@ -368,6 +389,7 @@ export function Stage({ ref, scene, photos, selected, onSelect, onScene, onStatu
     const g = gesture.current;
     if (!g) return;
     const { k, ...at } = canvasPoint({ x: e.clientX, y: e.clientY });
+    if (g.kind === "caption") return moveCaptionTo(e.currentTarget, g.index, { x: at.x - g.grab.x, y: at.y - g.grab.y });
     if (g.kind === "press") {
       if (Math.hypot(e.clientX - g.x, e.clientY - g.y) < TAP_SLOP_PX) return;
       clearTimeout(g.timer);
@@ -448,6 +470,14 @@ export function Stage({ ref, scene, photos, selected, onSelect, onScene, onStatu
     gesture.current = pointers.current.size ? { kind: "ended" } : null;
   }
 
+  /** Moves a caption's center to `to` (canvas pixels), kept on the canvas. */
+  function moveCaptionTo(canvas: HTMLCanvasElement, index: number, to: Point, snap = true) {
+    const c = latest.current.scene.captions?.[index];
+    if (!c) return;
+    const { box } = layoutCaption(canvas.getContext("2d")!, c, STORY_CANVAS);
+    onScene((s) => ({ ...s, captions: moveCaption(s.captions ?? [], index, to, box, STORY_CANVAS, snap) }));
+  }
+
   function onKeyDown(e: KeyboardEvent<HTMLCanvasElement>) {
     const n = Number(e.key);
     if (Number.isInteger(n) && n >= 1 && n <= scene.layout.cells.length) pick(n - 1);
@@ -459,6 +489,12 @@ export function Stage({ ref, scene, photos, selected, onSelect, onScene, onStatu
       const { frame } = cellShapes(scene.layout, scene.style, STORY_CANVAS)[selected]!;
       const step = frame.width * (e.shiftKey ? 0.2 : 0.05);
       pan(selected, x * step, y * step);
+    } else if (selected === null && caption !== null && scene.captions?.[caption] && e.key in ARROWS) {
+      // Arrow keys nudge the chosen caption.
+      const [x, y] = ARROWS[e.key as keyof typeof ARROWS];
+      const { box } = layoutCaption(e.currentTarget.getContext("2d")!, scene.captions[caption], STORY_CANVAS);
+      const step = STORY_CANVAS.width * (e.shiftKey ? 0.05 : 0.01);
+      moveCaptionTo(e.currentTarget, caption, { x: box.x + box.w / 2 + x * step, y: box.y + box.h / 2 + y * step }, false);
     } else if (selected !== null && (e.key === "+" || e.key === "=")) zoomBy(selected, KEY_ZOOM_STEP);
     else if (selected !== null && (e.key === "-" || e.key === "_")) zoomBy(selected, 1 / KEY_ZOOM_STEP);
     else return;
@@ -505,6 +541,12 @@ export function Stage({ ref, scene, photos, selected, onSelect, onScene, onStatu
           onFocus={(e) => setShowNumbers(e.currentTarget.matches(":focus-visible"))}
           onBlur={() => setShowNumbers(false)}
         />
+        {/* The captions, for screen readers and the keyboard: choosing one opens it in the Text tool. */}
+        {scene.captions?.map((c, i) => (
+          <button key={i} type="button" className="visually-hidden" aria-pressed={caption === i} onClick={() => onCaption?.(i)}>
+            {`Caption ${i + 1}: ${c.text}`}
+          </button>
+        ))}
         {tipStyle && (
           <div className="photo-tip" style={tipStyle} role="toolbar" aria-label={`Photo ${selected! + 1}`}>
             <button type="button" onClick={() => fit(selected!)}>
@@ -524,7 +566,7 @@ export function Stage({ ref, scene, photos, selected, onSelect, onScene, onStatu
       </div>
       <p id="keyboard-help" className={showNumbers ? "keyboard-help" : "visually-hidden"}>
         Press 1 to {scene.layout.cells.length} to pick a photo, then another number to swap them. Arrow keys move the
-        picked photo, + and − zoom, Esc finishes.
+        picked photo, + and − zoom, Esc finishes.{scene.captions?.length ? " With a caption chosen, arrow keys move it." : ""}
       </p>
     </div>
   );

@@ -208,7 +208,7 @@ test("AC-MOBILE-01 nothing scrolls sideways at phone width", async ({ page }) =>
     await libraryInput(page).setInputFiles(await makePhotos(page, 8));
     // Every panel, not just one: the layout strip once stretched the page only while Layouts was open.
     await expect(page.getByRole("radio").first()).toBeVisible();
-    for (const tab of ["Layouts", "Style", "Export"]) {
+    for (const tab of ["Layouts", "Style", "Text", "Export"]) {
       await page.getByRole("tab", { name: tab }).click();
       expect(await overflow(), `${tab} tool at ${width}px`).toBeLessThanOrEqual(0);
     }
@@ -224,7 +224,7 @@ test("AC-MOBILE-06 each editor tab has an icon above its label, and the tab keep
   await page.goto("/");
   await libraryInput(page).setInputFiles(await makePhotos(page, 8));
   await expect(page.getByRole("application")).toBeVisible();
-  for (const name of ["Layouts", "Style", "Export"]) {
+  for (const name of ["Layouts", "Style", "Text", "Export"]) {
     const tab = page.getByRole("tab", { name, exact: true });
     const icon = tab.getByTestId(`tab-icon-${name.toLowerCase()}`);
     await expect(icon).toBeVisible();
@@ -253,7 +253,7 @@ test("AC-MOBILE-04 the editor fits one phone screen: no page scrolling in any to
         expect(box.y + box.height, `${where}: on screen`).toBeLessThanOrEqual(size.height + 1);
       }
     };
-    for (const tab of ["Layouts", "Style", "Export"]) {
+    for (const tab of ["Layouts", "Style", "Text", "Export"]) {
       await page.getByRole("tab", { name: tab }).click();
       await fits(`${tab} tool`);
     }

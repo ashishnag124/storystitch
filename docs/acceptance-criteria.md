@@ -129,6 +129,21 @@ reuse IDs.
 | AC-EXPORT-08 | Sharing to Instagram on a real phone opens a Story with the image, and no face sits under Instagram's overlays. | manual |
 | AC-EXPORT-09 | The Export tab has a "Made with StoryStitch" switch, on by default. When it's on, the export carries a small, see-through StoryStitch mark in the lower right corner, set in far enough to sit on the photo rather than on the layout's outer margin, and about a quarter of the image's width at most. When it's off, the export has no mark. | auto |
 
+## Text
+
+Behind `EXPO_PUBLIC_FEATURE_TEXT`.
+
+| ID | Criterion | Check |
+|---|---|---|
+| AC-TEXT-01 | A collage has up to 3 captions. Each has 1 to 80 characters in up to 3 lines, one of four fonts (Clean, Serif, Hand, Type), white, black or a Style palette color, and a size. A new caption is white Clean text, centered across and inside Instagram's safe zone. A caption's box always stays fully on the canvas (a caption too wide gets smaller), and white or black text has a soft shadow. | auto |
+| AC-TEXT-02 | The Text tab (between Style and Export) adds a caption, which shows in the preview and in the exported 1080×1920 image, drawn over the photos and under the "Made with StoryStitch" mark. Its text, font, color and size can be changed. | auto |
+| AC-TEXT-03 | Captions stay through switching layouts, swapping photos and changing the style. Start over clears them. | auto |
+| AC-TEXT-04 | "Add text" works until there are 3 captions; then it's disabled and says why. Remove deletes the chosen caption. | auto |
+| AC-TEXT-05 | Tapping a caption on the preview chooses it, and dragging moves it, kept fully on the canvas and lined up with the middle when close. A touch that starts on a photo rather than a caption still picks, pans and swaps photos. With a caption chosen, arrow keys nudge it, and screen readers find each caption by its text. | auto |
+| AC-TEXT-06 | With the Text flag off, the editor has no Text tab and loads no caption fonts. | auto |
+| AC-TEXT-07 | Captions draw the same with the iOS and web drawing code, from the same font files, in every font, at the same positions. | auto |
+| AC-TEXT-08 | The caption fonts load only when the Text tool first opens or a collage has captions, never on app start. | auto |
+
 ## Performance
 
 | ID | Criterion | Check |
@@ -156,7 +171,7 @@ reuse IDs.
 | AC-A11Y-03 | Every control is at least 44 × 44 CSS pixels. | auto |
 | AC-MOBILE-01 | Nothing scrolls sideways at phone width, on the pick screen or in the editor. | auto |
 | AC-MOBILE-04 | On phones the editor is one screen with no page scrolling: top bar with Share, the preview, the current tool and the tab bar all fit, in every tool and with a photo selected. | auto |
-| AC-MOBILE-06 | Each tab in the editor's tab bar (Layouts, Style, Export) has an icon above its label, hidden from screen readers so the tab's name is still just its label, and each tab is at least 44 px tall. | auto |
+| AC-MOBILE-06 | Each tab in the editor's tab bar (Layouts, Style, Text when it's on, Export) has an icon above its label, hidden from screen readers so the tab's name is still just its label, and each tab is at least 44 px tall. | auto |
 | AC-MOBILE-02 | The full flow passes in emulated iPhone Safari (WebKit) and Android Chrome (Chromium). | auto |
 | AC-MOBILE-05 | Grouped actions keep to one hierarchy at phone width, on web and iOS: at most one gold primary, full width; at most one outlined secondary at the same width; anything else is smaller text in one row below, still at least 44 px tall. Destructive actions read as destructive. Nothing wraps into uneven rows, and tools of equal rank sit in even rows of equal widths. | auto |
 | AC-MOBILE-03 | Staging is checked by hand on a real iPhone (Safari) and Android phone (Chrome) before each release. | manual |

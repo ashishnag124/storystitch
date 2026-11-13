@@ -88,6 +88,37 @@ test("AC-IOS-12 every layout draws the same on Canvas and Skia", async ({ page }
   expect(worstOf(true)).toBeLessThan(7);
 });
 
+test("AC-TEXT-07 AC-IOS-12 captions draw the same on Canvas and Skia, from the same font files", async ({ page }, info) => {
+  test.skip(info.project.name !== "android-chrome", "Only needs one browser");
+  test.setTimeout(120_000);
+  const script = await bundle();
+  // The font files the web build serves, copied there by scripts/prepare-assets.mjs (the e2e build runs it).
+  const fonts = resolve(here, "../public/fonts/captions");
+  await page.route("http://parity.test/**", (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.startsWith("/fonts/captions/")) return route.fulfill({ body: readFileSync(join(fonts, path.split("/").pop()!)), contentType: "font/ttf" });
+    if (path === "/canvaskit.wasm") return route.fulfill({ body: readFileSync(join(canvasKitDir, "bin/full/canvaskit.wasm")), contentType: "application/wasm" });
+    if (path === "/parity.js") return route.fulfill({ body: script, contentType: "text/javascript" });
+    return route.fulfill({ body: '<!doctype html><script src="/parity.js"></script>', contentType: "text/html" });
+  });
+  await page.goto("http://parity.test/");
+  const results = await page.evaluate(() => (window as unknown as { compareCaptions(): Promise<{ id: string; differentPct: number; meanDiff: number; boxGap: number; canvas: string; skia: string }[]> }).compareCaptions());
+  const out = resolve(here, "../test-results/parity");
+  mkdirSync(out, { recursive: true });
+  for (const r of results) {
+    writeFileSync(join(out, `caption-${r.id}-canvas.png`), Buffer.from(r.canvas, "base64"));
+    writeFileSync(join(out, `caption-${r.id}-skia.png`), Buffer.from(r.skia, "base64"));
+  }
+  console.log(results.map((r) => `${r.id}: ${r.differentPct.toFixed(2)}% / ${r.meanDiff.toFixed(2)} / box ${r.boxGap.toFixed(2)}px`).join("\n"));
+  expect(results).toHaveLength(8);
+  for (const r of results) {
+    // Same fonts and the same layout code, so every caption's box lands in the same place, give or take what the
+    // browser's text shaping (kerning) adds over Skia's plain advances: 2 to 5 px on this 540 px canvas, under 1.5%.
+    expect(r.boxGap, r.id).toBeLessThan(0.015 * 540);
+    expect(r.differentPct, r.id).toBeLessThan(2);
+  }
+});
+
 test("AC-IOS-12 AC-CROP-07 the blurred fill of a zoomed-out photo draws the same on Canvas and Skia", async ({ page }, info) => {
   test.skip(info.project.name !== "android-chrome", "Only needs one browser");
   test.setTimeout(240_000);

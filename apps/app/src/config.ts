@@ -20,6 +20,8 @@ export const LAYOUT_EDITOR_ENABLED = ACCOUNTS_ENABLED && process.env.EXPO_PUBLIC
 export const BLANK_LAYOUT_ENABLED = LAYOUT_EDITOR_ENABLED && process.env.EXPO_PUBLIC_FEATURE_BLANK_LAYOUT === "true";
 /** Where a photo doesn't cover its cell, the rest of the cell shows a blurred copy of the photo. Off unless EXPO_PUBLIC_FEATURE_BLUR_FILL=true. */
 export const BLUR_FILL_ENABLED = process.env.EXPO_PUBLIC_FEATURE_BLUR_FILL === "true";
+/** The Text tool: captions on the collage, in four bundled fonts. Off unless EXPO_PUBLIC_FEATURE_TEXT=true. */
+export const TEXT_ENABLED = process.env.EXPO_PUBLIC_FEATURE_TEXT === "true";
 /** "Describe a layout" in the Layouts tool (iOS only, on the iPhone's own model). Needs the layout editor; off unless set to true. */
 export const DESCRIBE_LAYOUT_ENABLED = LAYOUT_EDITOR_ENABLED && process.env.EXPO_PUBLIC_FEATURE_DESCRIBE_LAYOUT === "true";
 /**
