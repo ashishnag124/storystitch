@@ -68,7 +68,16 @@ async function noMark(page: Page) {
 
 /** A point on the preview, from export pixels. */
 async function onPreview(page: Page, x: number, y: number) {
-  const box = (await page.getByRole("application").boundingBox())!;
+  // The preview resizes when a tool's panel changes height: wait for it to settle.
+  let box = (await page.getByRole("application").boundingBox())!;
+  await expect
+    .poll(async () => {
+      const now = (await page.getByRole("application").boundingBox())!;
+      const same = now.width === box.width && now.y === box.y;
+      box = now;
+      return same;
+    })
+    .toBe(true);
   return { x: box.x + (x / 1080) * box.width, y: box.y + (y / 1920) * box.height };
 }
 
@@ -145,7 +154,7 @@ test.describe("text", () => {
 
   test("AC-TEXT-03 captions stay through a layout switch, a photo swap and a style change, and Start over clears them", async ({ page }) => {
     await libraryInput(page).setInputFiles(await makePhotos(page, 2));
-    await page.getByRole("radio", { name: "Two stacked" }).click();
+    await page.getByRole("radio", { name: "Two stacked", exact: true }).click();
     await page.getByRole("tab", { name: "Text" }).click();
     await page.getByRole("button", { name: "Add text" }).click();
     await page.getByRole("textbox", { name: "Caption text" }).fill("Hello");
@@ -153,9 +162,9 @@ test.describe("text", () => {
     await expect(caption).toBeAttached();
 
     await page.getByRole("tab", { name: "Layouts" }).click();
-    await page.getByRole("radio", { name: "Side by side" }).click();
+    await page.getByRole("radio", { name: "Side by side", exact: true }).click();
     await expect(caption).toBeAttached();
-    await page.getByRole("radio", { name: "Two stacked" }).click();
+    await page.getByRole("radio", { name: "Two stacked", exact: true }).click();
     // Swap the photos, tapping away from the caption (near the top).
     for (const y of [0.4, 0.75]) {
       const at = await onPreview(page, 540, 1920 * y);
@@ -173,17 +182,25 @@ test.describe("text", () => {
     await expect(page.getByRole("button", { name: /^Caption 1/ })).toHaveCount(0);
   });
 
-  test("AC-TEXT-04 three captions at most, and Remove deletes the chosen one", async ({ page }) => {
+  test("AC-TEXT-04 three captions at most, + says why at the limit, and the trash removes the chosen one", async ({ page }) => {
     await libraryInput(page).setInputFiles(await makePhotos(page, 2));
     await page.getByRole("tab", { name: "Text" }).click();
+    // With no captions, a full-width "Add text"; then the "+" beside the text field has the same name.
     const add = page.getByRole("button", { name: "Add text" });
+    const hint = page.getByText("Up to 3 captions. Remove one to add another.");
     for (let i = 0; i < 3; i++) await add.click();
     await expect(page.getByRole("button", { name: /^Caption \d/ })).toHaveCount(3);
-    await expect(add).toBeDisabled();
-    await expect(page.getByText("Up to 3 captions. Remove one to add another.")).toBeVisible();
-    await page.getByRole("button", { name: "Remove" }).click();
+    await expect(hint).toBeHidden();
+    await add.click();
+    await expect(page.getByRole("button", { name: /^Caption \d/ })).toHaveCount(3);
+    await expect(hint).toBeVisible();
+    for (const name of ["Add text", "Remove text"]) {
+      const box = (await page.getByRole("button", { name }).boundingBox())!;
+      expect(Math.min(box.width, box.height), name).toBeGreaterThanOrEqual(44);
+    }
+    await page.getByRole("button", { name: "Remove text" }).click();
     await expect(page.getByRole("button", { name: /^Caption \d/ })).toHaveCount(2);
-    await expect(add).toBeEnabled();
+    await expect(hint).toBeHidden();
   });
 
   test("AC-TEXT-05 a caption is chosen by a tap, dragged within the canvas, snapped to the middle and nudged by keys; photos still work", async ({ page }) => {

@@ -11,12 +11,14 @@ interface Props {
   /** The value as shown beside the slider. */
   display: string;
   disabled?: boolean;
+  /** Just the track: the label is only spoken, and no value is shown. For a row with other controls. */
+  bare?: boolean;
   onChange: (value: number) => void;
 }
 
 const THUMB = 26;
 
-export function Slider({ label, value, min, max, step, display, disabled, onChange }: Props) {
+export function Slider({ label, value, min, max, step, display, disabled, bare, onChange }: Props) {
   const [width, setWidth] = useState(0);
   const from = useRef(0);
   function moveTo(x: number) {
@@ -48,8 +50,8 @@ export function Slider({ label, value, min, max, step, display, disabled, onChan
   const fraction = (value - min) / (max - min);
   const adjust = (direction: number) => !disabled && onChange(Math.round(Math.min(max, Math.max(min, value + direction * Math.max(step, (max - min) / 10))) / step) * step);
   return (
-    <View style={styles.row}>
-      <Text style={styles.label}>{label}</Text>
+    <View style={[styles.row, bare && styles.bare]}>
+      {!bare && <Text style={styles.label}>{label}</Text>}
       <View
         accessible
         accessibilityRole="adjustable"
@@ -65,13 +67,14 @@ export function Slider({ label, value, min, max, step, display, disabled, onChan
         <View style={[styles.fill, { width: THUMB / 2 + fraction * (width - THUMB) }]} />
         <View style={[styles.thumb, { left: fraction * (width - THUMB) }]} />
       </View>
-      <Text style={styles.value}>{display}</Text>
+      {!bare && <Text style={styles.value}>{display}</Text>}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: 8 },
+  bare: { flex: 1, minWidth: 80 },
   label: { ...type.hint, width: 72 },
   track: { flex: 1, height: MIN_TARGET, justifyContent: "center" },
   disabled: { opacity: 0.4 },
