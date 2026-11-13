@@ -47,7 +47,10 @@
         "EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR": "true",
         "EXPO_PUBLIC_FEATURE_USAGE": "true",
         "EXPO_PUBLIC_FEATURE_FIT_LAYOUTS": "true",
-        "EXPO_PUBLIC_FEATURE_BLANK_LAYOUT": "true"
+        "EXPO_PUBLIC_FEATURE_BLANK_LAYOUT": "true",
+        "EXPO_PUBLIC_FEATURE_LOOKS": "true",
+        "EXPO_PUBLIC_FEATURE_TEXT": "true",
+        "EXPO_PUBLIC_FEATURE_SHUFFLE": "true"
       }
     }
   },
