@@ -7,6 +7,7 @@ export * from "./looks";
 export * from "./mark";
 export * from "./motion";
 export * from "./scene";
+export * from "./shuffle";
 export * from "./subjects";
 export * from "./usage";
 export * from "./version";

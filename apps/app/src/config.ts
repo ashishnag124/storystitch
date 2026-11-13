@@ -35,3 +35,5 @@ export const PLUS_ENABLED = ACCOUNTS_ENABLED && API_URL !== "" && process.env.EX
 /** RevenueCat's public keys (safe in the app): the web app's, which sells through Paddle, and the iOS app's. */
 export const REVENUECAT_WEB_KEY: string = process.env.EXPO_PUBLIC_REVENUECAT_WEB_KEY ?? "";
 export const REVENUECAT_IOS_KEY: string = process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY ?? "";
+/** "Shuffle" in the Layouts tool: one tap for another layout that fits the photos well. Off unless EXPO_PUBLIC_FEATURE_SHUFFLE=true. */
+export const SHUFFLE_ENABLED = process.env.EXPO_PUBLIC_FEATURE_SHUFFLE === "true";
