@@ -1,0 +1,11 @@
+appId: com.ashishnag.storystitch.staging
+name: AC-IOS-19 Tapping Shuffle layout switches the preview to another layout
+---
+- runFlow: ../shared/pick-photos.yaml
+- repeat:
+    times: 3
+    commands:
+      - copyTextFrom: "Story preview: .*, 4 photos"
+      - tapOn: Shuffle layout
+      - assertNotVisible: ${maestro.copiedText}
+      - assertVisible: "Story preview: .*, 4 photos"
