@@ -10,12 +10,14 @@ import {
   styleScale,
   type Box,
   type CellShape,
+  type LookId,
   type Outline,
   type Scene,
 } from "@storystitch/client";
 import { CENTER_CROP, leavesUncovered, sourceRect, type Crop } from "@storystitch/layout-engine";
 import { drawOrder, type Size } from "@storystitch/shared";
 import { BLUR_FILL_ENABLED } from "../config";
+import { drawWithLook, withLook } from "./looks.web";
 import type { Photo } from "./photos";
 
 /** Anything drawable with its pixel size: a preview copy or a decoded original. */
@@ -52,7 +54,7 @@ export function outlinePath(outline: Outline, radius: number): Path2D {
   return path;
 }
 
-export function drawCell(ctx: CanvasRenderingContext2D, shape: CellShape, img: Drawable, crop: Crop, radius: number, border = 0, borderColor = "#fff") {
+export function drawCell(ctx: CanvasRenderingContext2D, shape: CellShape, img: Drawable, crop: Crop, radius: number, border = 0, borderColor = "#fff", look: LookId = "original") {
   const { frame } = shape;
   const src = sourceRect(img, frame, crop);
   // A zoomed-out crop reaches past the photo; draw only the part that exists (Safari won't clip for us).
@@ -74,18 +76,20 @@ export function drawCell(ctx: CanvasRenderingContext2D, shape: CellShape, img: D
   ctx.save();
   ctx.translate(frame.cx, frame.cy);
   ctx.rotate((frame.rotate * Math.PI) / 180);
-  if (BLUR_FILL_ENABLED && leavesUncovered(img, frame, crop)) drawBlurFill(ctx, img, frame);
-  ctx.drawImage(
-    img.image,
-    x0,
-    y0,
-    x1 - x0,
-    y1 - y0,
-    -frame.width / 2 + (x0 - src.x) * kx,
-    -frame.height / 2 + (y0 - src.y) * ky,
-    (x1 - x0) * kx,
-    (y1 - y0) * ky,
-  );
+  drawWithLook(ctx, img, frame, look, (ctx, img) => {
+    if (BLUR_FILL_ENABLED && leavesUncovered(img, frame, crop)) drawBlurFill(ctx, img, frame);
+    ctx.drawImage(
+      img.image,
+      x0,
+      y0,
+      x1 - x0,
+      y1 - y0,
+      -frame.width / 2 + (x0 - src.x) * kx,
+      -frame.height / 2 + (y0 - src.y) * ky,
+      (x1 - x0) * kx,
+      (y1 - y0) * ky,
+    );
+  });
   ctx.restore();
   if (border > 0) {
     // Stroke twice the width centered on the outline; the clip keeps the inner half, so the border sits inside the cell.
@@ -118,8 +122,8 @@ function blurredCopy(img: Drawable, size: Size): HTMLCanvasElement {
 }
 
 /** Fills the canvas with a heavily blurred copy of the photo. */
-export function drawBlurredBackground(ctx: CanvasRenderingContext2D, size: Size, img: Drawable) {
-  const blurred = blurredCopy(img, size);
+export function drawBlurredBackground(ctx: CanvasRenderingContext2D, size: Size, img: Drawable, look: LookId = "original") {
+  const blurred = withLook(blurredCopy(img, size), look);
   ctx.save();
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(blurred, 0, 0, size.width, size.height);
@@ -191,7 +195,7 @@ export function snapshotCell(scene: Scene, size: Size, cell: number, imageFor: (
   canvas.height = Math.max(1, Math.ceil(box.h));
   const ctx = canvas.getContext("2d")!;
   ctx.translate(-box.x, -box.y);
-  drawCell(ctx, shape, imageFor(scene.order[cell]!), scene.crops[cell]!, radius, border, scene.style.borderColor);
+  drawCell(ctx, shape, imageFor(scene.order[cell]!), scene.crops[cell]!, radius, border, scene.style.borderColor, scene.style.look);
   return { canvas, box };
 }
 
@@ -206,10 +210,10 @@ export function drawScene(
   const shapes = cellShapes(scene.layout, scene.style, size);
   const { radius, border } = styleScale(scene.layout, scene.style, size);
   fillBackground(ctx, size, scene);
-  if (hasBlurredBackground(scene)) drawBlurredBackground(ctx, size, imageFor(scene.order[0]!));
+  if (hasBlurredBackground(scene)) drawBlurredBackground(ctx, size, imageFor(scene.order[0]!), scene.style.look);
   for (const i of drawOrder(scene.layout.cells)) {
     if (marks.hidden?.includes(i)) continue;
-    drawCell(ctx, shapes[i]!, imageFor(scene.order[i]!), scene.crops[i]!, radius, border, scene.style.borderColor);
+    drawCell(ctx, shapes[i]!, imageFor(scene.order[i]!), scene.crops[i]!, radius, border, scene.style.borderColor, scene.style.look);
   }
   const dimmed = marks.dim === undefined ? undefined : shapes[marks.dim];
   if (dimmed) {

@@ -103,6 +103,19 @@ reuse IDs.
 | AC-EDIT-13 | The Layouts tool shows each layout as a plain diagram of its cells (one shape per photo, no photos drawn on it), with the current one highlighted. | auto |
 | AC-EDIT-14 | Tapping another layout during a crossfade replaces it, so quick taps never pile up crossfades that slow the preview. | auto |
 
+## Shuffle
+
+Behind `EXPO_PUBLIC_FEATURE_SHUFFLE`.
+
+| ID | Criterion | Check |
+|---|---|---|
+| AC-SHUFFLE-01 | Shuffle only picks layouts that fit the photos well: at least the 7 best-ranked (or all, if fewer: the one showing and 6 more) and any within a set cost of the best, plus the user's own layouts, never a negative-space one. | auto |
+| AC-SHUFFLE-02 | Shuffle never shows the layout already showing, nor any of the last 4 it showed, and goes through every eligible layout before repeating one; with two layouts it alternates. | auto |
+| AC-SHUFFLE-03 | Shuffle gives the same result for the same random source and history, keeps the user's style and everything else in the collage, and crops photos afresh for their new cells. When only one layout fits, it rearranges the photos instead, without cutting a face. | auto |
+| AC-SHUFFLE-04 | On the web with 4 photos, each of 6 taps on "Shuffle layout" (a button of at least 44 px at the start of the layout strip) shows a layout not shown before, named in the preview and selected in the strip, which scrolls to it. | auto |
+| AC-SHUFFLE-05 | Switching layouts with Shuffle updates the preview within the AC-PERF-02 budget, and quick taps run one crossfade, not one for each tap. | auto |
+| AC-SHUFFLE-06 | With the flag off there's no Shuffle button. | auto |
+
 ## Style
 
 | ID | Criterion | Check |
@@ -114,6 +127,21 @@ reuse IDs.
 | AC-STYLE-05 | Full-bleed layouts have no spacing, corners or border. | auto |
 | AC-STYLE-06 | Spacing and margin are even: neighbours are a full gap apart, every edge cell is one margin from the canvas edge, and both scale with the canvas. | auto |
 | AC-STYLE-07 | Auto, the default background, is a pale tint of the most common hue across the photos, each photo counting the same; near-black, near-white and grey are ignored, and with little color it fades toward white. When no hue clearly wins (another hue at least 90° away is within 10% of the most common one, as with red, green and blue photos together), Auto is white. Auto is the first choice in the Color tool and stays after Reset. | auto |
+
+## Looks
+
+Behind `EXPO_PUBLIC_FEATURE_LOOKS`.
+
+| ID | Criterion | Check |
+|---|---|---|
+| AC-LOOK-01 | There are eight looks, Original, Film, Fade, Warm, Cool, Vivid, Mono and Noir, each one color matrix defined once and used by both platforms: Original changes nothing, Mono and Noir are black and white, Film lifts blacks and warms, and every value stays in range. Original is the default. | auto |
+| AC-LOOK-02 | The Style tool's first row, labeled "Look" and above Color, scrolls sideways through the looks in order, each a small portrait (3:4) thumbnail of the user's first photo with the look's name under it; the chosen one has an accent outline and is announced as selected, and one tap applies it. | auto |
+| AC-LOOK-03 | A look changes every photo (and the blurred copies made from them) in the preview and the exported image, and never the background color, borders, Polaroid cards or the mark. | auto |
+| AC-LOOK-04 | With Original, the export is exactly what it was before looks existed. | auto |
+| AC-LOOK-05 | The iOS drawing code applies the same looks as the web code, from preview copies and from full-size originals. | auto |
+| AC-LOOK-06 | With the flag off there is no Look row, and photos draw as they always have. | auto |
+| AC-LOOK-07 | With a look on, switching layouts and exporting still meet the targets of AC-PERF-02 and AC-PERF-03. | auto |
+| AC-LOOK-08 | On an iPhone, choosing a look changes the preview, the thumbnails show it, and the shared image has it. | manual |
 
 ## Export and sharing
 
@@ -128,6 +156,21 @@ reuse IDs.
 | AC-EXPORT-07 | The export is rendered from the original photos, not the downscaled previews. | auto |
 | AC-EXPORT-08 | Sharing to Instagram on a real phone opens a Story with the image, and no face sits under Instagram's overlays. | manual |
 | AC-EXPORT-09 | The Export tab has a "Made with StoryStitch" switch, on by default. When it's on, the export carries a small, see-through StoryStitch mark in the lower right corner, set in far enough to sit on the photo rather than on the layout's outer margin, and about a quarter of the image's width at most. When it's off, the export has no mark. | auto |
+
+## Text
+
+Behind `EXPO_PUBLIC_FEATURE_TEXT`.
+
+| ID | Criterion | Check |
+|---|---|---|
+| AC-TEXT-01 | A collage has up to 3 captions. Each has 1 to 80 characters in up to 3 lines, one of four fonts (Clean, Serif, Hand, Type), white, black or a Style palette color, and a size. A new caption is white Clean text, centered across and inside Instagram's safe zone. A caption's box always stays fully on the canvas (a caption too wide gets smaller), and white or black text has a soft shadow. | auto |
+| AC-TEXT-02 | The Text tab (between Style and Export) adds a caption, which shows in the preview and in the exported 1080×1920 image, drawn over the photos and under the "Made with StoryStitch" mark. Its text, font, color and size can be changed. A look filters the photos but never the captions. | auto |
+| AC-TEXT-03 | Captions stay through switching layouts, swapping photos and changing the style. Start over clears them. | auto |
+| AC-TEXT-04 | The Text tool is three rows: the chosen caption's text with "+" (add) and trash (remove) icon buttons, the four font pills, then color dots beside the size slider. With no captions it shows a full-width "Add text" and a hint. "+" adds captions up to 3; tapped at 3 it says why and adds none. The trash removes the chosen caption. The icon buttons are named "Add text" and "Remove text" and are at least 44 px. | auto |
+| AC-TEXT-05 | Tapping a caption on the preview chooses it, and dragging moves it, kept fully on the canvas and lined up with the middle when close. A touch that starts on a photo rather than a caption still picks, pans and swaps photos. With a caption chosen, arrow keys nudge it, and screen readers find each caption by its text. | auto |
+| AC-TEXT-06 | With the Text flag off, the editor has no Text tab and loads no caption fonts. | auto |
+| AC-TEXT-07 | Captions draw the same with the iOS and web drawing code, from the same font files, in every font, at the same positions. | auto |
+| AC-TEXT-08 | The caption fonts load only when the Text tool first opens or a collage has captions, never on app start. | auto |
 
 ## Performance
 
@@ -156,7 +199,7 @@ reuse IDs.
 | AC-A11Y-03 | Every control is at least 44 × 44 CSS pixels. | auto |
 | AC-MOBILE-01 | Nothing scrolls sideways at phone width, on the pick screen or in the editor. | auto |
 | AC-MOBILE-04 | On phones the editor is one screen with no page scrolling: top bar with Share, the preview, the current tool and the tab bar all fit, in every tool and with a photo selected. | auto |
-| AC-MOBILE-06 | Each tab in the editor's tab bar (Layouts, Style, Export) has an icon above its label, hidden from screen readers so the tab's name is still just its label, and each tab is at least 44 px tall. | auto |
+| AC-MOBILE-06 | Each tab in the editor's tab bar (Layouts, Style, Text when it's on, Export) has an icon above its label, hidden from screen readers so the tab's name is still just its label, and each tab is at least 44 px tall. | auto |
 | AC-MOBILE-02 | The full flow passes in emulated iPhone Safari (WebKit) and Android Chrome (Chromium). | auto |
 | AC-MOBILE-05 | Grouped actions keep to one hierarchy at phone width, on web and iOS: at most one gold primary, full width; at most one outlined secondary at the same width; anything else is smaller text in one row below, still at least 44 px tall. Destructive actions read as destructive. Nothing wraps into uneven rows, and tools of equal rank sit in even rows of equal widths. | auto |
 | AC-MOBILE-03 | Staging is checked by hand on a real iPhone (Safari) and Android phone (Chrome) before each release. | manual |
@@ -189,6 +232,7 @@ Maestro reads the accessibility tree, so `ios` rows prove what a person can reac
 | AC-IOS-01 | The app opens on the pick screen with its headline and privacy line, with or without the API. | ios |
 | AC-IOS-02 | Picking photos, including a HEIC, in the iOS picker opens the editor with a preview naming its layout and photo count, and a strip of layouts. | ios |
 | AC-IOS-03 | Tapping a layout in the strip switches the preview to it. | ios |
+| AC-IOS-19 | Tapping Shuffle layout switches the preview to another layout. | ios |
 | AC-IOS-04 | The Style tool offers colors, and tells VoiceOver which one is chosen, and a spacing slider that changes the value. | ios |
 | AC-IOS-05 | Tapping a photo offers a zoom slider, Fit undoes the zoom, and Done closes the photo's tools. | ios |
 | AC-IOS-06 | Share opens the iOS share sheet with the export as a JPEG, or a PNG when that's the chosen format. It stays available while the image is being made: tapped then, the sheet opens as soon as the image is ready. | ios |

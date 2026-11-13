@@ -63,9 +63,8 @@ test.describe("performance targets", () => {
     expect(analysis, "analysis of 8 photos").toBeLessThan(BUDGET.analysis);
   });
 
-  test("AC-PERF-02 switching to any layout meets the brief's target", async ({ page }) => {
-    await pickPhotos(page, await phonePhotos(page));
-
+  /** The worst layout's median switch time, in ms. */
+  async function worstLayoutSwitch(page: Page) {
     // Layout switch: from the tap until the next frame has been painted, back to back with no pause, so each
     // tap lands during the last one's crossfade. A CI runner's hiccups (a busy neighbouring test, a stolen core)
     // only ever add time to a sample, so the slowest single sample measures the runner. Each layout's median
@@ -95,12 +94,11 @@ test.describe("performance targets", () => {
       `timings: worst layout median ${worst.toFixed(1)} ms, slowest single switch ${Math.max(...samples.flat()).toFixed(1)} ms, ` +
         `first round's slowest ${Math.max(...samples.map((ms) => ms[0]!)).toFixed(1)} ms, ${count} layouts × ${SWITCH_ROUNDS}`,
     );
-    expect(worst, "layout switch, worst layout's median").toBeLessThan(BUDGET.layoutSwitch);
-  });
+    return worst;
+  }
 
-  test("AC-PERF-03 exporting 8 12 MP photos meets the brief's target", async ({ page }) => {
-    await pickPhotos(page, await phonePhotos(page));
-
+  /** How long the app's latest export render took, in ms. */
+  async function timedExport(page: Page) {
     // The app measures each render itself (decode originals → encoded JPEG). Let earlier renders settle, then
     // time a fresh one.
     const download = page.getByRole("button", { name: "Download" });
@@ -111,7 +109,26 @@ test.describe("performance targets", () => {
     const exportMs = await page.evaluate((name) => performance.getEntriesByName(name).at(-1)!.duration, EXPORT_MEASURE);
 
     console.log(`timings: export ${exportMs.toFixed(0)} ms`);
-    expect(exportMs, "export").toBeLessThan(BUDGET.export);
+    return exportMs;
+  }
+
+  test("AC-PERF-02 switching to any layout meets the brief's target", async ({ page }) => {
+    await pickPhotos(page, await phonePhotos(page));
+    expect(await worstLayoutSwitch(page), "layout switch, worst layout's median").toBeLessThan(BUDGET.layoutSwitch);
+  });
+
+  test("AC-PERF-03 exporting 8 12 MP photos meets the brief's target", async ({ page }) => {
+    await pickPhotos(page, await phonePhotos(page));
+    expect(await timedExport(page), "export").toBeLessThan(BUDGET.export);
+  });
+
+  test("AC-LOOK-07 with a look on, switching layouts and exporting still meet the brief's targets", async ({ page }) => {
+    await pickPhotos(page, await phonePhotos(page));
+    await page.getByRole("tab", { name: "Style" }).click();
+    await page.getByRole("button", { name: "Film" }).click();
+    await page.getByRole("tab", { name: "Layouts" }).click();
+    expect(await worstLayoutSwitch(page), "layout switch with a look, worst layout's median").toBeLessThan(BUDGET.layoutSwitch);
+    expect(await timedExport(page), "export with a look").toBeLessThan(BUDGET.export);
   });
 });
 
@@ -208,7 +225,7 @@ test("AC-MOBILE-01 nothing scrolls sideways at phone width", async ({ page }) =>
     await libraryInput(page).setInputFiles(await makePhotos(page, 8));
     // Every panel, not just one: the layout strip once stretched the page only while Layouts was open.
     await expect(page.getByRole("radio").first()).toBeVisible();
-    for (const tab of ["Layouts", "Style", "Export"]) {
+    for (const tab of ["Layouts", "Style", "Text", "Export"]) {
       await page.getByRole("tab", { name: tab }).click();
       expect(await overflow(), `${tab} tool at ${width}px`).toBeLessThanOrEqual(0);
     }
@@ -224,7 +241,7 @@ test("AC-MOBILE-06 each editor tab has an icon above its label, and the tab keep
   await page.goto("/");
   await libraryInput(page).setInputFiles(await makePhotos(page, 8));
   await expect(page.getByRole("application")).toBeVisible();
-  for (const name of ["Layouts", "Style", "Export"]) {
+  for (const name of ["Layouts", "Style", "Text", "Export"]) {
     const tab = page.getByRole("tab", { name, exact: true });
     const icon = tab.getByTestId(`tab-icon-${name.toLowerCase()}`);
     await expect(icon).toBeVisible();
@@ -253,7 +270,7 @@ test("AC-MOBILE-04 the editor fits one phone screen: no page scrolling in any to
         expect(box.y + box.height, `${where}: on screen`).toBeLessThanOrEqual(size.height + 1);
       }
     };
-    for (const tab of ["Layouts", "Style", "Export"]) {
+    for (const tab of ["Layouts", "Style", "Text", "Export"]) {
       await page.getByRole("tab", { name: tab }).click();
       await fits(`${tab} tool`);
     }

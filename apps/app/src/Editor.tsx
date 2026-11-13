@@ -5,9 +5,10 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import { AppState, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { AccountLink } from "./AccountLink";
 import { deleteSaved, listSaved, recordExport } from "./api";
-import { BLANK_LAYOUT_ENABLED, DESCRIBE_LAYOUT_ENABLED, FIT_LAYOUTS_ENABLED, LAYOUT_EDITOR_ENABLED } from "./config";
+import { BLANK_LAYOUT_ENABLED, DESCRIBE_LAYOUT_ENABLED, FIT_LAYOUTS_ENABLED, LAYOUT_EDITOR_ENABLED, LOOKS_ENABLED, SHUFFLE_ENABLED, TEXT_ENABLED } from "./config";
 import { LayoutStrip } from "./LayoutStrip";
 import { PlusUpsell } from "./PlusUpsell";
+import { ShuffleButton } from "./ShuffleButton";
 import { perfTimes, resetPerfPeak, timeLayoutSwitch } from "./PerfReadout";
 import { EXPORT_PAUSE_MS, canShareFiles, canWaitToShare, renderExport, shareOrDownload, type ExportFormat } from "./platform/exportImage";
 import { DescribeAction } from "./platform/DescribeAction";
@@ -18,6 +19,7 @@ import { ACCOUNT_PATHS, useLocation } from "./platform/route";
 import { Slider } from "./platform/Slider";
 import { Stage, type StageHandle } from "./platform/Stage";
 import { StylePanel } from "./StylePanel";
+import { TextPanel } from "./TextPanel";
 import { colors, fontFamily, type as typography } from "./theme";
 import { Button } from "./ui/Button";
 import { Choice } from "./ui/Choice";
@@ -26,13 +28,14 @@ import { upscaleWarnings } from "./upscale";
 import { usePlus } from "./usePlus";
 import { track } from "./usage";
 
-type Tool = "layouts" | "style" | "export";
+type Tool = "layouts" | "style" | "text" | "export";
 /** The id of a layout edited and used without saving. No saved or built-in layout has it. */
 const UNSAVED_LAYOUT_ID = "edited";
 
 const TOOLS: { id: Tool; label: string }[] = [
   { id: "layouts", label: "Layouts" },
   { id: "style", label: "Style" },
+  ...(TEXT_ENABLED ? [{ id: "text", label: "Text" } as const] : []),
   { id: "export", label: "Export" },
 ];
 
@@ -56,6 +59,13 @@ function TabGlyph({ tool, ink }: { tool: Tool; ink: string }) {
               <View style={[glyphs.knob, { left, backgroundColor: ink }]} />
             </View>
           ))}
+        </View>
+      );
+    case "text":
+      return (
+        <View aria-hidden testID="tab-icon-text" style={glyphs.box}>
+          <View style={[glyphs.bar, { backgroundColor: ink }]} />
+          <View style={[glyphs.stem, { backgroundColor: ink }]} />
         </View>
       );
     case "export":
@@ -96,6 +106,8 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
   const location = useLocation();
   const onAccountScreen = (ACCOUNT_PATHS as readonly string[]).includes(location.pathname);
   const [selected, setSelected] = useState<number | null>(null);
+  /** The caption being edited in the Text tool. */
+  const [caption, setCaption] = useState<number | null>(null);
   const [status, setStatus] = useState("");
   const [tool, setTool] = useState<Tool>("layouts");
   // Notices (alerts) stay until closed; the detection summary fades on its own.
@@ -187,7 +199,8 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
   function chooseLayout(option: Scene) {
     timeLayoutSwitch();
     stage.current?.crossfade();
-    setScene(newScene(option.layout, photos, scene.style, option.order));
+    // Captions stay where they are on the canvas when the layout changes.
+    setScene({ ...newScene(option.layout, photos, scene.style, option.order), captions: scene.captions });
     setSelected(null);
     setConfirmDelete(false);
   }
@@ -237,7 +250,7 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
     const edited = { ...layout, id: UNSAVED_LAYOUT_ID, name: "Edited layout" };
     setUnsaved({ layout: edited, order });
     setBuilding(null);
-    setScene(newScene(edited, photos, scene.style, order));
+    setScene({ ...newScene(edited, photos, scene.style, order), captions: scene.captions });
     setStatus("Your edited layout is in your collage.");
   }
 
@@ -245,7 +258,7 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
     setSaved((list) => [layout, ...(Array.isArray(list) ? list.filter((s) => s.id !== layout.id) : [])]);
     setUnsaved(null);
     setBuilding(null);
-    setScene(newScene(layout.layout, photos, scene.style, order));
+    setScene({ ...newScene(layout.layout, photos, scene.style, order), captions: scene.captions });
     setStatus(`Saved ${layout.name}.`);
     track("layout_saved");
   }
@@ -302,7 +315,25 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
       </View>
 
       <View aria-hidden={covered} style={styles.stage}>
-        <Stage ref={stage} scene={scene} photos={photos} selected={selected} onSelect={setSelected} onScene={onScene} onStatus={setStatus} mark={mark} />
+        <Stage
+          ref={stage}
+          scene={scene}
+          photos={photos}
+          selected={selected}
+          onSelect={(cell) => {
+            setSelected(cell);
+            if (cell !== null) setCaption(null);
+          }}
+          onScene={onScene}
+          onStatus={setStatus}
+          mark={mark}
+          caption={tool === "text" ? caption : null}
+          onCaption={(index) => {
+            setCaption(index);
+            setSelected(null);
+            setTool("text");
+          }}
+        />
         <View aria-live="polite" style={styles.toasts} pointerEvents="box-none">
           {toasts.map((t) => (
             <Toast key={t.text} {...t} onClose={() => setToasts((all) => all.filter((x) => x.text !== t.text))} />
@@ -318,7 +349,7 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
         </Text>
       </View>
 
-      <View aria-hidden={covered} role="region" aria-label={panelTitle} style={[styles.panel, showActions && styles.panelActions]}>
+      <View aria-hidden={covered} role="region" aria-label={panelTitle} style={[styles.panel, (showActions || (selected === null && (tool === "text" || (LOOKS_ENABLED && tool === "style")))) && styles.panelActions]}>
         {selected !== null ? (
           <View style={styles.photoTool}>
             <Text style={typography.hint}>Tap another photo to swap them. Double-tap to zoom.</Text>
@@ -342,6 +373,22 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
                 chooseLayout(option);
               }}
               mine={yours}
+              leading={
+                SHUFFLE_ENABLED && (
+                  <ShuffleButton
+                    options={styledOptions}
+                    scene={scene}
+                    photos={photos}
+                    yours={yours}
+                    onShuffle={(next) => {
+                      timeLayoutSwitch();
+                      stage.current?.crossfade();
+                      setScene(next);
+                      setConfirmDelete(false);
+                    }}
+                  />
+                )
+              }
             />
             {LAYOUT_EDITOR_ENABLED && (
               <View style={styles.layoutActions}>
@@ -367,7 +414,9 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
             )}
           </View>
         ) : tool === "style" ? (
-          <StylePanel layout={scene.layout} style={scene.style} onChange={(style) => setScene((s) => withStyle(s, style, photos))} />
+          <StylePanel layout={scene.layout} style={scene.style} onChange={(style) => setScene((s) => withStyle(s, style, photos))} photo={photos[0]!} />
+        ) : tool === "text" ? (
+          <TextPanel captions={scene.captions ?? []} selected={caption} onChange={(captions) => setScene((s) => ({ ...s, captions }))} onSelect={setCaption} />
         ) : (
           <ScrollView contentContainerStyle={styles.exportTool}>
             <FormatSelect value={format} onChange={setFormat} />
@@ -486,4 +535,6 @@ const glyphs = StyleSheet.create({
   tray: { position: "absolute", bottom: 1, width: 16, height: 8, borderWidth: 1.5, borderTopWidth: 0, borderBottomLeftRadius: 3, borderBottomRightRadius: 3 },
   shaft: { position: "absolute", top: 3, width: 1.5, height: 10 },
   head: { position: "absolute", top: 3, width: 7, height: 7, borderTopWidth: 1.5, borderLeftWidth: 1.5, transform: [{ rotate: "45deg" }] },
+  bar: { position: "absolute", top: 1, width: 16, height: 3, borderRadius: 1 },
+  stem: { position: "absolute", top: 1, width: 3, height: 16, borderRadius: 1 },
 });

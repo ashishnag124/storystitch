@@ -9,10 +9,16 @@ interface Props {
   /** The value as shown beside the slider. */
   display: string;
   disabled?: boolean;
+  /** Just the track: the label is only spoken, and no value is shown. For a row with other controls. */
+  bare?: boolean;
   onChange: (value: number) => void;
 }
 
-export function Slider({ label, value, min, max, step, display, disabled, onChange }: Props) {
+export function Slider({ label, value, min, max, step, display, disabled, bare, onChange }: Props) {
+  if (bare)
+    return (
+      <input className="bare-slider" type="range" aria-label={label} min={min} max={max} step={step} value={value} disabled={disabled} onChange={(e) => onChange(Number(e.target.value))} />
+    );
   return (
     <label className="tool-slider">
       <span>{label}</span>

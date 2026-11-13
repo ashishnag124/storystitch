@@ -3,6 +3,8 @@ import { ImageFormat, Skia } from "@shopify/react-native-skia";
 import { STORY_CANVAS, drawOrder } from "@storystitch/shared";
 import { EncodingType, cacheDirectory, deleteAsync, makeDirectoryAsync, writeAsStringAsync } from "expo-file-system/legacy";
 import { isAvailableAsync, shareAsync } from "expo-sharing";
+import { loadCaptionFonts } from "./captionFonts.native";
+import { drawCaptions } from "./captionRender.native";
 import { decodeFull, type Photo } from "./photos.native";
 import { blurredImage, drawBlurredBackground, drawCell, drawMark, fillBackground, hasBlurredBackground } from "./render.native";
 
@@ -33,9 +35,13 @@ export async function renderExport(scene: Scene, photos: Photo[], format: Export
   };
 
   fillBackground(canvas, size, scene);
-  if (hasBlurredBackground(scene)) await draw(photos[scene.order[0]!]!, (img) => drawBlurredBackground(canvas, size, blurredImage(size, img)));
+  if (hasBlurredBackground(scene)) await draw(photos[scene.order[0]!]!, (img) => drawBlurredBackground(canvas, size, blurredImage(size, img), scene.style.look));
   for (const i of drawOrder(scene.layout.cells)) {
-    await draw(photos[scene.order[i]!]!, (img) => drawCell(canvas, shapes[i]!, img, scene.crops[i]!, radius, border, scene.style.borderColor));
+    await draw(photos[scene.order[i]!]!, (img) => drawCell(canvas, shapes[i]!, img, scene.crops[i]!, radius, border, scene.style.borderColor, scene.style.look));
+  }
+  if (scene.captions?.length) {
+    await loadCaptionFonts();
+    drawCaptions(canvas, size, scene.captions);
   }
   if (job.cancelled) return null;
   if (mark) drawMark(canvas, size);

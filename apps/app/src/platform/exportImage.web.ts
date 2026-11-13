@@ -1,5 +1,7 @@
 import { cellShapes, styleScale, type Scene } from "@storystitch/client";
 import { STORY_CANVAS, drawOrder } from "@storystitch/shared";
+import { loadCaptionFonts } from "./captionFonts.web";
+import { drawCaptions } from "./captionRender.web";
 import { decodeFull, type Photo } from "./photos.web";
 import { drawBlurredBackground, drawCell, drawMark, fillBackground, hasBlurredBackground, markFont, type Drawable } from "./render.web";
 
@@ -88,14 +90,18 @@ export async function renderExport(scene: Scene, photos: Photo[], format: Export
   fillBackground(ctx, size, scene);
   if (hasBlurredBackground(scene)) {
     const img = await decode(photos[scene.order[0]!]!);
-    drawBlurredBackground(ctx, size, img);
+    drawBlurredBackground(ctx, size, img, scene.style.look);
     img.image.close();
   }
   for (const i of drawOrder(scene.layout.cells)) {
     if (job.cancelled) return null;
     const img = await decode(photos[scene.order[i]!]!);
-    drawCell(ctx, shapes[i]!, img, scene.crops[i]!, radius, border, scene.style.borderColor);
+    drawCell(ctx, shapes[i]!, img, scene.crops[i]!, radius, border, scene.style.borderColor, scene.style.look);
     img.image.close();
+  }
+  if (scene.captions?.length) {
+    await loadCaptionFonts();
+    drawCaptions(ctx, size, scene.captions);
   }
   if (mark) {
     await document.fonts.load(markFont(size));

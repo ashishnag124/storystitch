@@ -20,6 +20,10 @@ export const LAYOUT_EDITOR_ENABLED = ACCOUNTS_ENABLED && process.env.EXPO_PUBLIC
 export const BLANK_LAYOUT_ENABLED = LAYOUT_EDITOR_ENABLED && process.env.EXPO_PUBLIC_FEATURE_BLANK_LAYOUT === "true";
 /** Where a photo doesn't cover its cell, the rest of the cell shows a blurred copy of the photo. Off unless EXPO_PUBLIC_FEATURE_BLUR_FILL=true. */
 export const BLUR_FILL_ENABLED = process.env.EXPO_PUBLIC_FEATURE_BLUR_FILL === "true";
+/** Looks: one-tap filters on every photo, in the Style tool. Off unless EXPO_PUBLIC_FEATURE_LOOKS=true. */
+export const LOOKS_ENABLED = process.env.EXPO_PUBLIC_FEATURE_LOOKS === "true";
+/** The Text tool: captions on the collage, in four bundled fonts. Off unless EXPO_PUBLIC_FEATURE_TEXT=true. */
+export const TEXT_ENABLED = process.env.EXPO_PUBLIC_FEATURE_TEXT === "true";
 /** "Describe a layout" in the Layouts tool (iOS only, on the iPhone's own model). Needs the layout editor; off unless set to true. */
 export const DESCRIBE_LAYOUT_ENABLED = LAYOUT_EDITOR_ENABLED && process.env.EXPO_PUBLIC_FEATURE_DESCRIBE_LAYOUT === "true";
 /**
@@ -31,3 +35,5 @@ export const PLUS_ENABLED = ACCOUNTS_ENABLED && API_URL !== "" && process.env.EX
 /** RevenueCat's public keys (safe in the app): the web app's, which sells through Paddle, and the iOS app's. */
 export const REVENUECAT_WEB_KEY: string = process.env.EXPO_PUBLIC_REVENUECAT_WEB_KEY ?? "";
 export const REVENUECAT_IOS_KEY: string = process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY ?? "";
+/** "Shuffle" in the Layouts tool: one tap for another layout that fits the photos well. Off unless EXPO_PUBLIC_FEATURE_SHUFFLE=true. */
+export const SHUFFLE_ENABLED = process.env.EXPO_PUBLIC_FEATURE_SHUFFLE === "true";

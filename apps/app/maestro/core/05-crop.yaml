@@ -3,7 +3,25 @@ name: AC-IOS-05 Tapping a photo offers zoom, and Fit undoes it
 ---
 - runFlow: ../shared/pick-photos.yaml
 # The app's first choice depends on the photos, and a tap can land between cells of some layouts.
-- tapOn: "Grid, space above"
+# Its place in the strip depends on the photos too, and Shuffle's tile can push it out of sight: scroll the strip
+# until a tap on it lands. A tap misses while the thumbnail is half out of sight, so the strip moves on after a miss.
+- repeat:
+    times: 8
+    while:
+      notVisible: "Story preview: Grid, space above, 4 photos"
+    commands:
+      - tapOn:
+          text: "Grid, space above"
+          optional: true
+      - runFlow:
+          when:
+            notVisible: "Story preview: Grid, space above, 4 photos"
+          commands:
+            - swipe:
+                start: "85%,77%"
+                end: "35%,77%"
+                duration: 800
+- assertVisible: "Story preview: Grid, space above, 4 photos"
 # CI's simulator can be slow enough to lose this tap. A tap that lands selects the photo, so the retry only runs after a miss.
 - retry:
     maxRetries: 2

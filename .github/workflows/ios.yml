@@ -32,6 +32,8 @@ jobs:
       EXPO_PUBLIC_WEB_URL: http://localhost:5174
       EXPO_PUBLIC_FEATURE_ACCOUNTS: "true"
       EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR: "true"
+      # AC-IOS-19 taps Shuffle. Looks and Text stay off: they change the Style panel and the tool tabs, and the flows swipe at screen positions.
+      EXPO_PUBLIC_FEATURE_SHUFFLE: "true"
       EXPO_NO_TELEMETRY: "1"
     steps:
       - uses: actions/checkout@v4
