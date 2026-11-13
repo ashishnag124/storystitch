@@ -90,12 +90,15 @@ describe("AC-SHUFFLE-03 Shuffle is repeatable and keeps the rest of the collage"
   });
 
   it("keeps the style and any other scene fields, with fresh crops for the new cells", () => {
-    const scene = { ...options[0]!, caption: { text: "Hello" } };
+    const captions = [{ text: "Hello", font: "serif", color: "#ffffff", size: 0.08, x: 0.5, y: 0.2 }] satisfies Scene["captions"];
+    const scene = { ...options[0]!, captions, other: { kept: true } };
     const next = shuffle(options, scene, [], photos, seeded(5))!.scene;
     expect(next.layout.id).not.toBe(scene.layout.id);
     expect(next.style).toBe(style);
     expect(next.style.look).toBe("noir");
-    expect((next as typeof scene).caption).toBe(scene.caption);
+    expect(next.captions).toBe(captions);
+    expect(next.captions).toEqual([{ text: "Hello", font: "serif", color: "#ffffff", size: 0.08, x: 0.5, y: 0.2 }]);
+    expect((next as typeof scene).other).toBe(scene.other);
     const option = options.find((o) => o.layout.id === next.layout.id)!;
     expect(next).toMatchObject(newScene(option.layout, photos, style, option.order));
   });

@@ -1,7 +1,10 @@
 // Draws one scene with both of the app's renderers, Canvas (web) and Skia (iOS), from the same photos and crops.
-import { DEFAULT_STYLE, newScene, type Scene, type Style } from "@storystitch/client";
+import { CAPTION_FONTS, DEFAULT_STYLE, newScene, type Caption, type Scene, type Style } from "@storystitch/client";
 import { layouts } from "@storystitch/shared";
 import CanvasKitInit from "canvaskit-wasm";
+import { CAPTION_FONT_FILES, loadCaptionFonts } from "../../src/platform/captionFonts.web";
+import * as onCanvasCaptions from "../../src/platform/captionRender.web";
+import * as onSkiaCaptions from "../../src/platform/captionRender.native";
 import * as onCanvas from "../../src/platform/render.web";
 import * as onSkia from "../../src/platform/render.native";
 import { Skia, loadCanvasKit } from "./skia";
@@ -99,8 +102,60 @@ function compare(a: ArrayLike<number>, b: ArrayLike<number>) {
 declare global {
   interface Window {
     compareRenderers: (styles: Partial<Style>[], zoom?: number, scale?: number) => Promise<{ id: string; styled: number; differentPct: number; meanDiff: number; canvas: string; skia: string }[]>;
+    compareCaptions: () => Promise<{ id: string; differentPct: number; meanDiff: number; boxGap: number; canvas: string; skia: string }[]>;
   }
 }
+
+/** Captions alone, on a plain background, in every font: once each in white (with its shadow) and in a palette color. */
+window.compareCaptions = async () => {
+  loadCanvasKit((await CanvasKitInit({ locateFile: () => "/canvaskit.wasm" })) as never);
+  // The web app's own loader, and the same files made into Skia typefaces, as the iOS app does.
+  await loadCaptionFonts();
+  for (const font of CAPTION_FONTS) {
+    const bytes = new Uint8Array(await (await fetch(`/fonts/captions/${CAPTION_FONT_FILES[font]}`)).arrayBuffer());
+    onSkiaCaptions.setCaptionTypeface(font, Skia.Typeface.MakeFreeTypeFaceFromData(Skia.Data.fromBytes(bytes))!);
+  }
+  const size = { width: 540, height: 960 };
+  const results = [];
+  for (const font of CAPTION_FONTS) {
+    for (const color of ["#ffffff", "#ff7a59"]) {
+      const captions: Caption[] = [
+        { text: "Summer in Lisbon", font, color, size: 0.08, x: 0.5, y: 0.25 },
+        { text: "Day 3\nwith Maya & Sam", font, color, size: 0.06, x: 0.3, y: 0.6 },
+        { text: "a caption long enough to need shrinking down", font, color, size: 0.14, x: 0.9, y: 0.95 },
+      ];
+      const canvas = document.createElement("canvas");
+      canvas.width = size.width;
+      canvas.height = size.height;
+      const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
+      ctx.fillStyle = "#8a9a7b";
+      ctx.fillRect(0, 0, size.width, size.height);
+      onCanvasCaptions.drawCaptions(ctx, size, captions);
+      const surface = Skia.Surface.Make(size.width, size.height)!;
+      surface.getCanvas().drawColor(Skia.Color("#8a9a7b"));
+      onSkiaCaptions.drawCaptions(surface.getCanvas() as never, size, captions);
+      surface.flush();
+      const image = surface.makeImageSnapshot();
+      const skiaPixels = image.readPixels(0, 0, { width: size.width, height: size.height, colorType: 4, alphaType: 3 }) as Uint8Array;
+      // How far apart the two layouts put each caption's box, in pixels.
+      const boxGap = Math.max(
+        ...captions.flatMap((c) => {
+          const a = onCanvasCaptions.layoutCaption(ctx, c, size).box;
+          const b = onSkiaCaptions.layoutCaption(c, size)!.box;
+          return [a.x - b.x, a.y - b.y, a.w - b.w, a.h - b.h].map(Math.abs);
+        }),
+      );
+      results.push({
+        id: `${font}-${color}`,
+        boxGap,
+        ...compare(ctx.getImageData(0, 0, size.width, size.height).data, skiaPixels),
+        canvas: canvas.toDataURL("image/png").split(",")[1]!,
+        skia: image.encodeToBase64(),
+      });
+    }
+  }
+  return results;
+};
 
 window.compareRenderers = async (styles, zoom, scale) => {
   loadCanvasKit((await CanvasKitInit({ locateFile: () => "/canvaskit.wasm" })) as never);
