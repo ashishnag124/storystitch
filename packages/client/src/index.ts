@@ -3,6 +3,7 @@ export * from "./autoColor";
 export * from "./captions";
 export * from "./draft";
 export * from "./emailLink";
+export * from "./looks";
 export * from "./mark";
 export * from "./motion";
 export * from "./scene";

@@ -47,9 +47,11 @@ function paintPhoto(width: number, height: number, n: number) {
 
 type Photos = Awaited<ReturnType<typeof loadPhotos>>;
 
-async function loadPhotos() {
+/** `scale` makes the photos larger, past the size the web renderer keeps filtered copies of (looks.web.ts). */
+async function loadPhotos(scale = 1) {
   return Promise.all(
-    PHOTO_SIZES.map(async ([width, height], n) => {
+    PHOTO_SIZES.map(async ([w, h], n) => {
+      const [width, height] = [w * scale, h * scale];
       const canvas = paintPhoto(width, height, n);
       const blob = await new Promise<Blob>((done) => canvas.toBlob((b) => done(b!), "image/png"));
       const bytes = new Uint8Array(await blob.arrayBuffer());
@@ -99,7 +101,7 @@ function compare(a: ArrayLike<number>, b: ArrayLike<number>) {
 
 declare global {
   interface Window {
-    compareRenderers: (styles: Partial<Style>[], zoom?: number) => Promise<{ id: string; styled: number; differentPct: number; meanDiff: number; canvas: string; skia: string }[]>;
+    compareRenderers: (styles: Partial<Style>[], zoom?: number, scale?: number) => Promise<{ id: string; styled: number; differentPct: number; meanDiff: number; canvas: string; skia: string }[]>;
     compareCaptions: () => Promise<{ id: string; differentPct: number; meanDiff: number; boxGap: number; canvas: string; skia: string }[]>;
   }
 }
@@ -155,9 +157,9 @@ window.compareCaptions = async () => {
   return results;
 };
 
-window.compareRenderers = async (styles, zoom) => {
+window.compareRenderers = async (styles, zoom, scale) => {
   loadCanvasKit((await CanvasKitInit({ locateFile: () => "/canvaskit.wasm" })) as never);
-  const photos = await loadPhotos();
+  const photos = await loadPhotos(scale);
   const sources = photos.map((p) => p.source);
   const results = [];
   for (const [styled, overrides] of styles.entries()) {

@@ -115,6 +115,21 @@ reuse IDs.
 | AC-STYLE-06 | Spacing and margin are even: neighbours are a full gap apart, every edge cell is one margin from the canvas edge, and both scale with the canvas. | auto |
 | AC-STYLE-07 | Auto, the default background, is a pale tint of the most common hue across the photos, each photo counting the same; near-black, near-white and grey are ignored, and with little color it fades toward white. When no hue clearly wins (another hue at least 90° away is within 10% of the most common one, as with red, green and blue photos together), Auto is white. Auto is the first choice in the Color tool and stays after Reset. | auto |
 
+## Looks
+
+Behind `EXPO_PUBLIC_FEATURE_LOOKS`.
+
+| ID | Criterion | Check |
+|---|---|---|
+| AC-LOOK-01 | There are eight looks, Original, Film, Fade, Warm, Cool, Vivid, Mono and Noir, each one color matrix defined once and used by both platforms: Original changes nothing, Mono and Noir are black and white, Film lifts blacks and warms, and every value stays in range. Original is the default. | auto |
+| AC-LOOK-02 | The Style tool's first row, labeled "Look" and above Color, scrolls sideways through the looks in order, each a small portrait (3:4) thumbnail of the user's first photo with the look's name under it; the chosen one has an accent outline and is announced as selected, and one tap applies it. | auto |
+| AC-LOOK-03 | A look changes every photo (and the blurred copies made from them) in the preview and the exported image, and never the background color, borders, Polaroid cards or the mark. | auto |
+| AC-LOOK-04 | With Original, the export is exactly what it was before looks existed. | auto |
+| AC-LOOK-05 | The iOS drawing code applies the same looks as the web code, from preview copies and from full-size originals. | auto |
+| AC-LOOK-06 | With the flag off there is no Look row, and photos draw as they always have. | auto |
+| AC-LOOK-07 | With a look on, switching layouts and exporting still meet the targets of AC-PERF-02 and AC-PERF-03. | auto |
+| AC-LOOK-08 | On an iPhone, choosing a look changes the preview, the thumbnails show it, and the shared image has it. | manual |
+
 ## Export and sharing
 
 | ID | Criterion | Check |
@@ -136,7 +151,7 @@ Behind `EXPO_PUBLIC_FEATURE_TEXT`.
 | ID | Criterion | Check |
 |---|---|---|
 | AC-TEXT-01 | A collage has up to 3 captions. Each has 1 to 80 characters in up to 3 lines, one of four fonts (Clean, Serif, Hand, Type), white, black or a Style palette color, and a size. A new caption is white Clean text, centered across and inside Instagram's safe zone. A caption's box always stays fully on the canvas (a caption too wide gets smaller), and white or black text has a soft shadow. | auto |
-| AC-TEXT-02 | The Text tab (between Style and Export) adds a caption, which shows in the preview and in the exported 1080×1920 image, drawn over the photos and under the "Made with StoryStitch" mark. Its text, font, color and size can be changed. | auto |
+| AC-TEXT-02 | The Text tab (between Style and Export) adds a caption, which shows in the preview and in the exported 1080×1920 image, drawn over the photos and under the "Made with StoryStitch" mark. Its text, font, color and size can be changed. A look filters the photos but never the captions. | auto |
 | AC-TEXT-03 | Captions stay through switching layouts, swapping photos and changing the style. Start over clears them. | auto |
 | AC-TEXT-04 | "Add text" works until there are 3 captions; then it's disabled and says why. Remove deletes the chosen caption. | auto |
 | AC-TEXT-05 | Tapping a caption on the preview chooses it, and dragging moves it, kept fully on the canvas and lined up with the middle when close. A touch that starts on a photo rather than a caption still picks, pans and swaps photos. With a caption chosen, arrow keys nudge it, and screen readers find each caption by its text. | auto |

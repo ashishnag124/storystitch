@@ -35,9 +35,9 @@ export async function renderExport(scene: Scene, photos: Photo[], format: Export
   };
 
   fillBackground(canvas, size, scene);
-  if (hasBlurredBackground(scene)) await draw(photos[scene.order[0]!]!, (img) => drawBlurredBackground(canvas, size, blurredImage(size, img)));
+  if (hasBlurredBackground(scene)) await draw(photos[scene.order[0]!]!, (img) => drawBlurredBackground(canvas, size, blurredImage(size, img), scene.style.look));
   for (const i of drawOrder(scene.layout.cells)) {
-    await draw(photos[scene.order[i]!]!, (img) => drawCell(canvas, shapes[i]!, img, scene.crops[i]!, radius, border, scene.style.borderColor));
+    await draw(photos[scene.order[i]!]!, (img) => drawCell(canvas, shapes[i]!, img, scene.crops[i]!, radius, border, scene.style.borderColor, scene.style.look));
   }
   if (scene.captions?.length) {
     await loadCaptionFonts();

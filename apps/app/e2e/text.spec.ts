@@ -119,6 +119,25 @@ test.describe("text", () => {
     await page.getByRole("button", { name: "Coral" }).click();
     const coral = await exportImage(page);
     expect((await exportDiff(page, last, coral)).count).toBeGreaterThan(200);
+    // A look filters the photos, never the captions: coral text stays coral under Mono.
+    const coralPixels = (image: Buffer) =>
+      page.evaluate(async (b64) => {
+        const bitmap = await createImageBitmap(await (await fetch(`data:image/jpeg;base64,${b64}`)).blob());
+        const ctx = new OffscreenCanvas(bitmap.width, bitmap.height).getContext("2d")!;
+        ctx.drawImage(bitmap, 0, 0);
+        const d = ctx.getImageData(0, 0, bitmap.width, bitmap.height).data;
+        let n = 0;
+        for (let i = 0; i < d.length; i += 4) if (d[i]! > 200 && d[i + 1]! > 90 && d[i + 1]! < 160 && d[i + 2]! < 120) n++;
+        return n;
+      }, image.toString("base64"));
+    const coralBefore = await coralPixels(coral);
+    expect(coralBefore).toBeGreaterThan(200);
+    await page.getByRole("tab", { name: "Style" }).click();
+    await page.getByRole("button", { name: "Mono" }).click();
+    const mono = await exportImage(page);
+    expect(await coralPixels(mono)).toBeGreaterThan(coralBefore * 0.8);
+    await page.getByRole("tab", { name: "Text" }).click();
+    await page.getByRole("button", { name: /^Caption 1/ }).evaluate((b) => (b as HTMLButtonElement).click());
     await page.getByRole("slider", { name: "Size" }).fill("0.12");
     const bigger = await exportDiff(page, plain, await exportImage(page));
     expect(bigger.x1 - bigger.x0).toBeGreaterThan(diff.x1 - diff.x0);

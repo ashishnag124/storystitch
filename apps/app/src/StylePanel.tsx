@@ -2,7 +2,10 @@ import { DEFAULT_BACKGROUND, DEFAULT_STYLE, backgroundOf, borderOf, pickedBackgr
 import type { Layout } from "@storystitch/shared";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { LOOKS_ENABLED } from "./config";
+import { LookRow } from "./LookRow";
 import { BlurFace, BorderColor, CustomSwatch } from "./platform/ColorInputs";
+import type { Photo } from "./platform/photos";
 import { Slider } from "./platform/Slider";
 import { MIN_TARGET, colors, fontFamily, type } from "./theme";
 import { Choice } from "./ui/Choice";
@@ -57,13 +60,15 @@ interface Props {
   layout: Layout;
   style: Style;
   onChange: (style: Style) => void;
+  /** The user's first photo, which the looks are shown on. */
+  photo: Photo;
 }
 
 /**
  * Style as a compact tool, like a photo app's "Adjust": a row of tool buttons picks the property, and one control
  * for it shows below. The defaults should look good without touching anything.
  */
-export function StylePanel({ layout, style, onChange }: Props) {
+export function StylePanel({ layout, style, onChange, photo }: Props) {
   const [property, setProperty] = useState<Property>("background");
   const picked = pickedBackground(layout, style);
   const background = backgroundOf(layout, style);
@@ -85,6 +90,7 @@ export function StylePanel({ layout, style, onChange }: Props) {
 
   return (
     <View style={styles.tool}>
+      {LOOKS_ENABLED && <LookRow photo={photo} look={style.look} onChange={(look) => set({ look })} />}
       {/* Every tool fits on one row, even on an SE, so none hides off the edge. */}
       <View style={styles.tools}>
         <View role="radiogroup" aria-label="Style property" style={styles.properties}>

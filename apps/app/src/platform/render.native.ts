@@ -8,9 +8,11 @@ import {
   markFontSize,
   markLayout,
   markLogoParts,
+  lookMatrix,
   styleScale,
   type Box,
   type CellShape,
+  type LookId,
   type Outline,
   type Scene,
 } from "@storystitch/client";
@@ -44,6 +46,15 @@ function paintOf(color: string, style = PaintStyle.Fill, width = 0): SkPaint {
   return paint;
 }
 
+/** Opens a layer that draws with the look's color matrix (closed by `canvas.restore()`); false for Original, which needs none. */
+function saveLookLayer(canvas: SkCanvas, look: LookId): boolean {
+  if (look === "original") return false;
+  const paint = Skia.Paint();
+  paint.setColorFilter(Skia.ColorFilter.MakeMatrix([...lookMatrix(look)]));
+  canvas.saveLayer(paint);
+  return true;
+}
+
 /** A cell outline as a path, with its corners rounded by `radius`. */
 export function outlinePath(outline: Outline, radius: number): SkPath {
   const path = Skia.PathBuilder.Make();
@@ -62,7 +73,7 @@ export function outlinePath(outline: Outline, radius: number): SkPath {
   return path.close().build();
 }
 
-export function drawCell(canvas: SkCanvas, shape: CellShape, img: Drawable, crop: Crop, radius: number, border = 0, borderColor = "#fff") {
+export function drawCell(canvas: SkCanvas, shape: CellShape, img: Drawable, crop: Crop, radius: number, border = 0, borderColor = "#fff", look: LookId = "original") {
   const { frame } = shape;
   const src = sourceRect(img, frame, crop);
   // A zoomed-out crop reaches past the photo; draw only the part that exists.
@@ -81,6 +92,7 @@ export function drawCell(canvas: SkCanvas, shape: CellShape, img: Drawable, crop
   canvas.save();
   canvas.translate(frame.cx, frame.cy);
   canvas.rotate(frame.rotate, 0, 0);
+  const looked = saveLookLayer(canvas, look);
   if (BLUR_FILL_ENABLED && leavesUncovered(img, frame, crop)) drawBlurFill(canvas, img, frame);
   canvas.drawImageRectOptions(
     img.image,
@@ -89,6 +101,7 @@ export function drawCell(canvas: SkCanvas, shape: CellShape, img: Drawable, crop
     FilterMode.Linear,
     MipmapMode.Linear,
   );
+  if (looked) canvas.restore();
   canvas.restore();
   // Stroke twice the width centered on the outline; the clip keeps the inner half, so the border sits inside the cell.
   if (border > 0) canvas.drawPath(clip, paintOf(borderColor, PaintStyle.Stroke, 2 * border));
@@ -121,8 +134,10 @@ export function blurredImage(size: Size, img: Drawable): SkImage {
   return surface.makeImageSnapshot();
 }
 
-export function drawBlurredBackground(canvas: SkCanvas, size: Size, blurred: SkImage) {
+export function drawBlurredBackground(canvas: SkCanvas, size: Size, blurred: SkImage, look: LookId = "original") {
+  const looked = saveLookLayer(canvas, look);
   canvas.drawImageRectCubic(blurred, Skia.XYWHRect(0, 0, blurred.width(), blurred.height()), Skia.XYWHRect(0, 0, size.width, size.height), ...SMOOTH);
+  if (looked) canvas.restore();
   canvas.drawRect(Skia.XYWHRect(0, 0, size.width, size.height), paintOf("rgba(0, 0, 0, 0.12)"));
 }
 
@@ -178,10 +193,10 @@ export function drawScene(canvas: SkCanvas, size: Size, scene: Scene, imageFor: 
   const shapes = cellShapes(scene.layout, scene.style, size);
   const { radius, border } = styleScale(scene.layout, scene.style, size);
   fillBackground(canvas, size, scene);
-  if (blurred) drawBlurredBackground(canvas, size, blurred);
+  if (blurred) drawBlurredBackground(canvas, size, blurred, scene.style.look);
   for (const i of drawOrder(scene.layout.cells)) {
     if (marks.hidden?.includes(i)) continue;
-    drawCell(canvas, shapes[i]!, imageFor(scene.order[i]!), scene.crops[i]!, radius, border, scene.style.borderColor);
+    drawCell(canvas, shapes[i]!, imageFor(scene.order[i]!), scene.crops[i]!, radius, border, scene.style.borderColor, scene.style.look);
   }
   const dimmed = marks.dim === undefined ? undefined : shapes[marks.dim];
   if (dimmed) canvas.drawPath(outlinePath(dimmed.outline, radius), paintOf("rgba(28, 25, 23, 0.45)"));
@@ -262,7 +277,7 @@ export function drawCellAt(canvas: SkCanvas, size: Size, scene: Scene, cell: num
   if (opts.turn) canvas.rotate(opts.turn, 0, 0);
   canvas.scale(to.w / box.w, to.h / box.h);
   canvas.translate(-box.x - box.w / 2, -box.y - box.h / 2);
-  drawCell(canvas, shape, imageFor(scene.order[cell]!), scene.crops[cell]!, radius, border, scene.style.borderColor);
+  drawCell(canvas, shape, imageFor(scene.order[cell]!), scene.crops[cell]!, radius, border, scene.style.borderColor, scene.style.look);
   if (opts.shadow) canvas.restore();
   canvas.restore();
 }
