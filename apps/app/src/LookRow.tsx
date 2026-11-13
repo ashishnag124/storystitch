@@ -4,8 +4,8 @@ import { LookThumb } from "./platform/LookThumb";
 import type { Photo } from "./platform/photos";
 import { colors, fontFamily, type } from "./theme";
 
-/** Thumbnails are small portrait rectangles, 3:4. */
-const THUMB = { width: 36, height: 48 } as const;
+/** Thumbnails are small portrait rectangles, 3:4, wide enough (with their 2px outline) to be a 44 px tap target. */
+const THUMB = { width: 42, height: 56 } as const;
 
 /** The Style tool's first row: every look, shown on the user's first photo. One tap applies it. */
 export function LookRow({ photo, look, onChange }: { photo: Photo; look: LookId; onChange: (look: LookId) => void }) {
