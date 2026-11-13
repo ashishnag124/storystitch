@@ -11,7 +11,7 @@ interface Props {
   onSelect: (option: Scene) => void;
   /** Ids of the user's own saved layouts among the options, marked "Yours". */
   mine?: Set<string>;
-  /** Shown first in the strip, scrolling with it, as tall as the layouts (Shuffle). */
+  /** Shown first in the strip, pinned while the layouts scroll, as tall as they are (Shuffle). */
   leading?: ReactNode;
 }
 
@@ -19,8 +19,6 @@ interface Props {
 export function LayoutStrip({ options, current, onSelect, mine, leading }: Props) {
   const scroll = useRef<ScrollViewInstance>(null);
   const view = useRef({ x: 0, width: 0 });
-  /** Where the radio group starts in the scrolled content (after `leading`). */
-  const groupX = useRef(0);
   const thumbs = useRef(new Map<string, { x: number; width: number }>());
   // Shuffle can choose a layout scrolled out of sight.
   const follow = Boolean(leading);
@@ -28,13 +26,20 @@ export function LayoutStrip({ options, current, onSelect, mine, leading }: Props
     const thumb = thumbs.current.get(current.layout.id);
     const { x, width } = view.current;
     if (!follow || !thumb || !width) return;
-    const left = groupX.current + thumb.x;
-    if (left < x) scroll.current?.scrollTo({ x: left, animated: true });
-    else if (left + thumb.width > x + width) scroll.current?.scrollTo({ x: left + thumb.width - width, animated: true });
+    if (thumb.x < x) scroll.current?.scrollTo({ x: thumb.x, animated: true });
+    else if (thumb.x + thumb.width > x + width) scroll.current?.scrollTo({ x: thumb.x + thumb.width - width, animated: true });
   }, [current.layout.id, follow]);
 
-  const group = (
-      <View role="radiogroup" aria-label="Layouts" style={styles.strip} onLayout={(e) => (groupX.current = e.nativeEvent.layout.x)}>
+  const strip = (
+    <ScrollView
+      ref={scroll}
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      scrollEventThrottle={32}
+      onScroll={(e) => (view.current.x = e.nativeEvent.contentOffset.x)}
+      onLayout={(e) => (view.current.width = e.nativeEvent.layout.width)}
+    >
+      <View role="radiogroup" aria-label="Layouts" style={styles.strip}>
         {options.map((option) => {
           const checked = option.layout.id === current.layout.id;
           const yours = mine?.has(option.layout.id);
@@ -58,31 +63,21 @@ export function LayoutStrip({ options, current, onSelect, mine, leading }: Props
           );
         })}
       </View>
-  );
-  return (
-    <ScrollView
-      ref={scroll}
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      scrollEventThrottle={32}
-      onScroll={(e) => (view.current.x = e.nativeEvent.contentOffset.x)}
-      onLayout={(e) => (view.current.width = e.nativeEvent.layout.width)}
-    >
-      {leading ? (
-        <View style={styles.row}>
-          {leading}
-          {group}
-        </View>
-      ) : (
-        group
-      )}
     </ScrollView>
+  );
+  if (!leading) return strip;
+  return (
+    <View style={styles.row}>
+      {leading}
+      <View style={styles.fill}>{strip}</View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   /** `leading` stretches to the strip's height. */
   row: { flexDirection: "row" },
+  fill: { flex: 1, minWidth: 0 },
   strip: { flexDirection: "row", gap: 10, paddingVertical: 4, paddingHorizontal: 2 },
   thumb: { padding: 3, borderWidth: 2, borderColor: "transparent", borderRadius: 10 },
   checked: { borderColor: colors.accent, transform: [{ scale: 1.04 }] },
