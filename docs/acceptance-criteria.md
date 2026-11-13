@@ -109,7 +109,7 @@ Behind `EXPO_PUBLIC_FEATURE_SHUFFLE`.
 
 | ID | Criterion | Check |
 |---|---|---|
-| AC-SHUFFLE-01 | Shuffle only picks layouts that fit the photos well: at least the 6 best-ranked (or all, if fewer) and any within a set cost of the best, plus the user's own layouts, never a negative-space one. | auto |
+| AC-SHUFFLE-01 | Shuffle only picks layouts that fit the photos well: at least the 7 best-ranked (or all, if fewer: the one showing and 6 more) and any within a set cost of the best, plus the user's own layouts, never a negative-space one. | auto |
 | AC-SHUFFLE-02 | Shuffle never shows the layout already showing, nor any of the last 4 it showed, and goes through every eligible layout before repeating one; with two layouts it alternates. | auto |
 | AC-SHUFFLE-03 | Shuffle gives the same result for the same random source and history, keeps the user's style and everything else in the collage, and crops photos afresh for their new cells. When only one layout fits, it rearranges the photos instead, without cutting a face. | auto |
 | AC-SHUFFLE-04 | On the web with 4 photos, each of 6 taps on "Shuffle layout" (a button of at least 44 px at the start of the layout strip) shows a layout not shown before, named in the preview and selected in the strip, which scrolls to it. | auto |

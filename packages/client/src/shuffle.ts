@@ -3,8 +3,11 @@ import { newScene, rankOption, type CropSource, type Scene } from "./scene";
 
 /** How much worse than the best-ranked layout (placement cost per photo) a layout may fit and still be shuffled to. */
 export const SHUFFLE_TOLERANCE = 0.2;
-/** Shuffle always offers at least this many of the best-ranked layouts (or all, when there are fewer). */
-export const SHUFFLE_MIN_POOL = 6;
+/**
+ * Shuffle always offers at least this many of the best-ranked layouts (or all, when there are fewer): the one
+ * showing and six more, so six taps in a row each show a layout not seen yet.
+ */
+export const SHUFFLE_MIN_POOL = 7;
 /** Shuffle doesn't repeat any of this many layouts it showed last, even when it starts a new cycle. */
 export const SHUFFLE_MEMORY = 4;
 
