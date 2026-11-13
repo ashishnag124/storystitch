@@ -11,7 +11,7 @@ const photos: CropSource[] = [
   { width: 3024, height: 4032, detections: [] },
   { width: 4032, height: 3024, detections: [] },
 ];
-const style = { ...DEFAULT_STYLE, gap: 20, margin: 30, radius: 4, background: { kind: "color", color: "#123456" } as const };
+const style = { ...DEFAULT_STYLE, gap: 20, margin: 30, radius: 4, background: { kind: "color", color: "#123456" } as const, look: "noir" as const };
 const options = rankedScenes(photos).map((o) => ({ ...o, style }));
 
 /** A fixed random source: a simple LCG from a seed. */
@@ -94,6 +94,7 @@ describe("AC-SHUFFLE-03 Shuffle is repeatable and keeps the rest of the collage"
     const next = shuffle(options, scene, [], photos, seeded(5))!.scene;
     expect(next.layout.id).not.toBe(scene.layout.id);
     expect(next.style).toBe(style);
+    expect(next.style.look).toBe("noir");
     expect((next as typeof scene).caption).toBe(scene.caption);
     const option = options.find((o) => o.layout.id === next.layout.id)!;
     expect(next).toMatchObject(newScene(option.layout, photos, style, option.order));

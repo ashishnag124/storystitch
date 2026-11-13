@@ -8,7 +8,7 @@
     "build": "node scripts/prepare-assets.mjs && expo export -p web",
     "build:ios": "expo export -p ios --output-dir dist-ios",
     "prebuild:ios": "LANG=en_US.UTF-8 expo prebuild -p ios",
-    "build:e2e": "node scripts/prepare-assets.mjs && EXPO_PUBLIC_FEATURE_ACCOUNTS=false EXPO_PUBLIC_FEATURE_BLUR_FILL=true EXPO_PUBLIC_FEATURE_SHUFFLE=true expo export -p web --output-dir dist-e2e && EXPO_PUBLIC_FEATURE_ACCOUNTS=true EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR=true EXPO_PUBLIC_FEATURE_BLANK_LAYOUT=true EXPO_PUBLIC_FEATURE_BLUR_FILL=true EXPO_PUBLIC_FEATURE_DESCRIBE_LAYOUT=true EXPO_PUBLIC_FEATURE_USAGE=true EXPO_PUBLIC_FEATURE_PLUS=true EXPO_PUBLIC_FEATURE_ADMIN=true EXPO_PUBLIC_API_URL=http://localhost:3010 EXPO_PUBLIC_TURNSTILE_SITE_KEY=1x00000000000000000000AA expo export -p web --output-dir dist-e2e-accounts",
+    "build:e2e": "node scripts/prepare-assets.mjs && EXPO_PUBLIC_FEATURE_ACCOUNTS=false EXPO_PUBLIC_FEATURE_BLUR_FILL=true EXPO_PUBLIC_FEATURE_LOOKS=true EXPO_PUBLIC_FEATURE_SHUFFLE=true expo export -p web --output-dir dist-e2e && EXPO_PUBLIC_FEATURE_ACCOUNTS=true EXPO_PUBLIC_FEATURE_LOOKS=false EXPO_PUBLIC_FEATURE_SHUFFLE=false EXPO_PUBLIC_FEATURE_LAYOUT_EDITOR=true EXPO_PUBLIC_FEATURE_BLANK_LAYOUT=true EXPO_PUBLIC_FEATURE_BLUR_FILL=true EXPO_PUBLIC_FEATURE_DESCRIBE_LAYOUT=true EXPO_PUBLIC_FEATURE_USAGE=true EXPO_PUBLIC_FEATURE_PLUS=true EXPO_PUBLIC_FEATURE_ADMIN=true EXPO_PUBLIC_API_URL=http://localhost:3010 EXPO_PUBLIC_TURNSTILE_SITE_KEY=1x00000000000000000000AA expo export -p web --output-dir dist-e2e-accounts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.e2e.json",
     "test": "vitest run",
