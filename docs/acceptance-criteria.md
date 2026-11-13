@@ -115,6 +115,21 @@ reuse IDs.
 | AC-STYLE-06 | Spacing and margin are even: neighbours are a full gap apart, every edge cell is one margin from the canvas edge, and both scale with the canvas. | auto |
 | AC-STYLE-07 | Auto, the default background, is a pale tint of the most common hue across the photos, each photo counting the same; near-black, near-white and grey are ignored, and with little color it fades toward white. When no hue clearly wins (another hue at least 90° away is within 10% of the most common one, as with red, green and blue photos together), Auto is white. Auto is the first choice in the Color tool and stays after Reset. | auto |
 
+## Looks
+
+Behind `EXPO_PUBLIC_FEATURE_LOOKS`.
+
+| ID | Criterion | Check |
+|---|---|---|
+| AC-LOOK-01 | There are eight looks, Original, Film, Fade, Warm, Cool, Vivid, Mono and Noir, each one color matrix defined once and used by both platforms: Original changes nothing, Mono and Noir are black and white, Film lifts blacks and warms, and every value stays in range. Original is the default. | auto |
+| AC-LOOK-02 | The Style tool's first row, labeled "Look" and above Color, scrolls sideways through the looks in order, each a small portrait (3:4) thumbnail of the user's first photo with the look's name under it; the chosen one has an accent outline and is announced as selected, and one tap applies it. | auto |
+| AC-LOOK-03 | A look changes every photo (and the blurred copies made from them) in the preview and the exported image, and never the background color, borders, Polaroid cards or the mark. | auto |
+| AC-LOOK-04 | With Original, the export is exactly what it was before looks existed. | auto |
+| AC-LOOK-05 | The iOS drawing code applies the same looks as the web code, from preview copies and from full-size originals. | auto |
+| AC-LOOK-06 | With the flag off there is no Look row, and photos draw as they always have. | auto |
+| AC-LOOK-07 | With a look on, switching layouts and exporting still meet the targets of AC-PERF-02 and AC-PERF-03. | auto |
+| AC-LOOK-08 | On an iPhone, choosing a look changes the preview, the thumbnails show it, and the shared image has it. | manual |
+
 ## Export and sharing
 
 | ID | Criterion | Check |
