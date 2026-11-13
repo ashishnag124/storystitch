@@ -132,4 +132,7 @@ jobs:
       # The dashboard is locked by the account's admin flag, two-factor and the API's ADMIN_ENABLED, so this is safe on.
       admin: true
       blank_layout: true
+      looks: true
+      text: true
+      shuffle: true
     secrets: inherit
