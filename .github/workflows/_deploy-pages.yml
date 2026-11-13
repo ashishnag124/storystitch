@@ -54,6 +54,21 @@ on:
         type: boolean
         required: false
         default: false
+      looks:
+        description: "Build with Looks switched on (EXPO_PUBLIC_FEATURE_LOOKS)"
+        type: boolean
+        required: false
+        default: false
+      text:
+        description: "Build with the Text tool switched on (EXPO_PUBLIC_FEATURE_TEXT)"
+        type: boolean
+        required: false
+        default: false
+      shuffle:
+        description: "Build with Shuffle switched on (EXPO_PUBLIC_FEATURE_SHUFFLE)"
+        type: boolean
+        required: false
+        default: false
 
 jobs:
   deploy:
@@ -81,6 +96,9 @@ jobs:
           EXPO_PUBLIC_FEATURE_ADMIN: ${{ inputs.admin }}
           EXPO_PUBLIC_FEATURE_BLANK_LAYOUT: ${{ inputs.blank_layout }}
           EXPO_PUBLIC_FEATURE_BLUR_FILL: ${{ inputs.blur_fill }}
+          EXPO_PUBLIC_FEATURE_LOOKS: ${{ inputs.looks }}
+          EXPO_PUBLIC_FEATURE_TEXT: ${{ inputs.text }}
+          EXPO_PUBLIC_FEATURE_SHUFFLE: ${{ inputs.shuffle }}
           EXPO_PUBLIC_TURNSTILE_SITE_KEY: ${{ secrets.TURNSTILE_SITE_KEY }}
       - uses: cloudflare/wrangler-action@v3
         with:

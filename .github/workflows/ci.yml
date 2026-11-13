@@ -122,4 +122,8 @@ jobs:
       blank_layout: true
       # Staging only, until the owner has looked at it.
       blur_fill: true
+      # Staging only, until the owner has reviewed them.
+      looks: true
+      text: true
+      shuffle: true
     secrets: inherit

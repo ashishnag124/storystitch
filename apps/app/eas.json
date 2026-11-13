@@ -18,7 +18,10 @@
         "EXPO_PUBLIC_FEATURE_FIT_LAYOUTS": "true",
         "EXPO_PUBLIC_FEATURE_BLANK_LAYOUT": "true",
         "EXPO_PUBLIC_FEATURE_DESCRIBE_LAYOUT": "true",
-        "EXPO_PUBLIC_FEATURE_BLUR_FILL": "true"
+        "EXPO_PUBLIC_FEATURE_BLUR_FILL": "true",
+        "EXPO_PUBLIC_FEATURE_LOOKS": "true",
+        "EXPO_PUBLIC_FEATURE_TEXT": "true",
+        "EXPO_PUBLIC_FEATURE_SHUFFLE": "true"
       }
     },
     "preview": {
