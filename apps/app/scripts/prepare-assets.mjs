@@ -15,6 +15,11 @@ for (const subset of ["vietnamese", "latin-ext", "latin"]) {
   cpSync(join(font, "files", file), join(out, file));
 }
 writeFileSync(join(out, "bricolage-grotesque.css"), readFileSync(join(font, "index.css"), "utf8").replaceAll("./files/", "/fonts/"));
+// The caption fonts (captionFonts.web.ts), from the same packages the iOS app bundles them from.
+mkdirSync(join(out, "captions"), { recursive: true });
+for (const file of ["inter/700Bold/Inter_700Bold.ttf", "playfair-display/600SemiBold/PlayfairDisplay_600SemiBold.ttf", "caveat/700Bold/Caveat_700Bold.ttf", "courier-prime/700Bold/CourierPrime_700Bold.ttf"]) {
+  cpSync(createRequire(import.meta.url).resolve(`@expo-google-fonts/${file}`), join(out, "captions", file.split("/").pop()));
+}
 
 const pub = fileURLToPath(new URL("../public/", import.meta.url));
 const wasm = join(dirname(createRequire(import.meta.url).resolve("@mediapipe/tasks-vision")), "wasm");

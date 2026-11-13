@@ -1,10 +1,12 @@
-import { DOUBLE_TAP_MS, DOUBLE_TAP_ZOOM, LONG_PRESS_MS, MOTION, TAP_SLOP_PX, autoCrop, cellShapes, lerp, lerpBox, swapCells, type Box, type Scene } from "@storystitch/client";
+import { DOUBLE_TAP_MS, DOUBLE_TAP_ZOOM, LONG_PRESS_MS, MOTION, TAP_SLOP_PX, autoCrop, cellShapes, lerp, lerpBox, moveCaption, swapCells, type Box, type Scene } from "@storystitch/client";
 import { Canvas, Picture, Skia, createPicture } from "@shopify/react-native-skia";
 import { MAX_ZOOM, MIN_ZOOM, clampCrop, panCrop, sourceRect, type Crop } from "@storystitch/layout-engine";
 import { STORY_CANVAS, hitTest, type Frame, type Point } from "@storystitch/shared";
 import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type Ref } from "react";
 import { PanResponder, Pressable, StyleSheet, Text, View, type GestureResponderEvent, type PanResponderGestureState } from "react-native";
 import { colors, fontFamily } from "../theme";
+import { loadCaptionFonts } from "./captionFonts.native";
+import { drawCaptions, hitCaption, layoutCaption } from "./captionRender.native";
 import { haptic, prefersReducedMotion, tween } from "./motion.native";
 import type { Photo } from "./photos.native";
 import { blurredImage, drawCellAt, drawFaded, drawMark, drawScene, hasBlurredBackground, outlineBounds, previewOf, type Marks } from "./render.native";
@@ -18,6 +20,7 @@ type Gesture =
   | { kind: "pan"; cell: number; x: number; y: number; t: number; vx: number; vy: number }
   | { kind: "lift"; from: number; over: number; at: Point; grab: Point; start: number }
   | { kind: "pinch"; cell: number; distance: number; zoom: number; mid: Point }
+  | { kind: "caption"; index: number; grab: Point } // dragging a caption, grabbed this far from its center
   | { kind: "ended" };
 
 interface Flight {
@@ -49,12 +52,15 @@ interface Props {
   onStatus: (text: string) => void;
   /** Shows the "Made with StoryStitch" mark, as the export will have it. */
   mark: boolean;
+  /** The chosen caption, outlined; tapping or dragging a caption chooses it. */
+  caption?: number | null;
+  onCaption?: (index: number | null) => void;
 }
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
 
 /** The preview: drawn with Skia, with the same gestures as the web preview. */
-export function Stage({ ref, scene, photos, selected, onSelect, onScene, onStatus, mark }: Props) {
+export function Stage({ ref, scene, photos, selected, onSelect, onScene, onStatus, mark, caption = null, onCaption }: Props) {
   const [area, setArea] = useState({ width: 0, height: 0 });
   const [lifted, setLifted] = useState<{ from: number; over: number } | null>(null);
   const [coach, setCoach] = useState(true);
@@ -82,6 +88,9 @@ export function Stage({ ref, scene, photos, selected, onSelect, onScene, onStatu
     const timer = setTimeout(() => setCoach(false), COACH_MS);
     return () => clearTimeout(timer);
   }, []);
+  // Captions' fonts load the first time there are captions; draw them again once they have.
+  const hasCaptions = Boolean(scene.captions?.length);
+  useEffect(() => void (hasCaptions && loadCaptionFonts().then(redraw, console.error)), [hasCaptions, redraw]);
 
   // `frame` changes while something is animating.
   const picture = useMemo(() => {
@@ -94,6 +103,7 @@ export function Stage({ ref, scene, photos, selected, onSelect, onScene, onStatu
         : { selected: selected ?? undefined, hidden: o.hidden };
       canvas.scale(k, k);
       drawScene(canvas, STORY_CANVAS, scene, imageFor, blurred, marks);
+      if (scene.captions?.length) drawCaptions(canvas, STORY_CANVAS, scene.captions, caption);
       if (mark) drawMark(canvas, STORY_CANVAS);
       if (o.fade) drawFaded(canvas, STORY_CANVAS, o.fade.scene, imageFor, null, 1 - o.fade.t, lerp(1, 1.03, o.fade.t));
       for (const f of o.flights ?? []) drawCellAt(canvas, STORY_CANVAS, f.scene, f.cell, imageFor, lerpBox(f.from, f.to, f.t), { shadow: 40 * (1 - f.t) });
@@ -106,7 +116,7 @@ export function Stage({ ref, scene, photos, selected, onSelect, onScene, onStatu
         drawCellAt(canvas, STORY_CANVAS, scene, g.from, imageFor, to, { turn: 2 * t, shadow: 48 * t });
       }
     }, Skia.XYWHRect(0, 0, width || 1, height || 1));
-  }, [k, width, height, scene, imageFor, blurred, selected, lifted, mark, frame]);
+  }, [k, width, height, scene, imageFor, blurred, selected, lifted, mark, caption, frame]);
 
   /** Applies `edit` to the crop of `cell`, then fits it to the cell's frame. */
   const editCrop = useCallback(
@@ -239,6 +249,15 @@ export function Stage({ ref, scene, photos, selected, onSelect, onScene, onStatu
     const at = point(e);
     start.current = at;
     const s = latest.current.scene;
+    // A caption sits over the photos, so a touch on one moves the caption.
+    const hit = s.captions?.length ? hitCaption(STORY_CANVAS, s.captions, at) : -1;
+    const box = hit >= 0 ? layoutCaption(s.captions![hit]!, STORY_CANVAS)?.box : undefined;
+    if (box) {
+      gesture.current = { kind: "caption", index: hit, grab: { x: at.x - (box.x + box.w / 2), y: at.y - (box.y + box.h / 2) } };
+      onCaption?.(hit);
+      onStatus(`Caption ${hit + 1} selected.`);
+      return;
+    }
     const cell = hitTest(s.layout.cells, at);
     if (cell < 0) {
       gesture.current = { kind: "ended" };
@@ -266,7 +285,7 @@ export function Stage({ ref, scene, photos, selected, onSelect, onScene, onStatu
     const g = gesture.current;
     if (!g) return;
     const touches = e.nativeEvent.touches;
-    if (touches.length === 2 && g.kind !== "pinch" && g.kind !== "lift" && g.kind !== "ended") {
+    if (touches.length === 2 && g.kind !== "pinch" && g.kind !== "lift" && g.kind !== "ended" && g.kind !== "caption") {
       if (g.kind === "press") clearTimeout(g.timer);
       const [a, b] = touches as [(typeof touches)[0], (typeof touches)[0]];
       gesture.current = {
@@ -279,6 +298,12 @@ export function Stage({ ref, scene, photos, selected, onSelect, onScene, onStatu
       return;
     }
     const at = { x: start.current.x + state.dx / k, y: start.current.y + state.dy / k };
+    if (g.kind === "caption") {
+      const c = latest.current.scene.captions?.[g.index];
+      const box = c && layoutCaption(c, STORY_CANVAS)?.box;
+      if (box) onScene((s) => ({ ...s, captions: moveCaption(s.captions ?? [], g.index, { x: at.x - g.grab.x, y: at.y - g.grab.y }, box, STORY_CANVAS) }));
+      return;
+    }
     if (g.kind === "press") {
       if (Math.hypot(state.dx, state.dy) < TAP_SLOP_PX) return;
       clearTimeout(g.timer);
@@ -392,6 +417,24 @@ export function Stage({ ref, scene, photos, selected, onSelect, onScene, onStatu
               <Picture picture={picture} />
             </Canvas>
           </View>
+          {/* The captions, for VoiceOver: choosing one opens it in the Text tool. */}
+          {scene.captions?.map((c, i) => {
+            const box = layoutCaption(c, STORY_CANVAS)?.box;
+            return (
+              box && (
+                <View
+                  key={i}
+                  accessible
+                  role="button"
+                  aria-label={`Caption ${i + 1}: ${c.text}`}
+                  aria-selected={caption === i}
+                  onAccessibilityTap={() => onCaption?.(i)}
+                  pointerEvents="none"
+                  style={{ position: "absolute", left: box.x * k, top: box.y * k, width: box.w * k, height: box.h * k }}
+                />
+              )
+            );
+          })}
           {tip && selected !== null && (
             <View role="toolbar" aria-label={`Photo ${selected + 1}`} style={[styles.tip, tip]}>
               <Pressable role="button" onPress={() => fit(selected)} style={styles.tipButton}>

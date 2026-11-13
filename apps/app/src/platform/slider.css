@@ -12,6 +12,12 @@
   min-height: 44px;
 }
 
+.bare-slider {
+  flex: 1;
+  min-width: 80px;
+  min-height: 44px;
+}
+
 .tool-slider .tool-value {
   color: #fff4e8;
   font-variant-numeric: tabular-nums;
