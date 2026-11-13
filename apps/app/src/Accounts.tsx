@@ -4,7 +4,9 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ScrollView, StyleSheet, Text, View, type HostInstance } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { authClient, errorMessage } from "./authClient";
+import { PLUS_ENABLED } from "./config";
 import { Disclosure, Field, Form, ORIGIN, SubmitButton, sendToApp } from "./platform/forms";
+import { linkBuyer } from "./platform/purchases";
 import { ACCOUNT_PATHS, navigate, useLocation } from "./platform/route";
 import { Turnstile } from "./platform/Turnstile";
 import { colors, fontFamily, type } from "./theme";
@@ -273,6 +275,11 @@ function Profile({ email, welcome }: { email: string; welcome: boolean }) {
 
 function AccountHome({ params }: { params: URLSearchParams }) {
   const { data, isPending } = authClient.useSession();
+  const userId = data?.user.id ?? null;
+  // StoryStitch Plus bought signed out on iOS moves to the account here; signing out starts a new anonymous buyer.
+  useEffect(() => {
+    if (PLUS_ENABLED && !isPending) linkBuyer(userId).catch(console.error);
+  }, [userId, isPending]);
   if (isPending) return <Hint>Loading…</Hint>;
   if (data) return <Profile email={data.user.email} welcome={params.has("welcome")} />;
   return (
