@@ -5,9 +5,10 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import { AppState, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { AccountLink } from "./AccountLink";
 import { deleteSaved, listSaved, recordExport } from "./api";
-import { BLANK_LAYOUT_ENABLED, DESCRIBE_LAYOUT_ENABLED, FIT_LAYOUTS_ENABLED, LAYOUT_EDITOR_ENABLED } from "./config";
+import { BLANK_LAYOUT_ENABLED, DESCRIBE_LAYOUT_ENABLED, FIT_LAYOUTS_ENABLED, LAYOUT_EDITOR_ENABLED, SHUFFLE_ENABLED } from "./config";
 import { LayoutStrip } from "./LayoutStrip";
 import { PlusUpsell } from "./PlusUpsell";
+import { ShuffleButton } from "./ShuffleButton";
 import { perfTimes, resetPerfPeak, timeLayoutSwitch } from "./PerfReadout";
 import { EXPORT_PAUSE_MS, canShareFiles, canWaitToShare, renderExport, shareOrDownload, type ExportFormat } from "./platform/exportImage";
 import { DescribeAction } from "./platform/DescribeAction";
@@ -342,6 +343,22 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
                 chooseLayout(option);
               }}
               mine={yours}
+              leading={
+                SHUFFLE_ENABLED && (
+                  <ShuffleButton
+                    options={styledOptions}
+                    scene={scene}
+                    photos={photos}
+                    yours={yours}
+                    onShuffle={(next) => {
+                      timeLayoutSwitch();
+                      stage.current?.crossfade();
+                      setScene(next);
+                      setConfirmDelete(false);
+                    }}
+                  />
+                )
+              }
             />
             {LAYOUT_EDITOR_ENABLED && (
               <View style={styles.layoutActions}>

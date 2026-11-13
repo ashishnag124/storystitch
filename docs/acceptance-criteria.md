@@ -103,6 +103,19 @@ reuse IDs.
 | AC-EDIT-13 | The Layouts tool shows each layout as a plain diagram of its cells (one shape per photo, no photos drawn on it), with the current one highlighted. | auto |
 | AC-EDIT-14 | Tapping another layout during a crossfade replaces it, so quick taps never pile up crossfades that slow the preview. | auto |
 
+## Shuffle
+
+Behind `EXPO_PUBLIC_FEATURE_SHUFFLE`.
+
+| ID | Criterion | Check |
+|---|---|---|
+| AC-SHUFFLE-01 | Shuffle only picks layouts that fit the photos well: at least the 6 best-ranked (or all, if fewer) and any within a set cost of the best, plus the user's own layouts, never a negative-space one. | auto |
+| AC-SHUFFLE-02 | Shuffle never shows the layout already showing, nor any of the last 4 it showed, and goes through every eligible layout before repeating one; with two layouts it alternates. | auto |
+| AC-SHUFFLE-03 | Shuffle gives the same result for the same random source and history, keeps the user's style and everything else in the collage, and crops photos afresh for their new cells. When only one layout fits, it rearranges the photos instead, without cutting a face. | auto |
+| AC-SHUFFLE-04 | On the web with 4 photos, each of 6 taps on "Shuffle layout" (a button of at least 44 px at the start of the layout strip) shows a layout not shown before, named in the preview and selected in the strip, which scrolls to it. | auto |
+| AC-SHUFFLE-05 | Switching layouts with Shuffle updates the preview within the AC-PERF-02 budget, and quick taps run one crossfade, not one for each tap. | auto |
+| AC-SHUFFLE-06 | With the flag off there's no Shuffle button. | auto |
+
 ## Style
 
 | ID | Criterion | Check |
@@ -189,6 +202,7 @@ Maestro reads the accessibility tree, so `ios` rows prove what a person can reac
 | AC-IOS-01 | The app opens on the pick screen with its headline and privacy line, with or without the API. | ios |
 | AC-IOS-02 | Picking photos, including a HEIC, in the iOS picker opens the editor with a preview naming its layout and photo count, and a strip of layouts. | ios |
 | AC-IOS-03 | Tapping a layout in the strip switches the preview to it. | ios |
+| AC-IOS-19 | Tapping Shuffle layout switches the preview to another layout. | ios |
 | AC-IOS-04 | The Style tool offers colors, and tells VoiceOver which one is chosen, and a spacing slider that changes the value. | ios |
 | AC-IOS-05 | Tapping a photo offers a zoom slider, Fit undoes the zoom, and Done closes the photo's tools. | ios |
 | AC-IOS-06 | Share opens the iOS share sheet with the export as a JPEG, or a PNG when that's the chosen format. It stays available while the image is being made: tapped then, the sheet opens as soon as the image is ready. | ios |
