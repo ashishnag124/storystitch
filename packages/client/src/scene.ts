@@ -23,6 +23,7 @@ import {
   type Point,
   type Size,
 } from "@storystitch/shared";
+import { DEFAULT_LOOK, type LookId } from "./looks";
 
 /** A solid color, a heavily blurred copy of the photo in the first cell, or Auto: a pale tint from the photos (`Style.auto`). */
 export type Background = { kind: "color"; color: string } | { kind: "blur" } | { kind: "auto" };
@@ -39,6 +40,8 @@ export interface Style {
   /** Null until the user picks one: each layout then uses its own (see `borderOf`). */
   border: number | null;
   borderColor: string;
+  /** The filter on every photo (see `LOOKS`). */
+  look: LookId;
 }
 
 export const DEFAULT_BACKGROUND = { kind: "color", color: "#ffffff" } as const satisfies Background;
@@ -48,7 +51,7 @@ export const PRINT_BORDER = 14;
 /** A Polaroid card's margins around its photo, as fractions of the card's width. */
 export const POLAROID = { side: 0.06, bottom: 0.24 } as const;
 
-export const DEFAULT_STYLE: Style = { background: null, auto: "#ffffff", gap: 8, margin: 12, radius: 20, border: null, borderColor: "#ffffff" };
+export const DEFAULT_STYLE: Style = { background: null, auto: "#ffffff", gap: 8, margin: 12, radius: 20, border: null, borderColor: "#ffffff", look: DEFAULT_LOOK };
 
 /** The background the user picked, else blur for "framed on blur" layouts, else Auto. */
 export function pickedBackground(layout: Layout, style: Style): Background {

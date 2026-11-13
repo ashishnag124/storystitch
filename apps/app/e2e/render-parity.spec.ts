@@ -10,7 +10,7 @@ const skiaDir = dirname(fromApp.resolve("@shopify/react-native-skia/package.json
 const canvasKitDir = dirname(fromSkia.resolve("canvaskit-wasm/package.json"));
 
 interface ParityPage {
-  compareRenderers(styles: object[], zoom?: number): Promise<{ id: string; styled: number; differentPct: number; meanDiff: number; canvas: string; skia: string }[]>;
+  compareRenderers(styles: object[], zoom?: number, scale?: number): Promise<{ id: string; styled: number; differentPct: number; meanDiff: number; canvas: string; skia: string }[]>;
 }
 
 /** The part of esbuild's plugin API used here. esbuild is a dependency of apps/app, so its types aren't available. */
@@ -103,4 +103,36 @@ test("AC-IOS-12 AC-CROP-07 the blurred fill of a zoomed-out photo draws the same
   expect(results.length).toBeGreaterThan(20);
   // The blur is close but not exact between the two (see above).
   expect(Math.max(...results.map((r) => r.differentPct))).toBeLessThan(7);
+});
+
+test("AC-LOOK-05 AC-IOS-12 looks draw the same on Canvas and Skia, from preview copies and from originals", async ({ page }, info) => {
+  test.skip(info.project.name !== "android-chrome", "Only needs one browser");
+  test.setTimeout(240_000);
+  const script = await bundle();
+  await page.route("http://parity.test/**", (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === "/canvaskit.wasm") return route.fulfill({ body: readFileSync(join(canvasKitDir, "bin/full/canvaskit.wasm")), contentType: "application/wasm" });
+    if (path === "/parity.js") return route.fulfill({ body: script, contentType: "text/javascript" });
+    return route.fulfill({ body: '<!doctype html><script src="/parity.js"></script>', contentType: "text/html" });
+  });
+  await page.goto("http://parity.test/");
+  const styles = [
+    { background: { kind: "color", color: "#203040" }, border: 12, borderColor: "#ff4f8b", look: "mono" },
+    { background: { kind: "color", color: "#ffffff" }, look: "film" },
+    { background: { kind: "color", color: "#ffffff" }, look: "vivid" },
+    { background: { kind: "blur" }, look: "noir" },
+  ];
+  const previews = await page.evaluate((s) => (window as unknown as ParityPage).compareRenderers(s), styles);
+  // Photos twice the size: the web code filters them after drawing them into their cells, as at export.
+  const originals = await page.evaluate((s) => (window as unknown as ParityPage).compareRenderers(s, undefined, 2), styles.slice(0, 2));
+  expect(previews.length).toBeGreaterThan(70);
+  expect(originals.length).toBeGreaterThan(35);
+  const worst = (results: typeof previews, blurred: boolean) =>
+    Math.max(...results.filter((r) => (styles[r.styled]!.background.kind === "blur") === blurred).map((r) => r.differentPct));
+  console.log(`looks: previews ${worst(previews, false).toFixed(2)}% (blurred ${worst(previews, true).toFixed(2)}%), originals ${worst(originals, false).toFixed(2)}%`);
+  // The same bounds as without a look (see above). Large photos are scaled once more on web (into a cell-sized canvas
+  // before filtering), which adds a little edge smoothing: 3.1%.
+  expect(worst(previews, false)).toBeLessThan(3);
+  expect(worst(previews, true)).toBeLessThan(7);
+  expect(worst(originals, false)).toBeLessThan(4);
 });

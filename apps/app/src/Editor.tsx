@@ -5,7 +5,7 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import { AppState, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { AccountLink } from "./AccountLink";
 import { deleteSaved, listSaved, recordExport } from "./api";
-import { BLANK_LAYOUT_ENABLED, DESCRIBE_LAYOUT_ENABLED, FIT_LAYOUTS_ENABLED, LAYOUT_EDITOR_ENABLED } from "./config";
+import { BLANK_LAYOUT_ENABLED, DESCRIBE_LAYOUT_ENABLED, FIT_LAYOUTS_ENABLED, LAYOUT_EDITOR_ENABLED, LOOKS_ENABLED } from "./config";
 import { LayoutStrip } from "./LayoutStrip";
 import { PlusUpsell } from "./PlusUpsell";
 import { perfTimes, resetPerfPeak, timeLayoutSwitch } from "./PerfReadout";
@@ -318,7 +318,7 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
         </Text>
       </View>
 
-      <View aria-hidden={covered} role="region" aria-label={panelTitle} style={[styles.panel, showActions && styles.panelActions]}>
+      <View aria-hidden={covered} role="region" aria-label={panelTitle} style={[styles.panel, (showActions || (LOOKS_ENABLED && selected === null && tool === "style")) && styles.panelActions]}>
         {selected !== null ? (
           <View style={styles.photoTool}>
             <Text style={typography.hint}>Tap another photo to swap them. Double-tap to zoom.</Text>
@@ -367,7 +367,7 @@ export function Editor({ photos, summary, notices, privacy, popularity, onStartO
             )}
           </View>
         ) : tool === "style" ? (
-          <StylePanel layout={scene.layout} style={scene.style} onChange={(style) => setScene((s) => withStyle(s, style, photos))} />
+          <StylePanel layout={scene.layout} style={scene.style} onChange={(style) => setScene((s) => withStyle(s, style, photos))} photo={photos[0]!} />
         ) : (
           <ScrollView contentContainerStyle={styles.exportTool}>
             <FormatSelect value={format} onChange={setFormat} />
